@@ -13,7 +13,9 @@ public class IsolationTests
         "Lhdn", "MyInvois", "UBL", "XAdES", "Irbm",
         "IEnumerable<IHostedRail>",
         "namespace Lazuar.Pay.Gateways",
-        "namespace Lazuar.Pay.One;"
+        "namespace Lazuar.Pay.One;",
+        "GenerateApiCredential",
+        "ApiKeys:Pepper"
     ];
 
     [Test]
@@ -55,6 +57,8 @@ public class IsolationTests
             Assert.That(text, Does.Not.Contain("ToTable(\"organizations\")"), file);
             Assert.That(text, Does.Not.Contain("ToTable(\"users\")"), file);
             Assert.That(text, Does.Not.Contain("ToTable(\"members\")"), file);
+            Assert.That(text, Does.Not.Contain("ToTable(\"api_keys\")"), file);
+            Assert.That(text, Does.Not.Contain("ToTable(\"pay_api_keys\")"), file);
         }
     }
 

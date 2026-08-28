@@ -62,6 +62,23 @@ curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
 # GET /v1/checkouts/{id} with the same Bearer
 ```
 
+Second apps mint a One API key (shown once; never `VITE_*`; never git) and send it as Pay Bearer. Scopes `tenant:read` and `authz:check`. Not Hub `sk_live_`, not Stripe `sk_live_`, not `whsec_`. `$ORG_ID` is the One tenant id. Merchant SPA still sends a human JWT only.
+
+```bash
+curl -sS -X POST "$ONE/tenants/$ORG_ID/api-keys" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"second-app-cashier","scopes":["tenant:read","authz:check"]}'
+# copy secret once (lzr_sk_…)
+
+curl -sS -H "Authorization: Bearer $PAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"org_id":"'"$ORG_ID"'","amount":10.00,"currency":"MYR","provider":"test"}' \
+  http://localhost:8081/v1/checkouts
+```
+
+Pay does not mint keys and does not hold the merchant’s `lzr_sk_` in process env.
+
 Checkouts persist in Postgres `lazuar_pay` on **5435**. `owner`/`admin` paste keys **per rail** (stripe, chip, billplz, xendit, razorpay). Saving a vault does not pick a default. Mint a pay link with an explicit `provider` that already has keys. Capability is `hosted_link`. A verified PSP webhook writes an Official Receipt `RCPT-…` and a two-line journal. Pay does not compute SST or file e-invoices. Buyers have no One account (`:5179/c/{token}`).
 
 Per-org `webhook_secret` (Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay HMAC). Process `Pay__StripeWebhookSecret` is a **Testing-only** fallback. Billplz needs `Pay__PublicBaseUrl` as public **https** (localhost callbacks 400). Buyer return URLs use `Pay__CheckoutBaseUrl` (not the Billplz callback). `Pay__WrapKey` is required outside Testing. A second `POST /v1/pay/{token}/start` on an open checkout returns the stored hosted URL (no second processor session). Success URL is not paid; `:5179` polls `?status=verifying`.

@@ -36,4 +36,9 @@ describe('pickApiBearerToken', () => {
     expect(pickApiBearerToken(user('', JWT_ID))).toBeUndefined()
     expect(pickApiBearerToken(user(JWE, JWT_ID))).toBeUndefined()
   })
+
+  it('rejects lzr_sk_ machine keys', () => {
+    expect(isJwtLike('lzr_sk_testfixture')).toBe(false)
+    expect(pickApiBearerToken(user('lzr_sk_testfixture', JWT_ID))).toBeUndefined()
+  })
 })

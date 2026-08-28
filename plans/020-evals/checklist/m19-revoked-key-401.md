@@ -21,20 +21,20 @@
 
 ## M19.1
 
-- [ ] Fake One: first `/me` 200, then 401
-- [ ] Second Pay whoami / mint → 401
-- [ ] Do not keep allowing after One 401
+- [x] Fake One: first `/me` 200, then 401
+- [x] Second Pay whoami / mint → 401
+- [x] Do not keep allowing after One 401
 
 ## M19.2 Must not
 
-- [ ] Do not cache `/me` in this phase
-- [ ] Do not subscribe to `api_key.revoked` yet (P13)
+- [x] Do not cache `/me` in this phase
+- [x] Do not subscribe to `api_key.revoked` yet (P13)
 
 ## M19.3 Tests
 
-- [ ] `Revoked_key_is_401`
-- [ ] Existing JWT 401 mapping unchanged
+- [x] `Revoked_key_is_401`
+- [x] Existing JWT 401 mapping unchanged
 
 ## M19.4 Exit
 
-- [ ] Unblocked for M20
+- [x] Unblocked for M20

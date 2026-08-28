@@ -28,6 +28,11 @@ internal static class MemberGate
         }
 
         request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
+        if (Bearer.IsMachineKey(authorization))
+        {
+            return await RequireKeyBoundAsync(one, authorization, orgId, hint.ToString(), cancellationToken);
+        }
+
         var result = await one.CheckMemberAsync(authorization, orgId, hint.ToString(), cancellationToken);
         if (result.StatusCode == 200 && result.Value)
         {
@@ -42,7 +47,7 @@ internal static class MemberGate
         return result.StatusCode switch
         {
             401 => PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token"),
-            403 => PayErrors.Status(403, "Forbidden", SuspendedDetail(result.Detail) ?? "Not a member of this org"),
+            403 => PayErrors.Status(403, "Forbidden", ForbiddenDetail(result.Detail) ?? "Not a member of this org"),
             400 => PayErrors.Status(400, "Bad Request", string.IsNullOrWhiteSpace(result.Detail)
                 ? "Identity provider rejected the request"
                 : result.Detail),
@@ -52,15 +57,71 @@ internal static class MemberGate
         };
     }
 
-    static string? SuspendedDetail(string? detail)
+    static string? ForbiddenDetail(string? detail)
     {
-        if (string.IsNullOrWhiteSpace(detail)
-            || detail.IndexOf("suspend", StringComparison.OrdinalIgnoreCase) < 0)
+        if (string.IsNullOrWhiteSpace(detail))
         {
             return null;
         }
 
-        return detail.Trim();
+        if (detail.IndexOf("suspend", StringComparison.OrdinalIgnoreCase) >= 0
+            || detail.IndexOf("scope", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return detail.Trim();
+        }
+
+        return null;
+    }
+
+    static async Task<IResult?> RequireKeyBoundAsync(
+        OneClient one,
+        string authorization,
+        string orgId,
+        string? tenantHint,
+        CancellationToken cancellationToken)
+    {
+        var who = await one.GetWhoamiAsync(authorization, tenantHint, cancellationToken);
+        if (who.TimedOut || who.TransportFailed)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "Identity provider unreachable");
+        }
+
+        if (who.StatusCode == 401)
+        {
+            return PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token");
+        }
+
+        if (who.Value is null)
+        {
+            return who.StatusCode switch
+            {
+                403 => PayErrors.Status(403, "Forbidden", ForbiddenDetail(who.Detail) ?? "Not a member of this org"),
+                400 => PayErrors.Status(400, "Bad Request", string.IsNullOrWhiteSpace(who.Detail)
+                    ? "Identity provider rejected the request"
+                    : who.Detail),
+                429 => PayErrors.Status(429, "Too Many Requests", "Identity provider rate limited"),
+                _ => PayErrors.Status(503, "Service Unavailable", "Identity provider failed")
+            };
+        }
+
+        if (who.Value.Tenants.Count == 0)
+        {
+            return PayErrors.Status(403, "Forbidden", "Not a member of this org");
+        }
+
+        var tenant = who.Value.Tenants.FirstOrDefault(t => t.Id == orgId);
+        if (tenant is null)
+        {
+            return PayErrors.Status(403, "Forbidden", "Not a member of this org");
+        }
+
+        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(tenant.Status))
+        {
+            return PayErrors.Status(403, "Forbidden", "Tenant is suspended.");
+        }
+
+        return null;
     }
 
     public static async Task<IResult?> RequireWriterAsync(
@@ -69,6 +130,11 @@ internal static class MemberGate
         string orgId,
         CancellationToken cancellationToken)
     {
+        if (Bearer.TryGet(request, out var machine) && Bearer.IsMachineKey(machine))
+        {
+            return await RequireMemberAsync(request, one, orgId, cancellationToken);
+        }
+
         var denied = await RequireMemberAsync(request, one, orgId, cancellationToken);
         if (denied is not null)
         {

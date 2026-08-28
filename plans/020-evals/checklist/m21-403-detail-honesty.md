@@ -20,15 +20,15 @@
 
 ## M21.1 Mapping
 
-- [ ] JWT `authz/check` 403: keep suspend pass-through; generic “Not a member” only when One has no better detail
-- [ ] If One detail contains `scope` / `API key lacks`, pass that sentence (or a fixed Pay sentence that is not “not a member”)
-- [ ] After M12 keys skip `authz/check`, this mostly hits leftover JWT/key mistakes — still fix the mapper
+- [x] JWT `authz/check` 403: keep suspend pass-through; generic “Not a member” only when One has no better detail
+- [x] If One detail contains `scope` / `API key lacks`, pass that sentence (or a fixed Pay sentence that is not “not a member”)
+- [x] After M12 keys skip `authz/check`, this mostly hits leftover JWT/key mistakes — still fix the mapper
 
 ## M21.2 Tests
 
-- [ ] Fake One 403 `{ "detail": "API key lacks required scope authz:check." }` → Pay 403 body does **not** contain `Not a member`
-- [ ] Suspend 403 still contains `suspend`
+- [x] Fake One 403 `{ "detail": "API key lacks required scope authz:check." }` → Pay 403 body does **not** contain `Not a member`
+- [x] Suspend 403 still contains `suspend`
 
 ## M21.3 Exit
 
-- [ ] Unblocked for M22
+- [x] Unblocked for M22

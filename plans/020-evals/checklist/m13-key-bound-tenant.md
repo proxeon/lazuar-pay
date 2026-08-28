@@ -21,26 +21,26 @@
 
 ## M13.1 Bound tenant
 
-- [ ] From key `/me`, find tenant `id == path orgId`
-- [ ] Zero tenants → 403
-- [ ] Path org not in `tenants` → 403 (not 404)
-- [ ] Multiple tenants: still require exact path match (keys should be one-tenant; extra ids 403 unless `id == orgId`)
+- [x] From key `/me`, find tenant `id == path orgId`
+- [x] Zero tenants → 403
+- [x] Path org not in `tenants` → 403 (not 404)
+- [x] Multiple tenants: still require exact path match (keys should be one-tenant; extra ids 403 unless `id == orgId`)
 
 ## M13.2 Active
 
-- [ ] `status` must be `active` (same fail-closed as writer overlay)
-- [ ] Suspend copy: if One detail contains suspend, pass that sentence (existing `SuspendedDetail`)
+- [x] `status` must be `active` (same fail-closed as writer overlay)
+- [x] Suspend copy: if One detail contains suspend, pass that sentence (existing `SuspendedDetail`)
 
 ## M13.3 Tests
 
-- [ ] Key bound `t1` on `/v1/orgs/t1/ready` → 200 (member door)
-- [ ] Key bound `t1` on `/v1/orgs/t2/ready` → 403
-- [ ] Key `/me` tenant `status: suspended` → 403, body may contain suspend
+- [x] Key bound `t1` on `/v1/orgs/t1/ready` → 200 (member door)
+- [x] Key bound `t1` on `/v1/orgs/t2/ready` → 403
+- [x] Key `/me` tenant `status: suspended` → 403, body may contain suspend
 
 ## M13.4 Must not
 
-- [ ] Header `X-Lazuar-Tenant-Id` cannot authorize a different org (path SoT)
+- [x] Header `X-Lazuar-Tenant-Id` cannot authorize a different org (path SoT)
 
 ## M13.5 Exit
 
-- [ ] Unblocked for M14
+- [x] Unblocked for M14

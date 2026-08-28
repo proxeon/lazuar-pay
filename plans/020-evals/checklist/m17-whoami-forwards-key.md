@@ -21,19 +21,19 @@
 
 ## M17.1
 
-- [ ] Whoami already forwards Authorization; confirm key prefix is not stripped
-- [ ] Response projection same snake_case as JWT whoami
-- [ ] `is_platform_admin` false for keys
+- [x] Whoami already forwards Authorization; confirm key prefix is not stripped
+- [x] Response projection same snake_case as JWT whoami
+- [x] `is_platform_admin` false for keys
 
 ## M17.2 Tests
 
-- [ ] `Whoami_forwards_machine_key_shape` — Fake One last Authorization contains `lzr_sk_`
-- [ ] Whoami 401 when Fake One 401s the key
+- [x] `Whoami_forwards_machine_key_shape` — Fake One last Authorization contains `lzr_sk_`
+- [x] Whoami 401 when Fake One 401s the key
 
 ## M17.3 Must not
 
-- [ ] Do not JIT-create Pay rows on whoami
+- [x] Do not JIT-create Pay rows on whoami
 
 ## M17.4 Exit
 
-- [ ] O13 stale tick is now true; do not flip 011/11 from here
+- [x] O13 stale tick is now true; do not flip 011/11 from here

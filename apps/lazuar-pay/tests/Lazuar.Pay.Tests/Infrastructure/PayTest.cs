@@ -7,6 +7,11 @@ namespace Lazuar.Pay.Tests;
 
 internal static class PayTest
 {
+    public const string MachineKey = "lzr_sk_testfixture";
+
+    public static string KeyMeJson(string orgId = "t1", string status = "active") =>
+        $$"""{"user_id":"key-1","is_platform_admin":false,"tenants":[{"id":"{{orgId}}","role":"member","status":"{{status}}"}]}""";
+
     public static HttpResponseMessage Owner(HttpRequestMessage req)
     {
         var path = req.RequestUri?.AbsolutePath ?? "";
@@ -17,6 +22,27 @@ internal static class PayTest
 
         return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
     }
+
+    public static HttpResponseMessage Key(HttpRequestMessage req) => KeyFor("t1")(req);
+
+    public static Func<HttpRequestMessage, HttpResponseMessage> KeyFor(string orgId, string status = "active") =>
+        req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, KeyMeJson(orgId, status));
+            }
+
+            if (req.Method == HttpMethod.Post && path.Contains("/authz/check"))
+            {
+                return FakeOneHandler.Json(
+                    HttpStatusCode.BadRequest,
+                    """{"detail":"user_id is required when authenticating with an API key."}""");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        };
 
     public static async Task Put(HttpClient client, string json)
     {

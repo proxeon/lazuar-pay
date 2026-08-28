@@ -24,25 +24,25 @@
 
 ## M14.1 Writer
 
-- [ ] `RequireWriterAsync` for `lzr_sk_`: after M13 member/bound/active, **return allow**
-- [ ] Do **not** demand `/me.tenants[].role` is `owner` or `admin` for keys
-- [ ] JWT writer overlay **unchanged** (`owner`/`admin` + active)
+- [x] `RequireWriterAsync` for `lzr_sk_`: after M13 member/bound/active, **return allow**
+- [x] Do **not** demand `/me.tenants[].role` is `owner` or `admin` for keys
+- [x] JWT writer overlay **unchanged** (`owner`/`admin` + active)
 
 ## M14.2 Mint
 
-- [ ] Key `POST /v1/checkouts` `{ org_id: t1, amount, provider: test }` → 201 (Testing)
-- [ ] `org_id` in body must match bound tenant (existing mint checks)
+- [x] Key `POST /v1/checkouts` `{ org_id: t1, amount, provider: test }` → 201 (Testing)
+- [x] `org_id` in body must match bound tenant (existing mint checks)
 
 ## M14.3 Tests
 
-- [ ] `Key_member_role_can_create_checkout` → 201
-- [ ] Vault PUT with key also 200 if you keep writer=key (same rule). If you split “vault still JWT-only”, write that exception **here** and test 403 — **default is key is writer for all writer doors**
+- [x] `Key_member_role_can_create_checkout` → 201
+- [x] Vault PUT with key also 200 if you keep writer=key (same rule). If you split “vault still JWT-only”, write that exception **here** and test 403 — **default is key is writer for all writer doors**
 
 ## M14.4 Must not
 
-- [ ] Do not add One scope `payments.checkouts:write`
-- [ ] Do not treat key as platform admin
+- [x] Do not add One scope `payments.checkouts:write`
+- [x] Do not treat key as platform admin
 
 ## M14.5 Exit
 
-- [ ] Unblocked for M15, U11, E13
+- [x] Unblocked for M15, U11, E13

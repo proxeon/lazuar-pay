@@ -21,16 +21,16 @@
 
 ## M18.1
 
-- [ ] Key `/me.tenants[0].id == t1`
-- [ ] `POST /v1/checkouts` body `org_id: t2` → 403
-- [ ] `POST /v1/orgs/t2/products` → 403
-- [ ] `GET /v1/orgs/t2/receipts` → 403 (member door, same bound-tenant rule)
+- [x] Key `/me.tenants[0].id == t1`
+- [x] `POST /v1/checkouts` body `org_id: t2` → 403
+- [x] `POST /v1/orgs/t2/products` → 403
+- [x] `GET /v1/orgs/t2/receipts` → 403 (member door, same bound-tenant rule)
 
 ## M18.2 Tests
 
-- [ ] `Key_bound_to_other_tenant_is_403` on mint and on list
-- [ ] Do not 404 (existence oracle)
+- [x] `Key_bound_to_other_tenant_is_403` on mint and on list
+- [x] Do not 404 (existence oracle)
 
 ## M18.3 Exit
 
-- [ ] Unblocked for M19
+- [x] Unblocked for M19

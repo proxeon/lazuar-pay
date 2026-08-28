@@ -21,21 +21,21 @@
 
 ## M20.1 Bans
 
-- [ ] No table `api_keys` / `pay_api_keys` in `PayDbContext`
-- [ ] No pepper config `ApiKeys:Pepper`
-- [ ] No hasher of `lzr_sk_` in Pay
-- [ ] IsolationTests: add tokens `pay_api_keys`, `GenerateApiCredential` if not already covered
-- [ ] Existing bans still red: `Modules.One`, `MediatR`, org/user tables
+- [x] No table `api_keys` / `pay_api_keys` in `PayDbContext`
+- [x] No pepper config `ApiKeys:Pepper`
+- [x] No hasher of `lzr_sk_` in Pay
+- [x] IsolationTests: add tokens `pay_api_keys`, `GenerateApiCredential` if not already covered
+- [x] Existing bans still red: `Modules.One`, `MediatR`, org/user tables
 
 ## M20.2 Tests
 
-- [ ] `Source_does_not_create_org_or_user_tables` still passes
-- [ ] Grep in test: Pay src has no `sk_test_` mint
+- [x] `Source_does_not_create_org_or_user_tables` still passes
+- [x] Grep in test: Pay src has no `sk_test_` mint
 
 ## M20.3 Must not
 
-- [ ] Do not wrap merchant `lzr_sk_` in SecretBox (caller identity, not BYOK)
+- [x] Do not wrap merchant `lzr_sk_` in SecretBox (caller identity, not BYOK)
 
 ## M20.4 Exit
 
-- [ ] Unblocked for M21
+- [x] Unblocked for M21

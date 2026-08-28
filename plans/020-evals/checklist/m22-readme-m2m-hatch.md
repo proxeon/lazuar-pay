@@ -22,28 +22,28 @@
 
 ## M22.1 Host README
 
-- [ ] Paragraph: mint key on One `POST /tenants/{id}/api-keys` with scopes `tenant:read` and `authz:check`
-- [ ] Secret shown once; prefix `lzr_sk_`; never `VITE_*`; never git
-- [ ] `Authorization: Bearer lzr_sk_…` on Pay **8081** `/v1/checkouts`
-- [ ] Not Hub `sk_live_`. Not Stripe `sk_live_`. Not `whsec_`
-- [ ] Curl example uses `$ORG_ID` = One tenant id
-- [ ] Do not claim outbound webhooks until W21
+- [x] Paragraph: mint key on One `POST /tenants/{id}/api-keys` with scopes `tenant:read` and `authz:check`
+- [x] Secret shown once; prefix `lzr_sk_`; never `VITE_*`; never git
+- [x] `Authorization: Bearer lzr_sk_…` on Pay **8081** `/v1/checkouts`
+- [x] Not Hub `sk_live_`. Not Stripe `sk_live_`. Not `whsec_`
+- [x] Curl example uses `$ORG_ID` = One tenant id
+- [x] Do not claim outbound webhooks until W21
 
 ## M22.2 `.env.example`
 
-- [ ] Do **not** add `Pay__OneApiKey` as a merchant credential
-- [ ] Comment: second apps hold their own `lzr_sk_`; Pay does not
+- [x] Do **not** add `Pay__OneApiKey` as a merchant credential
+- [x] Comment: second apps hold their own `lzr_sk_`; Pay does not
 
 ## M22.3 pay-spec
 
-- [ ] Doc comment on Checkouts.create: writer is One JWT owner/admin **or** bound `lzr_sk_`
-- [ ] No new Map* (honesty unchanged)
+- [x] Doc comment on Checkouts.create: writer is One JWT owner/admin **or** bound `lzr_sk_`
+- [x] No new Map* (honesty unchanged)
 
 ## M22.4 Must not
 
-- [ ] Do not document Mode M god-key
-- [ ] Do not send merchants to `lazuar-ops`
+- [x] Do not document Mode M god-key
+- [x] Do not send merchants to `lazuar-ops`
 
 ## M22.5 Exit
 
-- [ ] Unblocked for E16 (full second-app page after sample)
+- [x] Unblocked for E16 (full second-app page after sample)

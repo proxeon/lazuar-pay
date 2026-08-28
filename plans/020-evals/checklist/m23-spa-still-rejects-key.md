@@ -21,15 +21,15 @@
 
 ## M23.1
 
-- [ ] `pickApiBearerToken` (or equivalent) still rejects non-JWT / `lzr_sk_`-shaped strings
-- [ ] Vitest: opaque token not sent as Authorization
-- [ ] No `VITE_PAY_API_KEY`
+- [x] `pickApiBearerToken` (or equivalent) still rejects non-JWT / `lzr_sk_`-shaped strings
+- [x] Vitest: opaque token not sent as Authorization
+- [x] No `VITE_PAY_API_KEY`
 
 ## M23.2 Must not
 
-- [ ] Do not add an API-keys page that mints Hub `payments.checkouts:*`
-- [ ] A later “open One settings” link is allowed; store stays One
+- [x] Do not add an API-keys page that mints Hub `payments.checkouts:*`
+- [x] A later “open One settings” link is allowed; store stays One
 
 ## M23.3 Exit
 
-- [ ] Track M complete when M10–M23 checked
+- [x] Track M complete when M10–M23 checked

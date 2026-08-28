@@ -294,7 +294,7 @@ interface Orgs {
 @route("/v1")
 @tag("Checkouts")
 interface Checkouts {
-  /** Merchant creates a checkout. org_id is the One tenant id. Requires Bearer + writer. 201 on mint; 200 on idempotent replay. */
+  /** Merchant creates a checkout. org_id is the One tenant id. Writer is One JWT owner/admin or a bound One `lzr_sk_`. 201 on mint; 200 on idempotent replay. */
   @post
   @route("/checkouts")
   create(

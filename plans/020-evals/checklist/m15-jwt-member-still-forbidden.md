@@ -21,19 +21,19 @@
 
 ## M15.1 Overlay
 
-- [ ] JWT `role: member` + `authz/check` allowed → writer doors **403** `Writer role required`
-- [ ] JWT `owner` / `admin` still 201 on mint
+- [x] JWT `role: member` + `authz/check` allowed → writer doors **403** `Writer role required`
+- [x] JWT `owner` / `admin` still 201 on mint
 
 ## M15.2 Tests
 
-- [ ] Existing `Member_cannot_put_gateway` still 403
-- [ ] Existing member cannot `POST /v1/checkouts` still 403
-- [ ] New: same factory, key fixture 201 **and** member JWT 403 (do not share one Responder that always allows)
+- [x] Existing `Member_cannot_put_gateway` still 403
+- [x] Existing member cannot `POST /v1/checkouts` still 403
+- [x] New: same factory, key fixture 201 **and** member JWT 403 (do not share one Responder that always allows)
 
 ## M15.3 Must not
 
-- [ ] Do not infer “machine” from missing JWT claims on a random Bearer string — prefix `lzr_sk_` only
+- [x] Do not infer “machine” from missing JWT claims on a random Bearer string — prefix `lzr_sk_` only
 
 ## M15.4 Exit
 
-- [ ] Unblocked for M16
+- [x] Unblocked for M16

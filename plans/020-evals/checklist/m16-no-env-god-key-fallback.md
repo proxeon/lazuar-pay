@@ -23,15 +23,15 @@
 
 ## M16.1
 
-- [ ] Do **not** add `One:ApiKey` / `Pay:OneApiKey` to `OneOptions` in this program (P12 parked)
-- [ ] `OneClient` must not set `DefaultRequestHeaders.Authorization` from config
-- [ ] Missing Bearer on member/writer doors → 401, Fake One send count 0
+- [x] Do **not** add `One:ApiKey` / `Pay:OneApiKey` to `OneOptions` in this program (P12 parked)
+- [x] `OneClient` must not set `DefaultRequestHeaders.Authorization` from config
+- [x] Missing Bearer on member/writer doors → 401, Fake One send count 0
 
 ## M16.2 Tests
 
-- [ ] Factory `UseSetting("Pay:OneApiKey", "lzr_sk_env")` if the key exists as a trap — still 401 without request Bearer
-- [ ] Whoami without Bearer still skips One (existing)
+- [x] Factory `UseSetting("Pay:OneApiKey", "lzr_sk_env")` if the key exists as a trap — still 401 without request Bearer
+- [x] Whoami without Bearer still skips One (existing)
 
 ## M16.3 Exit
 
-- [ ] Unblocked for M17
+- [x] Unblocked for M17

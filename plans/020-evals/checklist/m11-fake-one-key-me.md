@@ -21,27 +21,27 @@
 
 ## M11.1 Fixture
 
-- [ ] Helper JSON: `user_id` is a **key id GUID** (not `u1`)
-- [ ] `is_platform_admin`: false
-- [ ] `tenants`: **exactly one** `{ id: "t1", role: "member", status: "active" }`
-- [ ] No `permissions` required (One ROLE-03)
+- [x] Helper JSON: `user_id` is a **key id GUID** (not `u1`)
+- [x] `is_platform_admin`: false
+- [x] `tenants`: **exactly one** `{ id: "t1", role: "member", status: "active" }`
+- [x] No `permissions` required (One ROLE-03)
 
 ## M11.2 Fake One
 
-- [ ] When `Authorization` remainder starts `lzr_sk_`, `GET …/me` returns the key fixture
-- [ ] When JWT-shaped / `"Bearer tok"`, keep owner/member fixtures already used
-- [ ] `POST …/authz/check` for a key **without** `user_id` may still 400 — M12 must stop sending that
+- [x] When `Authorization` remainder starts `lzr_sk_`, `GET …/me` returns the key fixture
+- [x] When JWT-shaped / `"Bearer tok"`, keep owner/member fixtures already used
+- [x] `POST …/authz/check` for a key **without** `user_id` may still 400 — M12 must stop sending that
 
 ## M11.3 Tests
 
-- [ ] Fixture unit or whoami test: key Bearer → Pay whoami `tenants[0].id == t1`, `user_id` is the key id
-- [ ] Do not assert `role == owner` for keys
+- [x] Fixture unit or whoami test: key Bearer → Pay whoami `tenants[0].id == t1`, `user_id` is the key id
+- [x] Do not assert `role == owner` for keys
 
 ## M11.4 Must not
 
-- [ ] Do not import One test factory / One csproj
-- [ ] Do not hit live `:8080` in CI
+- [x] Do not import One test factory / One csproj
+- [x] Do not hit live `:8080` in CI
 
 ## M11.5 Exit
 
-- [ ] Unblocked for M12
+- [x] Unblocked for M12
