@@ -124,6 +124,12 @@ internal static class PublicPayEndpoints
         IHostEnvironment env,
         CancellationToken ct)
     {
+        var maxStarts = config.GetValue("Pay:StartMaxPerMinute", 20);
+        if (maxStarts > 0 && !PublicPayLimiter.TryAcquire(token, maxStarts, 60))
+        {
+            return PayErrors.Status(429, "Too Many Requests", "Too many start attempts");
+        }
+
         var link = await db.PaymentLinks.FirstOrDefaultAsync(x => x.PublicToken == token, ct);
         CheckoutRow row;
         if (link is not null)

@@ -30,6 +30,8 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string EnvironmentName { get; init; } = "Testing";
 
+    public int StartMaxPerMinute { get; init; } = 200;
+
     /// <summary>
     /// InMemory BeginTransaction is a no-op. H25/G12 proof uses FulfillmentProbe,
     /// which throws before Fulfillment.SaveChanges so the event row is not committed.
@@ -44,6 +46,7 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
         builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
+        builder.UseSetting("Pay:StartMaxPerMinute", StartMaxPerMinute.ToString());
         if (!string.IsNullOrWhiteSpace(CorsOrigins))
         {
             builder.UseSetting("Pay:CorsOrigins", CorsOrigins);

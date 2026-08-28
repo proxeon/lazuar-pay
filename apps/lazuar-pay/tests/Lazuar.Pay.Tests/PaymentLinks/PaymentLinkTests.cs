@@ -387,6 +387,19 @@ public class PaymentLinkTests
     }
 
     [Test]
+    public async Task Start_rate_limit_is_429()
+    {
+        await using var factory = new PayApiFactory { StartMaxPerMinute = 2 };
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (token, _) = await PayTest.SeedPaymentLink(client, unlimited: true);
+        Assert.That((await PayTest.StartPay(client, token, "slot-lim-01")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PayTest.StartPay(client, token, "slot-lim-02")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var third = await PayTest.StartPay(client, token, "slot-lim-03");
+        Assert.That(third.StatusCode, Is.EqualTo((HttpStatusCode)429));
+    }
+
+    [Test]
     public async Task Concurrent_start_on_one_person_link_admits_one_psp()
     {
         await using var factory = new PayApiFactory();
