@@ -1,4 +1,4 @@
-import { CreditCard, LayoutDashboard, Link2, Receipt, Webhook, Wallet } from 'lucide-react'
+import { CreditCard, KeyRound, LayoutDashboard, Link2, Receipt, Webhook, Wallet } from 'lucide-react'
 import type { AppSidebarNavGroup } from '../ui/components/app-sidebar'
 
 export function getPayNavGroups(orgId: string): AppSidebarNavGroup[] {
@@ -12,6 +12,12 @@ export function getPayNavGroups(orgId: string): AppSidebarNavGroup[] {
         { name: 'Pay links', icon: Link2, path: `${base}/checkouts` },
         { name: 'Payments', icon: Wallet, path: `${base}/payments` },
         { name: 'Receipts', icon: Receipt, path: `${base}/receipts` },
+      ],
+    },
+    {
+      label: 'Developers',
+      items: [
+        { name: 'API keys', icon: KeyRound, path: `${base}/api-keys` },
         { name: 'Webhooks', icon: Webhook, path: `${base}/webhooks` },
       ],
     },

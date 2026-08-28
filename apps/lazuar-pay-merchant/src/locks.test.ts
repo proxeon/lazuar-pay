@@ -47,6 +47,27 @@ describe('merchant honesty locks', () => {
     expect(src).not.toContain('GenerateApi')
   })
 
+  it('merchant API keys are a One preset mint, not a Pay key table', () => {
+    const page = readFileSync(join(root, 'src', 'pages', 'org', 'ApiKeysPage.tsx'), 'utf8')
+    const client = readFileSync(join(root, 'src', 'lib', 'oneApi.ts'), 'utf8')
+    const nav = readFileSync(join(root, 'src', 'layout', 'nav.ts'), 'utf8')
+    expect(nav).toContain('API keys')
+    expect(nav).toContain('/api-keys')
+    expect(client).toContain("['tenant:read', 'authz:check']")
+    expect(client).toContain('/tenants/')
+    expect(client).toContain('/api-keys')
+    expect(client).toContain('createPayWorkerKey')
+    expect(client).not.toContain('GenerateApi')
+    expect(client).not.toContain('/v1/orgs/')
+    expect(page).toContain('createPayWorkerKey')
+    expect(page).toContain('lzr_sk_')
+    expect(page).toContain('Copy now. One will not show this again.')
+    expect(page).not.toContain('GenerateApi')
+    expect(page).not.toContain('payFetch')
+    expect(page).not.toContain('sk_test_')
+    expect(page).not.toContain('type="checkbox"')
+  })
+
   it('CHIP PEM uses a textarea', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
     expect(src).toContain('Textarea')

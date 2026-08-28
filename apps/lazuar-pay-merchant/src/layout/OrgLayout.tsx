@@ -23,6 +23,7 @@ function titleFromPath(pathname: string, orgId: string) {
   if (leaf === 'checkouts') return 'Pay links'
   if (leaf === 'payments') return 'Payments'
   if (leaf === 'receipts') return 'Receipts'
+  if (leaf === 'api-keys') return 'API keys'
   if (leaf === 'webhooks') return 'Webhooks'
   if (leaf === 'new') return 'Create workspace'
   return leaf.charAt(0).toUpperCase() + leaf.slice(1)
