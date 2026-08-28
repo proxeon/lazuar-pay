@@ -64,6 +64,7 @@ function App() {
   const [verifying, setVerifying] = useState(() => verifyingQuery())
   const [verifyTimedOut, setVerifyTimedOut] = useState(false)
   const [pollNonce, setPollNonce] = useState(0)
+  const [reload, setReload] = useState(0)
   const payStatus = pay?.status
 
   useEffect(() => {
@@ -73,10 +74,19 @@ function App() {
     }
     const path = payPath(token)
     let stop = false
+    setError(null)
     async function load() {
-      const r = await fetch(path)
+      let r: Response
+      try {
+        r = await fetch(path)
+      } catch {
+        throw new Error("Can't reach Pay")
+      }
       if (r.status === 404) throw new Error('missing')
-      if (!r.ok) throw new Error(`status ${r.status}`)
+      if (!r.ok) {
+        const detail = await readDetail(r)
+        throw new Error(detail ?? "Can't reach Pay")
+      }
       return (await r.json()) as PayView
     }
     void load()
@@ -90,12 +100,12 @@ function App() {
         }
       })
       .catch((err: unknown) => {
-        if (!stop) setError(err instanceof Error ? err.message : 'error')
+        if (!stop) setError(err instanceof Error ? err.message : "Can't reach Pay")
       })
     return () => {
       stop = true
     }
-  }, [token])
+  }, [token, reload])
 
   useEffect(() => {
     if (
@@ -211,6 +221,36 @@ function App() {
   }
 
   if (!pay) {
+    if (error && error !== 'missing') {
+      return (
+        <Shell>
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <CircleAlert className="size-6" />
+              </div>
+              <CardTitle className="text-xl">Can&apos;t reach Pay</CardTitle>
+              <CardDescription>
+                {error === "Can't reach Pay" ? 'The pay host did not respond. No sign-in.' : error}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setError(null)
+                  setReload((n) => n + 1)
+                }}
+              >
+                Retry
+              </Button>
+            </CardFooter>
+          </Card>
+        </Shell>
+      )
+    }
     return (
       <Shell>
         <Card>

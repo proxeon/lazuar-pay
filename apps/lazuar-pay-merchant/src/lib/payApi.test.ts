@@ -18,8 +18,12 @@ describe('getWhoami', () => {
     const fetchMock = vi.fn(async () => jsonResponse(401, { detail: 'Identity provider rejected the token' }))
     vi.stubGlobal('fetch', fetchMock)
     await expect(getWhoami('access.jwt.sig')).rejects.toThrow('unauthorized')
-    const init = fetchMock.mock.calls[0]?.[1] as { headers: Record<string, string> }
-    expect(init.headers.Authorization).toBe('Bearer access.jwt.sig')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer access.jwt.sig' }),
+      }),
+    )
   })
 
   it('surfaces One 503 detail instead of whoami 503', async () => {

@@ -15,6 +15,7 @@ API_BASE="${API_BASE%/}"
 WRITE_ENV="${WRITE_ENV:-0}"
 NAME="${SPA_NAME:-lazuar-pay-merchant}"
 REDIRECT_URI="${REDIRECT_URI:-http://localhost:5178/callback}"
+SILENT_REDIRECT_URI="${SILENT_REDIRECT_URI:-http://localhost:5178/silent-renew.html}"
 POST_LOGOUT_URI="${POST_LOGOUT_URI:-http://localhost:5178/}"
 
 if [[ -z "${ACCESS_TOKEN:-}" || -z "${TENANT_ID:-}" ]]; then
@@ -36,8 +37,9 @@ command -v jq >/dev/null
 body="$(jq -n \
   --arg name "$NAME" \
   --arg redir "$REDIRECT_URI" \
+  --arg silent "$SILENT_REDIRECT_URI" \
   --arg post "$POST_LOGOUT_URI" \
-  '{name:$name, type:"spa", redirect_uris:[$redir], post_logout_redirect_uris:[$post]}')"
+  '{name:$name, type:"spa", redirect_uris:[$redir, $silent], post_logout_redirect_uris:[$post]}')"
 
 resp="$(curl -sS -X POST "$API_BASE/tenants/$TENANT_ID/apps" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \

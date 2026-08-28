@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useParams } from 'react-router-dom'
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { pickApiBearerToken } from '../auth/bearerToken'
 import { getWhoami, type Whoami, type WhoamiTenant } from '../lib/payApi'
@@ -36,7 +36,6 @@ export function OrgLayout() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setOrgHint(orgId)
     if (!token) {
       setReturnTo(`${location.pathname}${location.search}`)
       void auth.signinRedirect()
@@ -49,7 +48,12 @@ export function OrgLayout() {
         setWho(body)
         const match = body.tenants.find((t) => t.id === orgId) ?? null
         setTenant(match)
-        setError(match ? null : 'Not a member of this org')
+        if (match) {
+          setOrgHint(orgId)
+          setError(null)
+        } else {
+          setError('Not a member of this org')
+        }
       })
       .catch((err: unknown) => {
         if (stop) return
@@ -70,10 +74,22 @@ export function OrgLayout() {
 
   if (error) {
     return (
-      <div className="flex min-h-dvh items-center justify-center p-6">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6">
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
+        <div className="flex gap-4 text-sm">
+          <Link className="text-sky-700 underline-offset-2 hover:underline" to="/">
+            Switch workspace
+          </Link>
+          <button
+            type="button"
+            className="text-sky-700 underline-offset-2 hover:underline"
+            onClick={() => void auth.signoutRedirect()}
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     )
   }

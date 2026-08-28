@@ -66,7 +66,7 @@ export function PaymentsPage() {
 
   return (
     <PageCanvas>
-      <PageHeader title="Payments" subtitle="Charges booked on a verified webhook. Amount charged = amount booked." />
+      <PageHeader subtitle="Charges booked on a verified webhook. Amount charged = amount booked." />
 
       {listError ? (
         <p role="alert" className="text-sm text-red-600">

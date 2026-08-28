@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { pickApiBearerToken } from '../auth/bearerToken'
-import { dashboardPath } from '../lib/homePath'
+import { orgIdFromPath, resolvePostLoginPath } from '../lib/homePath'
 import { getWhoami } from '../lib/payApi'
-import { setOrgHint } from '../lib/sessionKeys'
+import { setOrgHint, takeReturnTo } from '../lib/sessionKeys'
 
 export function HomePage() {
   const auth = useAuth()
@@ -21,8 +21,8 @@ export function HomePage() {
     getWhoami(token)
       .then((body) => {
         if (ac.signal.aborted) return
-        const next = dashboardPath(body.tenants)
-        const id = next.match(/^\/o\/([^/]+)/)?.[1]
+        const next = resolvePostLoginPath(takeReturnTo(), body.tenants)
+        const id = orgIdFromPath(next)
         if (id) setOrgHint(id)
         setPath(next)
       })

@@ -13,6 +13,7 @@ export function getOidcConfig(): AuthProviderProps {
   const redirect_uri =
     import.meta.env.VITE_ZITADEL_REDIRECT_URI ||
     'http://localhost:5178/callback'
+  const silent_redirect_uri = `${new URL(redirect_uri).origin}/silent-renew.html`
   const post_logout_redirect_uri =
     import.meta.env.VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI ||
     'http://localhost:5178/'
@@ -24,6 +25,7 @@ export function getOidcConfig(): AuthProviderProps {
     authority,
     client_id,
     redirect_uri,
+    silent_redirect_uri,
     post_logout_redirect_uri,
     scope,
     response_type: 'code',

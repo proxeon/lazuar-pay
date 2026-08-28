@@ -214,10 +214,7 @@ export function CheckoutsPage() {
   return (
     <PageCanvas>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          title="Pay links"
-          subtitle="Hosted links for this workspace. Set how many people can pay. Buyer has no One account and no PSP picker."
-        />
+        <PageHeader subtitle="Hosted links for this workspace. Set how many people can pay. Buyer has no One account and no PSP picker." />
         {write ? (
           <Button type="button" onClick={() => setOpen(true)}>
             Create pay link

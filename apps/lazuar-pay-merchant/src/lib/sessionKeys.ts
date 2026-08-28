@@ -12,11 +12,25 @@ export function setReturnTo(pathWithSearch: string): void {
   }
 }
 
+export function peekReturnTo(): string | null {
+  const value = sessionStorage.getItem(RETURN_TO_KEY)
+  if (value && isSafeReturnPath(value)) return value
+  return null
+}
+
 export function takeReturnTo(): string | null {
   const value = sessionStorage.getItem(RETURN_TO_KEY)
   if (value) sessionStorage.removeItem(RETURN_TO_KEY)
   if (value && isSafeReturnPath(value)) return value
   return null
+}
+
+/** Survives React StrictMode remount so login completion does not drop returnTo. */
+let takenOnce: string | null | undefined
+
+export function takeReturnToOnce(): string | null {
+  if (takenOnce === undefined) takenOnce = takeReturnTo()
+  return takenOnce
 }
 
 export function getOrgHint(): string | null {

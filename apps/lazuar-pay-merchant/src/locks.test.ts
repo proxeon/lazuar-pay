@@ -157,6 +157,50 @@ describe('merchant honesty locks', () => {
     const src = readFileSync(join(root, 'src', 'lib', 'homePath.ts'), 'utf8')
     expect(src).toContain('/overview')
     expect(src).toContain('/workspaces/new')
+    expect(src).toContain('resolvePostLoginPath')
+  })
+
+  it('silent renew does not reuse the login callback page', () => {
+    const oidc = readFileSync(join(root, 'src', 'auth', 'oidcConfig.ts'), 'utf8')
+    const silent = readFileSync(join(root, 'src', 'auth', 'silentRenew.ts'), 'utf8')
+    expect(oidc).toContain('silent_redirect_uri')
+    expect(oidc).toContain('/silent-renew.html')
+    expect(oidc).not.toMatch(/silent_redirect_uri[^\n]*\/callback/)
+    expect(silent).toContain('signinSilentCallback')
+    expect(silent).not.toContain('takeReturnTo')
+    expect(silent).not.toContain('Navigate')
+  })
+
+  it('money pages do not duplicate the chrome h1 and the user menu is not Settings', () => {
+    const chrome = readFileSync(join(root, 'src', 'layout', 'DashboardChrome.tsx'), 'utf8')
+    const checkouts = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
+    const gateway = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    const payments = readFileSync(join(root, 'src', 'pages', 'org', 'PaymentsPage.tsx'), 'utf8')
+    const receipts = readFileSync(join(root, 'src', 'pages', 'org', 'ReceiptsPage.tsx'), 'utf8')
+    expect(chrome).not.toContain('onSettingsClick')
+    expect(checkouts).not.toContain('title="Pay links"')
+    expect(gateway).not.toContain('title="Processor"')
+    expect(payments).not.toContain('title="Payments"')
+    expect(receipts).not.toContain('title="Receipts"')
+  })
+
+  it('membership miss and first workspace include Sign out', () => {
+    const org = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
+    const create = readFileSync(join(root, 'src', 'pages', 'CreateWorkspacePage.tsx'), 'utf8')
+    expect(org).toContain('Switch workspace')
+    expect(org).toContain('Sign out')
+    expect(org).toContain('signoutRedirect')
+    expect(create).toContain('Sign out')
+    expect(create).toContain('signoutRedirect')
+  })
+
+  it('does not set the org hint until membership is confirmed', () => {
+    const org = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
+    const callback = readFileSync(join(root, 'src', 'pages', 'CallbackPage.tsx'), 'utf8')
+    expect(org).toContain('if (match)')
+    expect(org).toContain('setOrgHint(orgId)')
+    expect(callback).toContain('resolvePostLoginPath')
+    expect(callback).toContain('takeReturnToOnce')
   })
 
   it('slug pattern escapes hyphen for unicode-sets HTML pattern', () => {

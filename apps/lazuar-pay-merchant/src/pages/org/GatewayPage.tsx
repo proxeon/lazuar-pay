@@ -130,10 +130,7 @@ export function GatewayPage() {
 
   return (
     <PageCanvas>
-      <PageHeader
-        title="Processor"
-        subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links."
-      />
+      <PageHeader subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links." />
 
       {listError ? (
         <p role="alert" className="text-sm text-red-600">

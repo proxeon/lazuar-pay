@@ -52,7 +52,6 @@ export function DashboardChrome({
           roleLabel: tenant.role ?? 'member',
         }}
         onLogout={() => void auth.signoutRedirect()}
-        onSettingsClick={() => navigate(`/o/${orgId}/gateway`)}
         header={<WorkspaceSwitcher orgId={orgId} tenants={who.tenants} />}
       />
 

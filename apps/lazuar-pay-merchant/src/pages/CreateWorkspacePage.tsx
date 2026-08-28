@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { pickApiBearerToken } from '../auth/bearerToken'
 import { dashboardPath } from '../lib/homePath'
@@ -31,17 +31,35 @@ export function CreateWorkspacePage() {
         setReady(true)
       })
       .catch((err: unknown) => {
-        if (!ac.signal.aborted) setError(err instanceof Error ? err.message : 'whoami failed')
+        if (ac.signal.aborted) return
+        const message = err instanceof Error ? err.message : 'whoami failed'
+        if (message === 'unauthorized') {
+          void auth.signinRedirect()
+          return
+        }
+        setError(message)
       })
     return () => ac.abort()
   }, [token, auth])
 
-  if (error) {
+  if (error && error !== 'unauthorized') {
     return (
-      <main className="mx-auto max-w-lg p-6">
+      <main className="mx-auto max-w-lg space-y-4 p-6">
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
+        <div className="flex gap-4 text-sm">
+          <Link className="text-sky-700 underline-offset-2 hover:underline" to="/">
+            Switch workspace
+          </Link>
+          <button
+            type="button"
+            className="text-sky-700 underline-offset-2 hover:underline"
+            onClick={() => void auth.signoutRedirect()}
+          >
+            Sign out
+          </button>
+        </div>
       </main>
     )
   }
@@ -54,10 +72,17 @@ export function CreateWorkspacePage() {
 
   return (
     <div className="min-h-dvh bg-slate-50/80">
-      <header className="flex h-14 items-center border-b border-slate-200/80 bg-white/90 px-6">
+      <header className="flex h-14 items-center justify-between border-b border-slate-200/80 bg-white/90 px-6">
         <p className="text-sm font-semibold tracking-tight text-slate-900">Lazuar Pay</p>
+        <button
+          type="button"
+          className="text-sm text-sky-700 underline-offset-2 hover:underline"
+          onClick={() => void auth.signoutRedirect()}
+        >
+          Sign out
+        </button>
       </header>
-      <CreateWorkspaceForm token={token} />
+      <CreateWorkspaceForm token={token} title="Create workspace" />
     </div>
   )
 }

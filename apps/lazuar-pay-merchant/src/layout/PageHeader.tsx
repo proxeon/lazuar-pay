@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react'
 
-export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+export function PageHeader({ title, subtitle }: { title?: string; subtitle?: string }) {
   return (
     <div className="min-w-0">
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[1.75rem]">
-        {title}
-      </h1>
+      {title ? (
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[1.75rem]">
+          {title}
+        </h1>
+      ) : null}
       {subtitle ? (
-        <p className="mt-1 max-w-2xl text-sm text-slate-500">{subtitle}</p>
+        <p className={`${title ? 'mt-1 ' : ''}max-w-2xl text-sm text-slate-500`}>{subtitle}</p>
       ) : null}
     </div>
   )

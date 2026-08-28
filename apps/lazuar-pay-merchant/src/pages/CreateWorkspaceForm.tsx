@@ -17,7 +17,7 @@ export function slugFromName(name: string): string {
     .slice(0, 64)
 }
 
-export function CreateWorkspaceForm({ token }: { token: string }) {
+export function CreateWorkspaceForm({ token, title }: { token: string; title?: string }) {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -48,7 +48,7 @@ export function CreateWorkspaceForm({ token }: { token: string }) {
   return (
     <PageCanvas>
       <PageHeader
-        title="Create workspace"
+        title={title}
         subtitle="One tenant id becomes Pay org_id. Pay does not store organizations."
       />
       <Card>

@@ -66,7 +66,7 @@ export function ReceiptsPage() {
 
   return (
     <PageCanvas>
-      <PageHeader title="Receipts" subtitle="Official Receipt RCPT-…. Never a Tax Invoice." />
+      <PageHeader subtitle="Official Receipt RCPT-…. Never a Tax Invoice." />
 
       {listError ? (
         <p role="alert" className="text-sm text-red-600">

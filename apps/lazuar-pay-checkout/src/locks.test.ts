@@ -68,6 +68,14 @@ describe('checkout honesty', () => {
     expect(src()).toContain("pay.status === 'full'")
   })
 
+  it('paints a retry card when boot GET is not 404', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain("Can't reach Pay")
+    expect(src).toContain('Retry')
+    expect(src).toContain("r.status === 404")
+    expect(src).not.toContain('Sign in')
+  })
+
   it('maps start 400 without calling it paid', () => {
     expect(src()).toContain('response.status === 400')
     expect(src()).not.toContain("status: 'paid'")
