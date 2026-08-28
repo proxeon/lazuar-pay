@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payFetch, payJson } from '../../lib/payApi'
-import { isRail, railLabel, type Processor, type Rail } from '../../lib/processors'
+import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
+import { defaultMintRail, isRail, railLabel, readyMintRails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
@@ -27,25 +28,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { cn } from '../../ui/lib/utils'
 import { ArrowUpRight, Check, Copy } from 'lucide-react'
 
-const testProcessor: Processor = { provider: 'test', configured: true }
+const checkoutOrigin = resolveCheckoutOrigin(
+  import.meta.env.VITE_CHECKOUT_ORIGIN as string | undefined,
+  import.meta.env.PROD,
+)
 
-function withTest(list: Processor[]): Processor[] {
-  const ready = list.filter((p) => p.configured && isRail(p.provider))
-  if (!ready.some((p) => p.provider === 'test')) {
-    ready.unshift(testProcessor)
-  }
-  return ready
-}
-
-function checkoutOrigin(): string {
-  return ((import.meta.env.VITE_CHECKOUT_ORIGIN as string | undefined) ?? 'http://localhost:5179').replace(
-    /\/$/,
-    '',
-  )
-}
-
-function buyerUrl(token: string): string {
-  return `${checkoutOrigin()}/c/${token}`
+function buyerUrl(token: string): string | null {
+  if (!checkoutOrigin) return null
+  return buyerPayUrl(token, checkoutOrigin)
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -75,6 +65,7 @@ type PayLink = {
   currency: string
   status: string
   public_token?: string | null
+  pay_url?: string | null
   created_at?: string
   label?: string | null
   max_payers?: number | null
@@ -105,8 +96,8 @@ export function CheckoutsPage() {
   const [amount, setAmount] = useState('10')
   const [capacity, setCapacity] = useState<Capacity>('one')
   const [maxPayers, setMaxPayers] = useState('2')
-  const [provider, setProvider] = useState<Rail | ''>('test')
-  const [configured, setConfigured] = useState<Processor[]>([testProcessor])
+  const [provider, setProvider] = useState<Rail | ''>('')
+  const [configured, setConfigured] = useState<Processor[]>([])
   const [links, setLinks] = useState<PayLink[]>([])
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -132,13 +123,11 @@ export function CheckoutsPage() {
     payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
       .then((body) => {
         if (stop) return
-        const ready = withTest(body.processors ?? [])
+        const ready = readyMintRails(body.processors ?? [])
         setConfigured(ready)
         setProvider((prev) => {
           if (prev && ready.some((p) => p.provider === prev)) return prev
-          const firstReal = ready.find((p) => p.provider !== 'test')?.provider
-          const first = firstReal ?? ready[0]?.provider
-          return isRail(first) ? first : 'test'
+          return defaultMintRail(ready)
         })
       })
       .catch((err: unknown) => {
@@ -157,6 +146,10 @@ export function CheckoutsPage() {
 
   async function createProductAndLink() {
     if (!write || !provider) return
+    if (!checkoutOrigin) {
+      setError('VITE_CHECKOUT_ORIGIN is required in production')
+      return
+    }
     const limited = Number(maxPayers)
     if (capacity === 'limited' && (!Number.isInteger(limited) || limited < 2)) {
       setError('Limited links need at least 2 people')
@@ -275,7 +268,7 @@ export function CheckoutsPage() {
             </TableHeader>
             <TableBody>
               {links.map((row) => {
-                const url = row.public_token ? buyerUrl(row.public_token) : null
+                const url = row.pay_url || (row.public_token ? buyerUrl(row.public_token) : null)
                 const rail = isRail(row.provider) ? railLabel[row.provider] : (row.provider ?? '—')
                 const when = formatWhen(row.created_at)
                 const status = statusLabel(row)
@@ -373,7 +366,7 @@ export function CheckoutsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="provider">Processor</Label>
-              <Select value={provider || 'test'} onValueChange={(v) => setProvider(v as Rail)}>
+              <Select value={provider || undefined} onValueChange={(v) => setProvider(v as Rail)}>
                 <SelectTrigger id="provider" className="w-full">
                   <SelectValue placeholder="Select a rail" />
                 </SelectTrigger>
@@ -386,15 +379,22 @@ export function CheckoutsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {configured.every((p) => p.provider === 'test') ? (
+              {!configured.some((p) => p.provider !== 'test') ? (
                 <p className="text-xs text-slate-500">
-                  Test needs no secrets.{' '}
+                  {configured.some((p) => p.provider === 'test') ? 'Test needs no secrets. ' : 'No processor is ready. '}
                   <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
                     Paste keys
                   </Link>{' '}
                   for a live rail.
                 </p>
               ) : null}
+              {checkoutOrigin ? (
+                <p className="text-xs text-slate-500">Buyer URL origin: {checkoutOrigin}</p>
+              ) : (
+                <p role="alert" className="text-xs text-red-600">
+                  VITE_CHECKOUT_ORIGIN is required in production
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="capacity">Who can pay</Label>
@@ -431,7 +431,11 @@ export function CheckoutsPage() {
             <Button type="button" variant="outline" onClick={closeCreate} disabled={busy}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void createProductAndLink()} disabled={busy || !provider}>
+            <Button
+              type="button"
+              onClick={() => void createProductAndLink()}
+              disabled={busy || !provider || !checkoutOrigin}
+            >
               Create pay link
             </Button>
           </DialogFooter>

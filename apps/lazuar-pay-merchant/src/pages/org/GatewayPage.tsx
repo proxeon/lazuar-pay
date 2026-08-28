@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
-import { payApi, payFetch, payJson } from '../../lib/payApi'
-import { railBlurb, railCopy, railLabel, rails, type Processor, type Rail } from '../../lib/processors'
+import { payFetch, payJson } from '../../lib/payApi'
+import { railBlurb, railCopy, railLabel, visibleRails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
@@ -142,7 +142,7 @@ export function GatewayPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {rails.map((r) => {
+        {visibleRails(processors).map((r) => {
           const row = processors.find((p) => p.provider === r)
           const isTest = r === 'test'
           const on = isTest || Boolean(row?.configured)
@@ -320,17 +320,15 @@ export function GatewayPage() {
                 )}
 
                 <p className="text-xs leading-relaxed text-slate-500">
-                  Webhook URL:{' '}
+                  Webhook path:{' '}
                   <code>
-                    {payApi}/v1/webhooks/{editing}/{orgId}
+                    /v1/webhooks/{editing}/{orgId}
                   </code>
                 </p>
-                {editing === 'billplz' ? (
-                  <p className="text-xs text-slate-500">
-                    Dashboard callback is registered at start from Pay:PublicBaseUrl (public https). This path
-                    is the shape; localhost will fail.
-                  </p>
-                ) : null}
+                <p className="text-xs text-slate-500">
+                  Dashboard callback must be public https on Pay:PublicBaseUrl. This SPA does not know that
+                  origin. Localhost will fail.
+                </p>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeEdit} disabled={saving}>

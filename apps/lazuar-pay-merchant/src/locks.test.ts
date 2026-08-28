@@ -106,11 +106,35 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('started · unlimited')
   })
 
-  it('overview lists processors not a single active rail', () => {
+  it('mint rails trust the host list and default to the first real rail', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
+    expect(src).toContain('readyMintRails')
+    expect(src).toContain('defaultMintRail')
+    expect(src).not.toContain('withTest')
+    expect(src).not.toContain("useState<Rail | ''>('test')")
+    expect(src).toContain("useState<Rail | ''>('')")
+    expect(src).toContain('pay_url')
+    expect(src).toContain('resolveCheckoutOrigin')
+    expect(src).toContain('VITE_CHECKOUT_ORIGIN is required in production')
+    expect(src).toContain('Buyer URL origin:')
+  })
+
+  it('overview On file excludes Test', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'OverviewPage.tsx'), 'utf8')
     expect(src).toContain('/gateways')
     expect(src).not.toContain('Active rail')
     expect(src).toContain('On file')
+    expect(src).toContain('vaultedNonTest')
+    expect(src).toContain('Test is always available')
+  })
+
+  it('processor cards show Test only when the host listed it', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    expect(src).toContain('visibleRails')
+    expect(src).not.toContain('{payApi}/v1/webhooks')
+    expect(src).toContain('/v1/webhooks/')
+    expect(src).toContain('Pay:PublicBaseUrl')
+    expect(src).not.toContain('localhost:8081')
   })
 
   it('org shell uses copied AppSidebar not Aura ops nav', () => {

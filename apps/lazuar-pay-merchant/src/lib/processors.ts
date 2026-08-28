@@ -42,3 +42,28 @@ export type Processor = {
 export function isRail(value: string | undefined | null): value is Rail {
   return !!value && (rails as readonly string[]).includes(value)
 }
+
+/** Configured rails the host listed. Do not invent Test. */
+export function readyMintRails(list: Processor[]): Processor[] {
+  return list.filter((p) => p.configured && isRail(p.provider))
+}
+
+/** First vaulted non-test rail, else Test if the host listed it, else empty. */
+export function defaultMintRail(ready: Processor[]): Rail | '' {
+  const firstReal = ready.find((p) => p.provider !== 'test')?.provider
+  const first = firstReal ?? ready[0]?.provider
+  return isRail(first) ? first : ''
+}
+
+/** Vaulted secrets. Test is always configured when listed — it is not "on file". */
+export function vaultedNonTest(list: Processor[]): Processor[] {
+  return list.filter((p) => p.configured && p.provider !== 'test')
+}
+
+export function hostListsTest(list: Processor[]): boolean {
+  return list.some((p) => p.provider === 'test')
+}
+
+export function visibleRails(list: Processor[]): Rail[] {
+  return hostListsTest(list) ? [...rails] : rails.filter((r) => r !== 'test')
+}

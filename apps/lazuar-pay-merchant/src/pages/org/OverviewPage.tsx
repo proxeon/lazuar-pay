@@ -4,7 +4,7 @@ import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { useEffect, useState } from 'react'
 import { payJson } from '../../lib/payApi'
-import { isRail, railLabel, type Processor } from '../../lib/processors'
+import { hostListsTest, isRail, railLabel, vaultedNonTest, type Processor } from '../../lib/processors'
 
 export function OverviewPage() {
   const { orgId, tenant, token, write } = useOutletContext<OrgOutletContext>()
@@ -31,7 +31,8 @@ export function OverviewPage() {
     }
   }, [orgId, token])
 
-  const onFile = processors.filter((p) => p.configured)
+  const onFile = vaultedNonTest(processors)
+  const testListed = hostListsTest(processors)
 
   return (
     <PageCanvas>
@@ -58,16 +59,19 @@ export function OverviewPage() {
             )}
             {!listError
               ? onFile.map((p) => (
-              <p key={p.provider}>
-                <code>{isRail(p.provider) ? railLabel[p.provider] : p.provider}</code>
-                {p.last4 ? <span className="text-slate-500"> · …{p.last4}</span> : null}
-                <span className="text-slate-500">
-                  {' '}
-                  · webhook {p.webhook_configured ? 'on file' : 'not set'}
-                </span>
-              </p>
-            ))
+                  <p key={p.provider}>
+                    <code>{isRail(p.provider) ? railLabel[p.provider] : p.provider}</code>
+                    {p.last4 ? <span className="text-slate-500"> · …{p.last4}</span> : null}
+                    <span className="text-slate-500">
+                      {' '}
+                      · webhook {p.webhook_configured ? 'on file' : 'not set'}
+                    </span>
+                  </p>
+                ))
               : null}
+            {!listError && loaded && testListed ? (
+              <p className="text-slate-500">Test is always available.</p>
+            ) : null}
             {write ? (
               <p>
                 <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
