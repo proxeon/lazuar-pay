@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
-import { payApi, payFetch } from '../../lib/payApi'
+import { payApi, payFetch, payJson } from '../../lib/payApi'
 import { railBlurb, railCopy, railLabel, rails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -39,14 +39,20 @@ export function GatewayPage() {
   const [keySecret, setKeySecret] = useState('')
   const [processors, setProcessors] = useState<Processor[]>([])
   const [saving, setSaving] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
 
   const selected = editing ? processors.find((p) => p.provider === editing) : undefined
 
   async function refresh() {
-    const gw = await payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
-    if (!gw.ok) return
-    const body = (await gw.json()) as { processors?: Processor[] }
-    setProcessors(body.processors ?? [])
+    try {
+      const body = await payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${orgId}/gateways`, {
+        orgHint: orgId,
+      })
+      setProcessors(body.processors ?? [])
+      setListError(null)
+    } catch (err: unknown) {
+      setListError(err instanceof Error ? err.message : 'Pay unreachable')
+    }
   }
 
   useEffect(() => {
@@ -83,6 +89,7 @@ export function GatewayPage() {
   async function pasteKey() {
     if (!write || !editing) return
     setSaving(true)
+    setError(null)
     const payload: Record<string, string> = {
       provider: editing,
       webhook_secret: webhookSecret,
@@ -98,21 +105,26 @@ export function GatewayPage() {
     if (editing === 'billplz') {
       payload.environment = environment
     }
-    const response = await payFetch(token, `/v1/orgs/${orgId}/gateway`, {
-      method: 'PUT',
-      orgHint: orgId,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    setSaving(false)
-    if (!response.ok) setError(await problemDetail(response, `keys ${response.status}`))
-    else {
-      setError(null)
-      setSecret('')
-      setWebhookSecret('')
-      setKeySecret('')
-      await refresh()
-      closeEdit()
+    try {
+      const response = await payFetch(token, `/v1/orgs/${orgId}/gateway`, {
+        method: 'PUT',
+        orgHint: orgId,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) setError(await problemDetail(response, `keys ${response.status}`))
+      else {
+        setError(null)
+        setSecret('')
+        setWebhookSecret('')
+        setKeySecret('')
+        await refresh()
+        closeEdit()
+      }
+    } catch {
+      setError('Pay unreachable')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -122,6 +134,12 @@ export function GatewayPage() {
         title="Processor"
         subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links."
       />
+
+      {listError ? (
+        <p role="alert" className="text-sm text-red-600">
+          {listError}
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rails.map((r) => {

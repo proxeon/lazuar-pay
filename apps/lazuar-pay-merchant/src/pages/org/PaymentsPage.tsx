@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { payFetch } from '../../lib/payApi'
+import { payJson } from '../../lib/payApi'
 import { isRail, railLabel } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -42,21 +42,43 @@ function formatWhen(iso?: string): string {
 export function PaymentsPage() {
   const { orgId, token } = useOutletContext<OrgOutletContext>()
   const [payments, setPayments] = useState<Payment[]>([])
+  const [listError, setListError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    payFetch(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
-      .then(async (r) => {
-        if (r.ok) setPayments((await r.json()) as Payment[])
+    let stop = false
+    setLoaded(false)
+    setListError(null)
+    payJson<Payment[]>(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
+      .then((rows) => {
+        if (stop) return
+        setPayments(rows)
+        setLoaded(true)
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (stop) return
+        setListError(err instanceof Error ? err.message : 'Pay unreachable')
+      })
+    return () => {
+      stop = true
+    }
   }, [orgId, token])
 
   return (
     <PageCanvas>
       <PageHeader title="Payments" subtitle="Charges booked on a verified webhook. Amount charged = amount booked." />
 
+      {listError ? (
+        <p role="alert" className="text-sm text-red-600">
+          {listError}
+        </p>
+      ) : null}
+
+      {listError && payments.length === 0 ? null : (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {payments.length === 0 ? (
+        {!loaded ? (
+          <div className="px-6 py-14 text-center text-sm text-slate-500">Loading…</div>
+        ) : payments.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-sm font-medium text-slate-900">No payments yet</p>
             <p className="mt-1 text-sm text-slate-500">
@@ -122,6 +144,7 @@ export function PaymentsPage() {
           </Table>
         )}
       </div>
+      )}
     </PageCanvas>
   )
 }

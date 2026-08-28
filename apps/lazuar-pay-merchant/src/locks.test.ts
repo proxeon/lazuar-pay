@@ -145,4 +145,50 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('Card')
     expect(src).toContain('workspace_name')
   })
+
+  it('org shell redirects when the access token is not a JWT or whoami is 401', () => {
+    const org = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
+    const requireAuth = readFileSync(join(root, 'src', 'auth', 'RequireAuth.tsx'), 'utf8')
+    expect(org).toContain('signinRedirect')
+    expect(org).toContain("message === 'unauthorized'")
+    expect(org).toContain('setReturnTo')
+    expect(org).toContain('Signing in…')
+    expect(requireAuth).toContain('pickApiBearerToken')
+    expect(requireAuth).toContain('signinRedirect')
+    expect(requireAuth).not.toContain('id_token')
+  })
+
+  it('list GETs surface host detail instead of the empty illustration', () => {
+    const pages = [
+      'OverviewPage.tsx',
+      'GatewayPage.tsx',
+      'CheckoutsPage.tsx',
+      'PaymentsPage.tsx',
+      'ReceiptsPage.tsx',
+    ].map((name) => readFileSync(join(root, 'src', 'pages', 'org', name), 'utf8'))
+    for (const src of pages) {
+      expect(src).toContain('listError')
+      expect(src).toContain('role="alert"')
+      expect(src).toContain('Pay unreachable')
+    }
+    const checkouts = pages[2]!
+    expect(checkouts).toContain('No pay links yet')
+    expect(checkouts).toContain('listError && links.length === 0')
+    const payments = pages[3]!
+    expect(payments).toContain('No payments yet')
+    expect(payments).toContain('listError && payments.length === 0')
+    const receipts = pages[4]!
+    expect(receipts).toContain('No receipts yet')
+    expect(receipts).toContain('listError && receipts.length === 0')
+  })
+
+  it('writer busy flags clear in finally and mint names a leftover product', () => {
+    const gateway = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    const checkouts = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
+    expect(gateway).toContain('finally')
+    expect(gateway).toContain('setSaving(false)')
+    expect(checkouts).toContain('finally')
+    expect(checkouts).toContain('setBusy(false)')
+    expect(checkouts).toContain('A product was created. Pay link failed:')
+  })
 })

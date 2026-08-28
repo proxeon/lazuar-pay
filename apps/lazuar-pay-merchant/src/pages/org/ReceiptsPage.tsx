@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { payFetch } from '../../lib/payApi'
+import { payJson } from '../../lib/payApi'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/components/table'
@@ -42,21 +42,43 @@ function formatWhen(iso?: string): string {
 export function ReceiptsPage() {
   const { orgId, token } = useOutletContext<OrgOutletContext>()
   const [receipts, setReceipts] = useState<Receipt[]>([])
+  const [listError, setListError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    payFetch(token, `/v1/orgs/${orgId}/receipts`, { orgHint: orgId })
-      .then(async (r) => {
-        if (r.ok) setReceipts((await r.json()) as Receipt[])
+    let stop = false
+    setLoaded(false)
+    setListError(null)
+    payJson<Receipt[]>(token, `/v1/orgs/${orgId}/receipts`, { orgHint: orgId })
+      .then((rows) => {
+        if (stop) return
+        setReceipts(rows)
+        setLoaded(true)
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (stop) return
+        setListError(err instanceof Error ? err.message : 'Pay unreachable')
+      })
+    return () => {
+      stop = true
+    }
   }, [orgId, token])
 
   return (
     <PageCanvas>
       <PageHeader title="Receipts" subtitle="Official Receipt RCPT-…. Never a Tax Invoice." />
 
+      {listError ? (
+        <p role="alert" className="text-sm text-red-600">
+          {listError}
+        </p>
+      ) : null}
+
+      {listError && receipts.length === 0 ? null : (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {receipts.length === 0 ? (
+        {!loaded ? (
+          <div className="px-6 py-14 text-center text-sm text-slate-500">Loading…</div>
+        ) : receipts.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-sm font-medium text-slate-900">No receipts yet</p>
             <p className="mt-1 text-sm text-slate-500">
@@ -124,6 +146,7 @@ export function ReceiptsPage() {
           </Table>
         )}
       </div>
+      )}
     </PageCanvas>
   )
 }

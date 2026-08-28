@@ -4,7 +4,7 @@ import { useAuth } from 'react-oidc-context'
 import { pickApiBearerToken } from '../auth/bearerToken'
 import { getWhoami, type Whoami, type WhoamiTenant } from '../lib/payApi'
 import { canWriteMoney } from '../lib/roles'
-import { setOrgHint } from '../lib/sessionKeys'
+import { setOrgHint, setReturnTo } from '../lib/sessionKeys'
 import { DashboardChrome } from './DashboardChrome'
 
 export type OrgOutletContext = {
@@ -37,16 +37,34 @@ export function OrgLayout() {
 
   useEffect(() => {
     setOrgHint(orgId)
-    if (!token) return
+    if (!token) {
+      setReturnTo(`${location.pathname}${location.search}`)
+      void auth.signinRedirect()
+      return
+    }
+    let stop = false
     getWhoami(token, orgId)
       .then((body) => {
+        if (stop) return
         setWho(body)
         const match = body.tenants.find((t) => t.id === orgId) ?? null
         setTenant(match)
         setError(match ? null : 'Not a member of this org')
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'whoami failed'))
-  }, [orgId, token])
+      .catch((err: unknown) => {
+        if (stop) return
+        const message = err instanceof Error ? err.message : 'whoami failed'
+        if (message === 'unauthorized') {
+          setReturnTo(`${location.pathname}${location.search}`)
+          void auth.signinRedirect()
+          return
+        }
+        setError(message)
+      })
+    return () => {
+      stop = true
+    }
+  }, [orgId, token, auth, location.pathname, location.search])
 
   const write = canWriteMoney(tenant?.role)
 
@@ -60,7 +78,15 @@ export function OrgLayout() {
     )
   }
 
-  if (!who || !tenant || !token) {
+  if (!token) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-6 text-sm text-slate-500">
+        Signing in…
+      </div>
+    )
+  }
+
+  if (!who || !tenant) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6 text-sm text-slate-500">
         Loading workspace…

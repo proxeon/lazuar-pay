@@ -1,3 +1,5 @@
+import { problemDetail } from './http'
+
 const payApi = import.meta.env.VITE_PAY_API_URL ?? 'http://localhost:8081'
 
 export type WhoamiTenant = {
@@ -29,12 +31,17 @@ export async function getWhoami(
   if (orgHint) {
     headers['X-Lazuar-Tenant-Id'] = orgHint
   }
-  const response = await fetch(`${payApi}/v1/whoami`, { headers })
+  let response: Response
+  try {
+    response = await fetch(`${payApi}/v1/whoami`, { headers })
+  } catch {
+    throw new Error('Pay unreachable')
+  }
   if (response.status === 401) {
     throw new Error('unauthorized')
   }
   if (!response.ok) {
-    throw new Error(`whoami ${response.status}`)
+    throw new Error(await problemDetail(response, `whoami ${response.status}`))
   }
   return (await response.json()) as Whoami
 }
@@ -49,6 +56,28 @@ export async function payFetch(
   headers.set('Accept', 'application/json')
   if (init?.orgHint) headers.set('X-Lazuar-Tenant-Id', init.orgHint)
   return fetch(`${payApi}${path}`, { ...init, headers })
+}
+
+/** GET/POST JSON. Non-OK uses host `detail`. Network throw → Pay unreachable. */
+export async function payJson<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit & { orgHint?: string },
+): Promise<T> {
+  let response: Response
+  try {
+    response = await payFetch(accessToken, path, init)
+  } catch {
+    throw new Error('Pay unreachable')
+  }
+  if (!response.ok) {
+    throw new Error(await problemDetail(response, `Pay ${response.status}`))
+  }
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new Error('Pay unreachable')
+  }
 }
 
 export { payApi }

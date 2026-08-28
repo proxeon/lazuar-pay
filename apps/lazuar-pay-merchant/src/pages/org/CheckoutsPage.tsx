@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
-import { payFetch } from '../../lib/payApi'
+import { payFetch, payJson } from '../../lib/payApi'
 import { isRail, railLabel, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -110,24 +110,28 @@ export function CheckoutsPage() {
   const [links, setLinks] = useState<PayLink[]>([])
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [listError, setListError] = useState<string | null>(null)
+  const [linksLoaded, setLinksLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
 
   async function loadLinks() {
-    const r = await payFetch(token, `/v1/orgs/${orgId}/payment-links`, { orgHint: orgId })
-    if (!r.ok) return
-    setLinks((await r.json()) as PayLink[])
+    const rows = await payJson<PayLink[]>(token, `/v1/orgs/${orgId}/payment-links`, { orgHint: orgId })
+    setLinks(rows)
+    setListError(null)
+    setLinksLoaded(true)
   }
 
   useEffect(() => {
-    void loadLinks()
-    payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
-      .then(async (r) => {
-        if (!r.ok) {
-          setConfigured(withTest([]))
-          return
-        }
-        const body = (await r.json()) as { processors?: Processor[] }
+    let stop = false
+    setLinksLoaded(false)
+    setListError(null)
+    void loadLinks().catch((err: unknown) => {
+      if (!stop) setListError(err instanceof Error ? err.message : 'Pay unreachable')
+    })
+    payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
+      .then((body) => {
+        if (stop) return
         const ready = withTest(body.processors ?? [])
         setConfigured(ready)
         setProvider((prev) => {
@@ -137,10 +141,13 @@ export function CheckoutsPage() {
           return isRail(first) ? first : 'test'
         })
       })
-      .catch(() => {
-        setConfigured(withTest([]))
-        setProvider((prev) => prev || 'test')
+      .catch((err: unknown) => {
+        if (stop) return
+        setListError(err instanceof Error ? err.message : 'Pay unreachable')
       })
+    return () => {
+      stop = true
+    }
   }, [orgId, token])
 
   function closeCreate() {
@@ -157,39 +164,48 @@ export function CheckoutsPage() {
     }
     setBusy(true)
     setError(null)
-    const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
-      method: 'POST',
-      orgHint: orgId,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: productName, amount: Number(amount), currency: 'MYR' }),
-    })
-    if (!created.ok) {
+    let productCreated = false
+    try {
+      const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
+        method: 'POST',
+        orgHint: orgId,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: productName, amount: Number(amount), currency: 'MYR' }),
+      })
+      if (!created.ok) {
+        setError(await problemDetail(created, `product ${created.status}`))
+        return
+      }
+      productCreated = true
+      const product = (await created.json()) as { id?: string }
+      const checkout = await payFetch(token, '/v1/payment-links', {
+        method: 'POST',
+        orgHint: orgId,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: orgId,
+          amount: Number(amount),
+          currency: 'MYR',
+          provider,
+          product_id: product.id,
+          max_payers: capacity === 'one' ? 1 : capacity === 'limited' ? limited : undefined,
+          unlimited: capacity === 'unlimited',
+        }),
+      })
+      if (!checkout.ok) {
+        const detail = await problemDetail(checkout, `pay link ${checkout.status}`)
+        setError(`A product was created. Pay link failed: ${detail}`)
+        return
+      }
+      closeCreate()
+      await loadLinks()
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : 'Pay unreachable'
+      const network = detail === 'Failed to fetch' ? 'Pay unreachable' : detail
+      setError(productCreated ? `A product was created. Pay link failed: ${network}` : network)
+    } finally {
       setBusy(false)
-      setError(await problemDetail(created, `product ${created.status}`))
-      return
     }
-    const product = (await created.json()) as { id?: string }
-    const checkout = await payFetch(token, '/v1/payment-links', {
-      method: 'POST',
-      orgHint: orgId,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        org_id: orgId,
-        amount: Number(amount),
-        currency: 'MYR',
-        provider,
-        product_id: product.id,
-        max_payers: capacity === 'one' ? 1 : capacity === 'limited' ? limited : undefined,
-        unlimited: capacity === 'unlimited',
-      }),
-    })
-    setBusy(false)
-    if (!checkout.ok) {
-      setError(await problemDetail(checkout, `pay link ${checkout.status}`))
-      return
-    }
-    closeCreate()
-    await loadLinks()
   }
 
   async function copyLink(url: string, id: string) {
@@ -218,8 +234,17 @@ export function CheckoutsPage() {
         )}
       </div>
 
+      {listError ? (
+        <p role="alert" className="text-sm text-red-600">
+          {listError}
+        </p>
+      ) : null}
+
+      {listError && links.length === 0 ? null : (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {links.length === 0 ? (
+        {!linksLoaded ? (
+          <div className="px-6 py-14 text-center text-sm text-slate-500">Loading…</div>
+        ) : links.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-sm font-medium text-slate-900">No pay links yet</p>
             <p className="mt-1 text-sm text-slate-500">Create a hosted link. The buyer pays without a One account.</p>
@@ -310,6 +335,7 @@ export function CheckoutsPage() {
           </Table>
         )}
       </div>
+      )}
 
       <Dialog
         open={open}

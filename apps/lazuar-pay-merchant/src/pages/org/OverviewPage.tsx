@@ -3,21 +3,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { useEffect, useState } from 'react'
-import { payFetch } from '../../lib/payApi'
+import { payJson } from '../../lib/payApi'
 import { isRail, railLabel, type Processor } from '../../lib/processors'
 
 export function OverviewPage() {
   const { orgId, tenant, token, write } = useOutletContext<OrgOutletContext>()
   const [processors, setProcessors] = useState<Processor[]>([])
+  const [listError, setListError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
-      .then(async (r) => {
-        if (!r.ok) return
-        const body = (await r.json()) as { processors?: Processor[] }
+    let stop = false
+    setLoaded(false)
+    setListError(null)
+    payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
+      .then((body) => {
+        if (stop) return
         setProcessors(body.processors ?? [])
+        setLoaded(true)
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (stop) return
+        setListError(err instanceof Error ? err.message : 'Pay unreachable')
+      })
+    return () => {
+      stop = true
+    }
   }, [orgId, token])
 
   const onFile = processors.filter((p) => p.configured)
@@ -35,11 +46,18 @@ export function OverviewPage() {
             <CardDescription>Vault only. Pay links pick a rail at mint. Capability is hosted_link.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p>
-              <span className="text-slate-500">On file </span>
-              {onFile.length === 0 ? 'none' : `${onFile.length}`}
-            </p>
-            {onFile.map((p) => (
+            {listError ? (
+              <p role="alert" className="text-red-600">
+                {listError}
+              </p>
+            ) : (
+              <p>
+                <span className="text-slate-500">On file </span>
+                {!loaded ? '…' : onFile.length === 0 ? 'none' : `${onFile.length}`}
+              </p>
+            )}
+            {!listError
+              ? onFile.map((p) => (
               <p key={p.provider}>
                 <code>{isRail(p.provider) ? railLabel[p.provider] : p.provider}</code>
                 {p.last4 ? <span className="text-slate-500"> · …{p.last4}</span> : null}
@@ -48,7 +66,8 @@ export function OverviewPage() {
                   · webhook {p.webhook_configured ? 'on file' : 'not set'}
                 </span>
               </p>
-            ))}
+            ))
+              : null}
             {write ? (
               <p>
                 <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
