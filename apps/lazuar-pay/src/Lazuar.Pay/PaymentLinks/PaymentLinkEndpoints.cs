@@ -3,6 +3,7 @@ using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
+using Lazuar.Pay.Rails.Solana;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
@@ -86,8 +87,14 @@ internal static class PaymentLinkEndpoints
             }
         }
 
-        var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
         var productId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim();
+        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval: null, productId);
+        if (mintErr is not null)
+        {
+            return mintErr;
+        }
+
+        var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
         if (productId is not null)
         {
             var product = await db.Products.AsNoTracking()

@@ -73,12 +73,16 @@ internal static class PayTest
             public_merchant_id = "brand_1"
         }));
 
-    public static async Task<(string Token, string CheckoutId)> SeedCheckout(HttpClient client, string provider = "stripe")
+    public static async Task<(string Token, string CheckoutId)> SeedCheckout(
+        HttpClient client,
+        string provider = "stripe",
+        string? currency = null)
     {
+        var currencyJson = currency is null ? "" : $",\"currency\":\"{currency}\"";
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
         {
             Content = new StringContent(
-                $$"""{"org_id":"t1","amount":10,"provider":"{{provider}}"}""",
+                $$"""{"org_id":"t1","amount":10,"provider":"{{provider}}"{{currencyJson}}}""",
                 Encoding.UTF8,
                 "application/json")
         };
@@ -93,13 +97,15 @@ internal static class PayTest
         HttpClient client,
         string provider = "test",
         int? maxPayers = 1,
-        bool unlimited = false)
+        bool unlimited = false,
+        string? currency = null)
     {
         var maxJson = unlimited ? "null" : maxPayers.ToString();
+        var currencyJson = currency is null ? "" : $",\"currency\":\"{currency}\"";
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/payment-links")
         {
             Content = new StringContent(
-                $$"""{"org_id":"t1","amount":10,"provider":"{{provider}}","max_payers":{{maxJson}},"unlimited":{{(unlimited ? "true" : "false")}}}""",
+                $$"""{"org_id":"t1","amount":10,"provider":"{{provider}}","max_payers":{{maxJson}},"unlimited":{{(unlimited ? "true" : "false")}}{{currencyJson}}}""",
                 Encoding.UTF8,
                 "application/json")
         };

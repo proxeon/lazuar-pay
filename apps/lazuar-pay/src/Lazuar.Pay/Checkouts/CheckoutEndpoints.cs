@@ -3,6 +3,7 @@ using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
+using Lazuar.Pay.Rails.Solana;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
@@ -78,6 +79,12 @@ internal static class CheckoutEndpoints
         if (interval is not ("one_off" or "mo" or "yr"))
         {
             return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
+        }
+
+        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval, body.ProductId);
+        if (mintErr is not null)
+        {
+            return mintErr;
         }
 
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
