@@ -23,29 +23,29 @@
 
 ## M10.1 Detect
 
-- [ ] `Bearer.TryGet` still extracts the remainder after `Bearer `
-- [ ] Add a small helper: remainder that starts with `lzr_sk_` is a **machine key**
-- [ ] JWT path is “not `lzr_sk_` and not rejected family”
-- [ ] Do not parse JWT claims in Pay
+- [x] `Bearer.TryGet` still extracts the remainder after `Bearer `
+- [x] Add a small helper: remainder that starts with `lzr_sk_` is a **machine key**
+- [x] JWT path is “not `lzr_sk_` and not rejected family”
+- [x] Do not parse JWT claims in Pay
 
 ## M10.2 Reject wrong family as Pay caller (fail closed at Pay)
 
-- [ ] Remainder starting `sk_live_` / `sk_test_` / `sk_` (Hub) → **401** Invalid bearer, **do not** call One
-- [ ] Remainder looking like a Zitadel PAT (document the prefix you reject; if unknown, still do not invent PAT storage)
-- [ ] Stripe vault `sk_test` on **gateway PUT body** is unchanged (Family B)
+- [x] Remainder starting `sk_live_` / `sk_test_` / `sk_` (Hub) → **401** Invalid bearer, **do not** call One
+- [x] Remainder looking like a Zitadel PAT (document the prefix you reject; if unknown, still do not invent PAT storage)
+- [x] Stripe vault `sk_test` on **gateway PUT body** is unchanged (Family B)
 
 ## M10.3 Tests
 
-- [ ] `Bearer_sk_live_is_401_skips_one` — Fake One send count 0
-- [ ] `Bearer_lzr_sk_is_not_rejected_at_parser` — reaches One (whoami 401/200 from Fake)
-- [ ] Existing JWT `"Bearer tok"` still reaches One
+- [x] `Bearer_sk_live_is_401_skips_one` — Fake One send count 0
+- [x] `Bearer_lzr_sk_is_not_rejected_at_parser` — reaches One (whoami 401/200 from Fake)
+- [x] Existing JWT `"Bearer tok"` still reaches One
 
 ## M10.4 Must not
 
-- [ ] No hash lookup table
-- [ ] No `X-Api-Key` header
-- [ ] No wrap of caller secrets in SecretBox
+- [x] No hash lookup table
+- [x] No `X-Api-Key` header
+- [x] No wrap of caller secrets in SecretBox
 
 ## M10.5 Exit
 
-- [ ] Unblocked for M11
+- [x] Unblocked for M11

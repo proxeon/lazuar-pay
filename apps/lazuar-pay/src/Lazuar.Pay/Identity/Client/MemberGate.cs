@@ -16,6 +16,12 @@ internal static class MemberGate
             return PayErrors.Status(401, "Unauthorized", "Missing bearer token");
         }
 
+        var wrongFamily = Bearer.RejectWrongFamily(authorization);
+        if (wrongFamily is not null)
+        {
+            return wrongFamily;
+        }
+
         if (string.IsNullOrWhiteSpace(orgId))
         {
             return PayErrors.Status(400, "Bad Request", "org_id is required");

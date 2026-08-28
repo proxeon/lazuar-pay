@@ -53,6 +53,35 @@ public class WhoamiTests
     }
 
     [Test]
+    public async Task Bearer_sk_live_is_401_skips_one()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/v1/whoami");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer sk_live_dummy");
+        var response = await client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(factory.One.SendCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Bearer_lzr_sk_is_not_rejected_at_parser()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            Assert.That(req.Headers.Authorization?.ToString(), Is.EqualTo("Bearer lzr_sk_testfixture"));
+            return FakeOneHandler.Json(HttpStatusCode.Unauthorized, """{"detail":"bad"}""");
+        };
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/v1/whoami");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer lzr_sk_testfixture");
+        var response = await client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(factory.One.SendCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Whoami_without_authorization_is_401_and_skips_one()
     {
         await using var factory = new PayApiFactory();

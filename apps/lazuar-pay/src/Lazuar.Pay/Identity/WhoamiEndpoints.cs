@@ -17,6 +17,12 @@ internal static class WhoamiEndpoints
             return PayErrors.Status(401, "Unauthorized", "Missing bearer token");
         }
 
+        var wrongFamily = Bearer.RejectWrongFamily(authorization);
+        if (wrongFamily is not null)
+        {
+            return wrongFamily;
+        }
+
         request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
         var result = await one.GetWhoamiAsync(authorization, hint.ToString(), cancellationToken);
         return Map(result);
