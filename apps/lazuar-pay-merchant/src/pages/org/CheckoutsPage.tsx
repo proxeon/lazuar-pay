@@ -87,11 +87,10 @@ type PayLink = {
 type Capacity = 'one' | 'limited' | 'unlimited'
 
 function payersLabel(row: PayLink): string {
-  if (row.unlimited || row.max_payers == null) {
-    const paid = row.paid_count ?? 0
-    return paid === 0 ? 'Unlimited' : `${paid} paid · unlimited`
-  }
   const taken = row.taken_count ?? 0
+  if (row.unlimited || row.max_payers == null) {
+    return taken === 0 ? 'Unlimited' : `${taken} started · unlimited`
+  }
   return `${taken} / ${row.max_payers}`
 }
 
@@ -396,7 +395,7 @@ export function CheckoutsPage() {
               ) : (
                 <p className="text-xs text-slate-500">
                   {capacity === 'one'
-                    ? 'The link closes after one successful payment.'
+                    ? 'The link closes after one person starts Pay. Unpaid starts free after 30 minutes.'
                     : 'Anyone with the URL can pay. It does not close on its own.'}
                 </p>
               )}

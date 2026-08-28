@@ -101,6 +101,9 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('unlimited')
     expect(src).toContain('max_payers')
     expect(src).toContain('1 person only')
+    expect(src).toContain('The link closes after one person starts Pay. Unpaid starts free after 30 minutes.')
+    expect(src).not.toContain('The link closes after one successful payment.')
+    expect(src).toContain('started · unlimited')
   })
 
   it('overview lists processors not a single active rail', () => {

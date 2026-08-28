@@ -29,12 +29,13 @@ internal static class PublicPayEndpoints
         string? slot_key,
         CheckoutStore store,
         PayDbContext db,
+        IConfiguration config,
         CancellationToken ct)
     {
         var link = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.PublicToken == token, ct);
         if (link is not null)
         {
-            return await GetLink(link, slot_key, db, ct);
+            return await GetLink(link, slot_key, db, config, ct);
         }
 
         var session = await store.GetByPublicTokenAsync(token, ct);
@@ -47,8 +48,20 @@ internal static class PublicPayEndpoints
         return CheckoutView(token, row);
     }
 
-    static async Task<IResult> GetLink(PaymentLinkRow link, string? slotKey, PayDbContext db, CancellationToken ct)
+    static async Task<IResult> GetLink(
+        PaymentLinkRow link,
+        string? slotKey,
+        PayDbContext db,
+        IConfiguration config,
+        CancellationToken ct)
     {
+        await PaymentLinkOccupancy.SerializeAsync(link.Id, async () =>
+        {
+            await PaymentLinkOccupancy.ExpireStaleAsync(
+                db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
+            return 0;
+        }, ct);
+
         var children = await db.Checkouts.AsNoTracking()
             .Where(x => x.PaymentLinkId == link.Id)
             .ToListAsync(ct);
@@ -193,11 +206,13 @@ internal static class PublicPayEndpoints
         }
         catch (InvalidOperationException ex)
         {
+            await ExpireFailedReservation(db, row, ct);
             var status = ex.Message.Contains("callback base", StringComparison.Ordinal) ? 400 : 503;
             return PayErrors.Status(status, status == 400 ? "Bad Request" : "Service Unavailable", ex.Message);
         }
         catch (Stripe.StripeException)
         {
+            await ExpireFailedReservation(db, row, ct);
             return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
         }
     }
@@ -222,46 +237,113 @@ internal static class PublicPayEndpoints
             return (null, PayErrors.Status(400, "Bad Request", "slot_key is required"));
         }
 
-        var existing = await db.Checkouts.FirstOrDefaultAsync(x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
-        if (existing is not null)
+        if (!PayProviders.TryNormalize(link.Provider, out var providerName))
         {
-            if (existing.Status is "paid" or "expired")
+            return (null, PayErrors.Status(503, "Service Unavailable", "rail not configured"));
+        }
+
+        if (PayProviders.RequiresEmail(providerName) && !BuyerEmail.IsUsable(body?.Email))
+        {
+            return (null, PayErrors.Status(400, "Bad Request", "email is required"));
+        }
+
+        try
+        {
+            CheckoutUrls.Base(config, env);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (null, PayErrors.Status(503, "Service Unavailable", ex.Message));
+        }
+
+        return await PaymentLinkOccupancy.SerializeAsync(link.Id, async () =>
+        {
+            await using var tx = db.Database.IsRelational()
+                ? await db.Database.BeginTransactionAsync(ct)
+                : null;
+            try
             {
-                return (null, PayErrors.Status(409, "Conflict", "Checkout is not open"));
+                await PaymentLinkOccupancy.LockParentAsync(db, link.Id, ct);
+                await PaymentLinkOccupancy.ExpireStaleAsync(
+                    db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
+
+                var existing = await db.Checkouts.FirstOrDefaultAsync(
+                    x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
+                if (existing is not null)
+                {
+                    if (existing.Status is "paid" or "expired")
+                    {
+                        return ((CheckoutRow?)null, PayErrors.Status(409, "Conflict", "Checkout is not open"));
+                    }
+
+                    if (tx is not null)
+                    {
+                        await tx.CommitAsync(ct);
+                    }
+
+                    return (existing, (IResult?)null);
+                }
+
+                var taken = await db.Checkouts.CountAsync(
+                    x => x.PaymentLinkId == link.Id && (x.Status == "open" || x.Status == "paid"),
+                    ct);
+                if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
+                {
+                    return ((CheckoutRow?)null, PayErrors.Status(409, "Conflict", "This pay link is full"));
+                }
+
+                var baseUrl = CheckoutUrls.Base(config, env);
+                var row = new CheckoutRow
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    OrgId = link.OrgId,
+                    Provider = link.Provider,
+                    ProductId = link.ProductId,
+                    PaymentLinkId = link.Id,
+                    SlotKey = slot,
+                    PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
+                    Amount = link.Amount,
+                    Currency = link.Currency,
+                    Status = "open",
+                    Interval = "one_off",
+                    PayerName = string.IsNullOrWhiteSpace(body?.Name) ? null : body.Name.Trim(),
+                    PayerEmail = string.IsNullOrWhiteSpace(body?.Email) ? null : body.Email.Trim(),
+                    SuccessUrl = baseUrl + "/c/" + link.PublicToken + "?status=verifying",
+                    CancelUrl = baseUrl + "/c/" + link.PublicToken,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+                db.Checkouts.Add(row);
+                await db.SaveChangesAsync(ct);
+                if (tx is not null)
+                {
+                    await tx.CommitAsync(ct);
+                }
+
+                return (row, (IResult?)null);
             }
+            catch (DbUpdateException)
+            {
+                if (tx is not null)
+                {
+                    await tx.RollbackAsync(ct);
+                }
 
-            return (existing, null);
+                return ((CheckoutRow?)null, PayErrors.Status(409, "Conflict", "This pay link is full"));
+            }
+        }, ct);
+    }
+
+    static async Task ExpireFailedReservation(PayDbContext db, CheckoutRow row, CancellationToken ct)
+    {
+        if (row.PaymentLinkId is null
+            || row.Status != "open"
+            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl))
+        {
+            return;
         }
 
-        var taken = await db.Checkouts.CountAsync(
-            x => x.PaymentLinkId == link.Id && (x.Status == "open" || x.Status == "paid"),
-            ct);
-        if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
-        {
-            return (null, PayErrors.Status(409, "Conflict", "This pay link is full"));
-        }
-
-        var baseUrl = CheckoutUrls.Base(config, env);
-        var row = new CheckoutRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = link.OrgId,
-            Provider = link.Provider,
-            ProductId = link.ProductId,
-            PaymentLinkId = link.Id,
-            SlotKey = slot,
-            PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
-            Amount = link.Amount,
-            Currency = link.Currency,
-            Status = "open",
-            Interval = "one_off",
-            SuccessUrl = baseUrl + "/c/" + link.PublicToken + "?status=verifying",
-            CancelUrl = baseUrl + "/c/" + link.PublicToken,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        db.Checkouts.Add(row);
+        row.Status = "expired";
         await db.SaveChangesAsync(ct);
-        return (row, null);
     }
 
     static IResult CheckoutView(

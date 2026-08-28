@@ -1,6 +1,10 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Lazuar.Pay.Data;
+using Lazuar.Pay.Money;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lazuar.Pay.Tests;
 
@@ -229,4 +233,190 @@ public class PaymentLinkTests
         Assert.That(again.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(factory.One.SendCount, Is.EqualTo(after));
     }
+
+    [Test]
+    public async Task Concurrent_start_on_one_person_link_admits_one_psp()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) =>
+        {
+            Thread.Sleep(120);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id":"purch_race","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+            };
+        };
+        var clientA = factory.CreateClient();
+        var clientB = factory.CreateClient();
+        await PayTest.Put(clientA, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        var (token, _) = await PayTest.SeedPaymentLink(clientA, "chip", maxPayers: 1);
+
+        var email = """{"name":"Ada","email":"ada@acme.test"}""";
+        var first = PayTest.StartPay(clientA, token, "slot-race-a1", email);
+        var second = PayTest.StartPay(clientB, token, "slot-race-b2", email);
+        await Task.WhenAll(first, second);
+
+        var codes = new[] { first.Result.StatusCode, second.Result.StatusCode };
+        Assert.That(codes, Does.Contain(HttpStatusCode.OK));
+        Assert.That(codes, Does.Contain(HttpStatusCode.Conflict));
+        Assert.That(factory.Psp.SendCount, Is.EqualTo(1));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(await db.Documents.CountAsync(), Is.EqualTo(0));
+        Assert.That(await db.Checkouts.CountAsync(x => x.Status == "open"), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Concurrent_test_start_on_one_person_link_mints_one_receipt()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var clientA = factory.CreateClient();
+        var clientB = factory.CreateClient();
+        var (token, _) = await PayTest.SeedPaymentLink(clientA, maxPayers: 1);
+
+        var first = PayTest.StartPay(clientA, token, "slot-t-race-a");
+        var second = PayTest.StartPay(clientB, token, "slot-t-race-b");
+        await Task.WhenAll(first, second);
+
+        var codes = new[] { first.Result.StatusCode, second.Result.StatusCode };
+        Assert.That(codes, Does.Contain(HttpStatusCode.OK));
+        Assert.That(codes, Does.Contain(HttpStatusCode.Conflict));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(await db.Documents.CountAsync(x => x.Title == "Official Receipt"), Is.EqualTo(1));
+        Assert.That(await db.Checkouts.CountAsync(x => x.Status == "paid"), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Chip_start_without_email_does_not_occupy_the_only_seat()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        var (token, _) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 1);
+
+        var missing = await PayTest.StartPay(client, token, "slot-ghost-1");
+        Assert.That(missing.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), await missing.Content.ReadAsStringAsync());
+        Assert.That(await missing.Content.ReadAsStringAsync(), Does.Contain("email is required"));
+        Assert.That(factory.Psp.SendCount, Is.EqualTo(0));
+
+        var other = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-other-2");
+        using var openDoc = JsonDocument.Parse(await other.Content.ReadAsStringAsync());
+        Assert.That(openDoc.RootElement.GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(openDoc.RootElement.GetProperty("remaining").GetInt32(), Is.EqualTo(1));
+
+        var ok = await PayTest.StartPay(client, token, "slot-other-2", """{"name":"Ada","email":"ada@acme.test"}""");
+        Assert.That(ok.StatusCode, Is.EqualTo(HttpStatusCode.OK), await ok.Content.ReadAsStringAsync());
+        Assert.That(factory.Psp.SendCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Billplz_localhost_callback_400_frees_the_seat()
+    {
+        await using var factory = new PayApiFactory { PublicBaseUrl = "http://localhost:8081" };
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"billplz","secret":"bp_sk","webhook_secret":"xsig","public_merchant_id":"col_1","environment":"test"}""");
+        var (token, _) = await PayTest.SeedPaymentLink(client, "billplz", maxPayers: 1);
+
+        var first = await PayTest.StartPay(client, token, "slot-bp-fail", """{"name":"Ada","email":"ada@acme.test"}""");
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), await first.Content.ReadAsStringAsync());
+        Assert.That(await first.Content.ReadAsStringAsync(), Does.Contain("callback base"));
+
+        var other = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-bp-next");
+        using var doc = JsonDocument.Parse(await other.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(doc.RootElement.GetProperty("remaining").GetInt32(), Is.EqualTo(1));
+        Assert.That(doc.RootElement.GetProperty("taken_count").GetInt32(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Abandoned_open_reservation_expires_and_second_slot_can_start()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_old","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        var (token, linkId) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 1);
+
+        var start = await PayTest.StartPay(client, token, "slot-stale-1", """{"name":"Ada","email":"ada@acme.test"}""");
+        Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.OK), await start.Content.ReadAsStringAsync());
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var child = await db.Checkouts.FirstAsync(x => x.PaymentLinkId == linkId && x.SlotKey == "slot-stale-1");
+            child.CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-31);
+            await db.SaveChangesAsync();
+        }
+
+        var staleGet = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-stale-1");
+        using var staleDoc = JsonDocument.Parse(await staleGet.Content.ReadAsStringAsync());
+        Assert.That(staleDoc.RootElement.GetProperty("status").GetString(), Is.EqualTo("expired"));
+
+        var next = await PayTest.StartPay(client, token, "slot-fresh-2", """{"name":"Bob","email":"bob@acme.test"}""");
+        Assert.That(next.StatusCode, Is.EqualTo(HttpStatusCode.OK), await next.Content.ReadAsStringAsync());
+
+        using var after = factory.Services.CreateScope();
+        var payDb = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        var fulfill = after.ServiceProvider.GetRequiredService<IFulfillPaid>();
+        var expiredId = await payDb.Checkouts
+            .Where(x => x.SlotKey == "slot-stale-1")
+            .Select(x => x.Id)
+            .FirstAsync();
+        await fulfill.FulfillPaidAsync(expiredId, "chip", "purch_old", CancellationToken.None);
+        Assert.That(await payDb.Documents.CountAsync(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Second_fulfill_on_max_one_link_does_not_mint_a_second_receipt()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, linkId) = await PayTest.SeedPaymentLink(client, maxPayers: 1);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        var first = OpenChild(linkId, "slot-over-a");
+        var extra = OpenChild(linkId, "slot-over-b");
+        db.Checkouts.AddRange(first, extra);
+        await db.SaveChangesAsync();
+
+        var fulfill = scope.ServiceProvider.GetRequiredService<IFulfillPaid>();
+        await fulfill.FulfillPaidAsync(first.Id, "test", "ref-a", CancellationToken.None);
+        await fulfill.FulfillPaidAsync(extra.Id, "test", "ref-b", CancellationToken.None);
+
+        Assert.That(await db.Documents.CountAsync(x => x.Title == "Official Receipt"), Is.EqualTo(1));
+        Assert.That(await db.Charges.CountAsync(), Is.EqualTo(1));
+        await db.Entry(extra).ReloadAsync();
+        Assert.That(extra.Status, Is.EqualTo("expired"));
+    }
+
+    static CheckoutRow OpenChild(string linkId, string slot) =>
+        new()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = "t1",
+            Provider = "test",
+            PaymentLinkId = linkId,
+            SlotKey = slot,
+            PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
+            Amount = 10m,
+            Currency = "MYR",
+            Status = "open",
+            Interval = "one_off",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
 }

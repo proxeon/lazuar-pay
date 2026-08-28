@@ -49,6 +49,8 @@ describe('checkout honesty', () => {
     expect(src).toContain('Payment received')
     expect(src).toContain('Link expired')
     expect(src).toContain('Link is full')
+    expect(src).toContain('no remaining seats')
+    expect(src).not.toContain('no remaining payments')
     expect(src).not.toContain('lazuar-portal')
   })
 

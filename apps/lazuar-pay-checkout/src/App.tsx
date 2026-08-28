@@ -232,7 +232,7 @@ function App() {
               <CircleAlert className="size-6" />
             </div>
             <CardTitle className="text-xl">Link is full</CardTitle>
-            <CardDescription>This pay link has no remaining payments.</CardDescription>
+            <CardDescription>This pay link has no remaining seats.</CardDescription>
           </CardHeader>
         </Card>
       </Shell>

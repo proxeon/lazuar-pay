@@ -1,4 +1,5 @@
 using Lazuar.Pay.Data;
+using Lazuar.Pay.PaymentLinks;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Money;
@@ -32,6 +33,23 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
         if (settings?.ChargesPaused == true)
         {
             throw new ChargesPausedException();
+        }
+
+        if (checkout.PaymentLinkId is not null)
+        {
+            var link = await db.PaymentLinks.FirstOrDefaultAsync(x => x.Id == checkout.PaymentLinkId, ct);
+            if (link is not null)
+            {
+                var paid = await db.Checkouts.CountAsync(
+                    x => x.PaymentLinkId == link.Id && x.Status == "paid",
+                    ct);
+                if (PaymentLinkOccupancy.IsFull(link.MaxPayers, paid))
+                {
+                    checkout.Status = "expired";
+                    await db.SaveChangesAsync(ct);
+                    return;
+                }
+            }
         }
 
         checkout.Status = "paid";
