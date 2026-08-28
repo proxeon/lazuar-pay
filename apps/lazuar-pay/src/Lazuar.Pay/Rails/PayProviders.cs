@@ -19,7 +19,7 @@ public static class PayProviders
         AllowsTest(env) ? [..All, Test] : All;
 
     public static bool AllowsTest(IHostEnvironment env) =>
-        !env.IsProduction();
+        env.IsDevelopment() || env.IsEnvironment("Testing");
 
     public static bool IsTest(string provider) => provider == Test;
 

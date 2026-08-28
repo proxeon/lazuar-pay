@@ -101,6 +101,7 @@ internal static class ChipWebhook
         {
             EventId = "paid:" + purchaseId,
             CheckoutId = checkoutId,
+            HostedSessionId = purchaseId,
             ProviderRef = purchaseId,
             AmountMinor = (long)total,
             Currency = currency

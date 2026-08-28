@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.PaymentLinks;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,23 @@ public interface IFulfillPaid
 
 public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 {
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> CheckoutGates = new(StringComparer.Ordinal);
+
     public async Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
+    {
+        var gate = CheckoutGates.GetOrAdd(checkoutId, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            await FulfillPaidCoreAsync(checkoutId, provider, providerRef, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    async Task FulfillPaidCoreAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {
         var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == checkoutId, ct);
         if (checkout is null)
@@ -144,7 +161,17 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             At = DateTimeOffset.UtcNow
         });
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged))
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
     }
 }
 

@@ -43,7 +43,8 @@ internal static class StripeWebhook
             throw new PspVerifyException("invalid event");
         }
 
-        if (stripeEvent.Type is not "checkout.session.completed")
+        if (stripeEvent.Type is not "checkout.session.completed"
+            and not "checkout.session.async_payment_succeeded")
         {
             return new PspParseResult { EventId = stripeEvent.Id, Ignored = true, IgnoreReason = stripeEvent.Type };
         }
@@ -58,6 +59,17 @@ internal static class StripeWebhook
             return new PspParseResult { EventId = stripeEvent.Id, Ignored = true, IgnoreReason = "setup_or_zero" };
         }
 
+        if (stripeEvent.Type == "checkout.session.completed"
+            && session.PaymentStatus is not "paid" and not "no_payment_required")
+        {
+            return new PspParseResult
+            {
+                EventId = stripeEvent.Id,
+                Ignored = true,
+                IgnoreReason = "payment_status:" + (session.PaymentStatus ?? "missing")
+            };
+        }
+
         var checkoutId = session.ClientReferenceId ?? session.Metadata?.GetValueOrDefault("checkout_id");
         // AmountTotal is Stripe cents (minor). Do not ToMinor again.
         if (!MoneyMath.TryNormalizeCurrency(session.Currency, out var currency))
@@ -69,6 +81,7 @@ internal static class StripeWebhook
         {
             EventId = stripeEvent.Id,
             CheckoutId = checkoutId,
+            HostedSessionId = session.Id,
             ProviderRef = session.Id,
             AmountMinor = session.AmountTotal,
             Currency = currency

@@ -5,24 +5,27 @@ using System.Text;
 namespace Lazuar.Pay.Identity.OneWebhooks;
 
 /// <summary>
-/// Standard Webhooks–style verify: header t={unix},v1={lowercase hex} over {unix}.{body}.
-/// Judgment stolen from One's signer. Do not import the Hub worker type.
+/// Product One signs <c>X-Lazuar-Signature: v1=&lt;hex&gt;</c> and
+/// <c>X-Lazuar-Timestamp</c> over <c>{unix}.{body}</c>. Combined
+/// <c>t=&lt;unix&gt;,v1=&lt;hex&gt;</c> in one header is accepted as compat.
+/// Raw body hex is rejected.
 /// </summary>
 internal static class OneWebhookSignature
 {
     public static bool TryVerify(
         string secret,
         string body,
-        string? headerValue,
+        string? signatureHeader,
+        string? timestampHeader = null,
         long toleranceSeconds = 300,
         long? nowUnixSeconds = null)
     {
-        if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(headerValue))
+        if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(signatureHeader))
         {
             return false;
         }
 
-        if (!TryParseHeader(headerValue, out var timestamp, out var v1Hex))
+        if (!TryParse(signatureHeader, timestampHeader, out var timestamp, out var v1Hex))
         {
             return false;
         }
@@ -42,13 +45,20 @@ internal static class OneWebhookSignature
         return FixedTimeEqualsHex(v1Hex, expectedHex);
     }
 
-    internal static bool TryParseHeader(string headerValue, out long timestamp, out string v1Hex)
+    internal static bool TryParseHeader(string headerValue, out long timestamp, out string v1Hex) =>
+        TryParse(headerValue, timestampHeader: null, out timestamp, out v1Hex);
+
+    internal static bool TryParse(
+        string signatureHeader,
+        string? timestampHeader,
+        out long timestamp,
+        out string v1Hex)
     {
         timestamp = 0;
         v1Hex = string.Empty;
         long? t = null;
         string? v1 = null;
-        foreach (var part in headerValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var part in signatureHeader.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var eq = part.IndexOf('=');
             if (eq <= 0)
@@ -67,6 +77,13 @@ internal static class OneWebhookSignature
             {
                 v1 = value;
             }
+        }
+
+        if (t is null
+            && !string.IsNullOrWhiteSpace(timestampHeader)
+            && long.TryParse(timestampHeader.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var splitTs))
+        {
+            t = splitTs;
         }
 
         if (t is null || string.IsNullOrEmpty(v1))

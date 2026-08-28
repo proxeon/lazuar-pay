@@ -28,12 +28,35 @@ internal static class OneWebhookEndpoints
         }
 
         var provided = request.Headers["X-Lazuar-Signature"].ToString().Trim();
-        if (!OneWebhookSignature.TryVerify(secret, json, provided))
+        var timestamp = request.Headers["X-Lazuar-Timestamp"].ToString().Trim();
+        if (!OneWebhookSignature.TryVerify(secret, json, provided, timestamp))
         {
             return PayErrors.Status(401, "Unauthorized", "Invalid HMAC");
         }
 
-        using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return PayErrors.Status(400, "Bad Request", "invalid event");
+        }
+
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(json);
+        }
+        catch (JsonException)
+        {
+            return PayErrors.Status(400, "Bad Request", "invalid event");
+        }
+
+        using (doc)
+        {
+            return await ApplyAsync(doc, db, ct);
+        }
+    }
+
+    static async Task<IResult> ApplyAsync(JsonDocument doc, PayDbContext db, CancellationToken ct)
+    {
         var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() : null;
         var delivery = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : Guid.NewGuid().ToString("N");
         var orgId = ReadOrgId(doc.RootElement);

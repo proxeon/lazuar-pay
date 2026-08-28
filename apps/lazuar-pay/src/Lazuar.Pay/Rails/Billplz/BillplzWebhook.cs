@@ -83,6 +83,7 @@ internal static class BillplzWebhook
         {
             EventId = "paid:" + billId,
             CheckoutId = string.IsNullOrWhiteSpace(checkoutId) ? null : checkoutId,
+            HostedSessionId = billId,
             ProviderRef = billId,
             AmountMinor = paidCents,
             Currency = currency

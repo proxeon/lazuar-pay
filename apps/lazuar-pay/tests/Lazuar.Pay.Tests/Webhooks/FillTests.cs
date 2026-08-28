@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Money;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lazuar.Pay.Tests;
@@ -156,5 +157,24 @@ public class FillTests
         };
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Concurrent_fulfill_of_one_checkout_mints_one_receipt()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "test");
+
+        using var scope = factory.Services.CreateScope();
+        var fulfill = scope.ServiceProvider.GetRequiredService<IFulfillPaid>();
+        await Task.WhenAll(
+            fulfill.FulfillPaidAsync(checkoutId, "test", "ref-a", CancellationToken.None),
+            fulfill.FulfillPaidAsync(checkoutId, "test", "ref-b", CancellationToken.None));
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Charges.Count(), Is.EqualTo(1));
+        Assert.That(db.Checkouts.Single(x => x.Id == checkoutId).Status, Is.EqualTo("paid"));
     }
 }

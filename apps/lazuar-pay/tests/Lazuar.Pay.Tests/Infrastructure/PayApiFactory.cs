@@ -20,9 +20,13 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string StripeWebhookSecret { get; init; } = "whsec_test_local";
 
+    public string TestWebhookSecret { get; init; } = "test_whsec_local";
+
     public string OneWebhookSecret { get; init; } = "";
 
     public string PublicBaseUrl { get; init; } = "https://pay.test.example";
+
+    public string EnvironmentName { get; init; } = "Testing";
 
     /// <summary>
     /// InMemory BeginTransaction is a no-op. H25/G12 proof uses FulfillmentProbe,
@@ -32,8 +36,9 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(EnvironmentName);
         builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
+        builder.UseSetting("Pay:TestWebhookSecret", TestWebhookSecret);
         builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
         builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");

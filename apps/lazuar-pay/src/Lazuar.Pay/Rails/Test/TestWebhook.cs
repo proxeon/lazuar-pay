@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Money;
 using Lazuar.Pay.Webhooks;
@@ -6,8 +8,31 @@ namespace Lazuar.Pay.Rails.Test;
 
 internal static class TestWebhook
 {
-    public static PspParseResult Parse(string json)
+    public const string SignatureHeader = "X-Pay-Test-Signature";
+
+    public static PspParseResult Parse(string json, IHeaderDictionary headers, IConfiguration config)
     {
+        var secret = config["Pay:TestWebhookSecret"];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("webhook secret missing");
+        }
+
+        if (!headers.TryGetValue(SignatureHeader, out var provided) || string.IsNullOrWhiteSpace(provided))
+        {
+            throw new PspVerifyException("invalid signature");
+        }
+
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(json));
+        var expected = Convert.ToHexString(mac).ToLowerInvariant();
+        var got = provided.ToString().Trim().ToLowerInvariant();
+        var left = Encoding.UTF8.GetBytes(expected);
+        var right = Encoding.UTF8.GetBytes(got);
+        if (left.Length != right.Length || !CryptographicOperations.FixedTimeEquals(left, right))
+        {
+            throw new PspVerifyException("invalid signature");
+        }
+
         JsonDocument doc;
         try
         {
@@ -26,7 +51,7 @@ internal static class TestWebhook
                 : null;
             if (string.IsNullOrWhiteSpace(eventId))
             {
-                eventId = "test:" + Guid.NewGuid().ToString("N");
+                throw new PspVerifyException("missing event id");
             }
 
             string? checkoutId = null;
@@ -35,10 +60,14 @@ internal static class TestWebhook
                 checkoutId = checkoutEl.GetString();
             }
 
-            long? amountMinor = null;
-            if (root.TryGetProperty("amount_total", out var amountEl) && amountEl.TryGetInt64(out var amount))
+            if (string.IsNullOrWhiteSpace(checkoutId))
             {
-                amountMinor = amount;
+                throw new PspVerifyException("missing checkout id");
+            }
+
+            if (!root.TryGetProperty("amount_total", out var amountEl) || !amountEl.TryGetInt64(out var amount))
+            {
+                throw new PspVerifyException("missing amount");
             }
 
             string? currency = null;
@@ -47,12 +76,17 @@ internal static class TestWebhook
                 MoneyMath.TryNormalizeCurrency(ccyEl.GetString(), out currency);
             }
 
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                throw new PspVerifyException("missing currency");
+            }
+
             return new PspParseResult
             {
                 EventId = eventId,
                 CheckoutId = checkoutId,
                 ProviderRef = eventId,
-                AmountMinor = amountMinor,
+                AmountMinor = amount,
                 Currency = currency
             };
         }

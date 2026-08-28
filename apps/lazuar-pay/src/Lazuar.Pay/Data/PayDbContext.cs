@@ -87,6 +87,7 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         {
             e.ToTable("charges");
             e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CheckoutId).IsUnique();
             e.Property(x => x.Amount).HasPrecision(18, 2);
         });
         model.Entity<SubscriptionRow>(e =>
@@ -109,6 +110,8 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         {
             e.ToTable("documents");
             e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CheckoutId).IsUnique();
+            e.HasIndex(x => new { x.OrgId, x.Number }).IsUnique();
         });
         model.Entity<DocumentSequenceRow>(e =>
         {

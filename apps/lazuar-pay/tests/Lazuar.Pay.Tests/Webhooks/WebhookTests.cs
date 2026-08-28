@@ -255,4 +255,65 @@ public class WebhookTests
         using var after = factory.Services.CreateScope();
         Assert.That(after.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task Unpaid_completed_session_is_ignored()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var checkoutId = await SeedRailAndCheckout(client);
+        var eventId = "evt_unpaid_" + Guid.NewGuid().ToString("N");
+        var payload =
+            "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_unpaid\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"unpaid\",\"status\":\"complete\"}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, payload, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ignored"));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
+    }
+
+    [Test]
+    public async Task Async_payment_succeeded_pays_after_unpaid_completed()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var checkoutId = await SeedRailAndCheckout(client);
+        var unpaidId = "evt_unpaid2_" + Guid.NewGuid().ToString("N");
+        var unpaid =
+            "{\"id\":\"" + unpaidId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_async\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"unpaid\",\"status\":\"complete\"}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using (var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(unpaid, Encoding.UTF8, "application/json")
+        })
+        {
+            req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, unpaid, t));
+            Assert.That((await client.SendAsync(req)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        var paidId = "evt_async_" + Guid.NewGuid().ToString("N");
+        var paid =
+            "{\"id\":\"" + paidId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.async_payment_succeeded\",\"data\":{\"object\":{\"id\":\"cs_async\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\"}}}";
+        using var paidReq = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(paid, Encoding.UTF8, "application/json")
+        };
+        paidReq.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, paid, t));
+        var response = await client.SendAsync(paidReq);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("paid"));
+    }
 }

@@ -96,6 +96,7 @@ internal static class XenditWebhook
         {
             EventId = "paid:" + invoiceId,
             CheckoutId = checkoutId,
+            HostedSessionId = invoiceId,
             ProviderRef = invoiceId,
             AmountMinor = MoneyMath.ToMinor(amount),
             Currency = currency

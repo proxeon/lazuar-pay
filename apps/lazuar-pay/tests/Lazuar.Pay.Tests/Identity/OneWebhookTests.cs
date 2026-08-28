@@ -159,4 +159,40 @@ public class OneWebhookTests
         using var scope = factory.Services.CreateScope();
         Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.False);
     }
+
+    [Test]
+    public async Task Product_one_split_headers_suspend_charges()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = """{"id":"del_one","type":"tenant.suspended","tenant_id":"t1"}""";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(Secret), Encoding.UTF8.GetBytes($"{t}.{body}"));
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", "v1=" + Convert.ToHexString(mac).ToLowerInvariant());
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Timestamp", t.ToString());
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
+    }
+
+    [Test]
+    public async Task Empty_signed_body_is_400()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = "";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", Sign(body, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
 }

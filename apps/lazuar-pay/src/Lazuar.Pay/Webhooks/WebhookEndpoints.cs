@@ -74,7 +74,7 @@ internal static class WebhookEndpoints
                 PayProviders.Billplz => BillplzWebhook.Parse(raw, request.Query, cred!, box),
                 PayProviders.Xendit => XenditWebhook.Parse(raw, request.Headers, cred!, box),
                 PayProviders.Razorpay => RazorpayWebhook.Parse(raw, request.Headers, cred!, box),
-                PayProviders.Test => TestWebhook.Parse(raw),
+                PayProviders.Test => TestWebhook.Parse(raw, request.Headers, config),
                 _ => throw new InvalidOperationException("unknown provider")
             };
         }

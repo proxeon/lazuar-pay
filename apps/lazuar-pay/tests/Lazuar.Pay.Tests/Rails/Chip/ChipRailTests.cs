@@ -64,6 +64,41 @@ public class ChipRailTests
     }
 
     [Test]
+    public async Task Chip_paid_without_metadata_joins_on_purchase_id()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        using var rsa = RSA.Create(2048);
+        var pem = rsa.ExportSubjectPublicKeyInfoPem();
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = pem, public_merchant_id = "brand_1" }));
+        var (token, _) = await PayTest.SeedCheckout(client, "chip");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"name":"Ada","email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var payload = """{"event_type":"purchase.paid","id":"purch_1","purchase":{"id":"purch_1","total":1000,"currency":"MYR"}}""";
+        var sig = Convert.ToBase64String(rsa.SignData(Encoding.UTF8.GetBytes(payload), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+        using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/chip/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        wh.Headers.TryAddWithoutValidation("X-Signature", sig);
+        var paid = await client.SendAsync(wh);
+        Assert.That(paid.StatusCode, Is.EqualTo(HttpStatusCode.OK), await paid.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("paid"));
+    }
+
+    [Test]
     public async Task Chip_preauthorized_is_ignored()
     {
         await using var factory = new PayApiFactory();
