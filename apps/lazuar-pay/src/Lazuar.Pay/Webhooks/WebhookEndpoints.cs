@@ -7,6 +7,7 @@ using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Solana;
 using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
@@ -76,6 +77,7 @@ internal static class WebhookEndpoints
                 PayProviders.Billplz => BillplzWebhook.Parse(raw, request.Query, cred!, box),
                 PayProviders.Xendit => XenditWebhook.Parse(raw, request.Headers, cred!, box),
                 PayProviders.Razorpay => RazorpayWebhook.Parse(raw, request.Headers, cred!, box),
+                PayProviders.Solana => SolanaWebhook.Parse(raw, request.Headers),
                 PayProviders.Test => TestWebhook.Parse(raw, request.Headers, config),
                 _ => throw new InvalidOperationException("unknown provider")
             };

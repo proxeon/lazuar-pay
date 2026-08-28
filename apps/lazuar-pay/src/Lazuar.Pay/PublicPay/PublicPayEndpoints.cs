@@ -8,6 +8,7 @@ using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Money;
 using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Solana;
 using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
@@ -123,6 +124,7 @@ internal static class PublicPayEndpoints
         BillplzHosted billplz,
         XenditHosted xendit,
         RazorpayHosted razorpay,
+        SolanaHosted solana,
         TestHosted test,
         IFulfillPaid fulfillment,
         ProcessorRemote remote,
@@ -210,6 +212,7 @@ internal static class PublicPayEndpoints
             PayProviders.Billplz => billplz,
             PayProviders.Xendit => xendit,
             PayProviders.Razorpay => razorpay,
+            PayProviders.Solana => solana,
             PayProviders.Test => test,
             _ => throw new InvalidOperationException("rail not configured")
         };

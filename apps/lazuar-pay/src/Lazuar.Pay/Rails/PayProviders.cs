@@ -9,11 +9,12 @@ public static class PayProviders
     public const string Billplz = "billplz";
     public const string Xendit = "xendit";
     public const string Razorpay = "razorpay";
+    public const string Solana = "solana";
     public const string Test = "test";
 
     public const string Capability = "hosted_link";
 
-    public static readonly string[] All = [Stripe, Chip, Billplz, Xendit, Razorpay];
+    public static readonly string[] All = [Stripe, Chip, Billplz, Xendit, Razorpay, Solana];
 
     public static IReadOnlyList<string> Listed(IHostEnvironment env) =>
         AllowsTest(env) ? [..All, Test] : All;
@@ -26,14 +27,16 @@ public static class PayProviders
     public static bool TryNormalize(string? raw, out string provider)
     {
         provider = (raw ?? "").Trim().ToLowerInvariant();
-        return provider is Stripe or Chip or Billplz or Xendit or Razorpay or Test;
+        return provider is Stripe or Chip or Billplz or Xendit or Razorpay or Solana or Test;
     }
 
+    public static bool IsSolana(string provider) => provider == Solana;
+
     public static bool RequiresPublicMerchantId(string provider) =>
-        provider is Chip or Billplz;
+        provider is Chip or Billplz or Solana;
 
     public static bool RequiresEmail(string provider) =>
-        provider is not Stripe and not Test;
+        provider is not Stripe and not Test and not Solana;
 
     public static bool AllowsPublicMerchantId(string provider) =>
         RequiresPublicMerchantId(provider);

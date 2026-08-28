@@ -12,6 +12,8 @@ public class IsolationTests
         "ChipWebhookRegistrar", "PublicDnsFallback",
         "Lhdn", "MyInvois", "UBL", "XAdES", "Irbm",
         "IEnumerable<IHostedRail>",
+        "AddKeyedScoped<IHostedRail",
+        "GetRequiredKeyedService<IHostedRail",
         "namespace Lazuar.Pay.Gateways",
         "namespace Lazuar.Pay.One;",
         "GenerateApiCredential",

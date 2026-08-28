@@ -16,6 +16,7 @@ using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Solana;
 using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
@@ -49,6 +50,8 @@ builder.Services.AddHttpClient("chip");
 builder.Services.AddHttpClient("billplz");
 builder.Services.AddHttpClient("xendit");
 builder.Services.AddHttpClient("razorpay");
+builder.Services.AddHttpClient("solana", c => c.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("pay-webhooks", c => c.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>();
@@ -64,6 +67,7 @@ builder.Services.AddScoped<ChipHosted>();
 builder.Services.AddScoped<BillplzHosted>();
 builder.Services.AddScoped<XenditHosted>();
 builder.Services.AddScoped<RazorpayHosted>();
+builder.Services.AddScoped<SolanaHosted>();
 builder.Services.AddScoped<TestHosted>();
 builder.Services.AddScoped<ProcessorRemote>();
 builder.Services.AddScoped<Fulfillment>();

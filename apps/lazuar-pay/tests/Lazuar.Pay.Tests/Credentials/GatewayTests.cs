@@ -137,7 +137,7 @@ public class GatewayTests
     }
 
     [Test]
-    public async Task List_returns_all_five_and_put_does_not_default_pay_links()
+    public async Task List_returns_all_vaulted_rails_and_put_does_not_default_pay_links()
     {
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Role("owner", req);
@@ -151,7 +151,10 @@ public class GatewayTests
         Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var doc = JsonDocument.Parse(await got.Content.ReadAsStringAsync());
         var processors = doc.RootElement.GetProperty("processors");
-        Assert.That(processors.GetArrayLength(), Is.EqualTo(6));
+        Assert.That(processors.GetArrayLength(), Is.EqualTo(7));
+        var solana = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "solana");
+        Assert.That(solana.GetProperty("configured").GetBoolean(), Is.False);
+        Assert.That(solana.GetProperty("capability").GetString(), Is.EqualTo("hosted_link"));
         var stripe = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "stripe");
         var chip = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "chip");
         var xendit = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "xendit");
