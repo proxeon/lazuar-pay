@@ -145,7 +145,7 @@ internal static class CheckoutEndpoints
         }
 
         var rows = await db.Checkouts.AsNoTracking()
-            .Where(x => x.OrgId == orgId)
+            .Where(x => x.OrgId == orgId && x.PaymentLinkId == null)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
         var productIds = rows
@@ -156,7 +156,7 @@ internal static class CheckoutEndpoints
         var names = productIds.Count == 0
             ? new Dictionary<string, string>()
             : await db.Products.AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
+                .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
         return Results.Json(rows.Select(r => new

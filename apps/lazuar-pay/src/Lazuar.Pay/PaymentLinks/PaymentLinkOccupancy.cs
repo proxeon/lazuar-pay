@@ -75,4 +75,23 @@ internal static class PaymentLinkOccupancy
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
+
+    public static async Task ExpireOpenAsync(PayDbContext db, string linkId, CancellationToken ct)
+    {
+        var open = await db.Checkouts
+            .Where(x => x.PaymentLinkId == linkId && x.Status == "open")
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        if (open.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var row in open)
+        {
+            row.Status = "expired";
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
 }

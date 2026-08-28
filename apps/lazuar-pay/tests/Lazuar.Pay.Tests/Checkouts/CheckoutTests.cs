@@ -270,6 +270,24 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task List_omits_payment_link_children()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        await PayTest.SeedCheckout(client, "test");
+        var (token, _) = await PayTest.SeedPaymentLink(client, maxPayers: 1);
+        Assert.That((await PayTest.StartPay(client, token, "slot-child-1")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/checkouts");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(list);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("open"));
+    }
+
+    [Test]
     public async Task List_other_org_is_403()
     {
         await using var factory = new PayApiFactory();

@@ -45,6 +45,16 @@ internal static class PublicPayEndpoints
         }
 
         var row = await db.Checkouts.AsNoTracking().FirstAsync(x => x.Id == session.Id, ct);
+        if (!string.IsNullOrWhiteSpace(row.PaymentLinkId))
+        {
+            var parent = await db.PaymentLinks.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == row.PaymentLinkId, ct);
+            if (parent is not null)
+            {
+                return await GetLink(parent, row.SlotKey ?? slot_key, db, config, ct);
+            }
+        }
+
         return CheckoutView(token, row);
     }
 
@@ -57,8 +67,17 @@ internal static class PublicPayEndpoints
     {
         await PaymentLinkOccupancy.SerializeAsync(link.Id, async () =>
         {
-            await PaymentLinkOccupancy.ExpireStaleAsync(
-                db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
+            var settings = await db.OrgSettings.FindAsync([link.OrgId], ct);
+            if (settings?.ChargesPaused == true)
+            {
+                await PaymentLinkOccupancy.ExpireOpenAsync(db, link.Id, ct);
+            }
+            else
+            {
+                await PaymentLinkOccupancy.ExpireStaleAsync(
+                    db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
+            }
+
             return 0;
         }, ct);
 

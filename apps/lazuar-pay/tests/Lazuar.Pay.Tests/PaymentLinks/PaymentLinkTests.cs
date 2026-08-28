@@ -316,6 +316,77 @@ public class PaymentLinkTests
     }
 
     [Test]
+    public async Task Child_public_token_loads_parent_occupancy()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.PutChip(client);
+        var (token, linkId) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 2);
+        Assert.That((await PayTest.StartPay(client, token, "slot-alias-1", """{"name":"Ada","email":"ada@acme.test"}""")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var scope = factory.Services.CreateScope();
+        var child = scope.ServiceProvider.GetRequiredService<PayDbContext>().Checkouts.Single(x => x.PaymentLinkId == linkId);
+        var get = await client.GetAsync($"/v1/pay/{child.PublicToken}");
+        using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("remaining").GetInt32(), Is.EqualTo(1));
+        Assert.That(doc.RootElement.GetProperty("max_payers").GetInt32(), Is.EqualTo(2));
+        Assert.That(doc.RootElement.GetProperty("taken_count").GetInt32(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Pause_expires_open_reservations()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.PutChip(client);
+        var (token, _) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 1);
+        Assert.That((await PayTest.StartPay(client, token, "slot-pause-1", """{"name":"Ada","email":"ada@acme.test"}""")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused = true;
+            await db.SaveChangesAsync();
+        }
+
+        var get = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-other-2");
+        using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(doc.RootElement.GetProperty("remaining").GetInt32(), Is.EqualTo(1));
+        Assert.That(doc.RootElement.GetProperty("taken_count").GetInt32(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Two_chip_starts_hold_open_seats_on_a_link_of_two()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.PutChip(client);
+        var (token, _) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 2);
+        Assert.That((await PayTest.StartPay(client, token, "slot-open-a", """{"name":"Ada","email":"ada@acme.test"}""")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PayTest.StartPay(client, token, "slot-open-b", """{"name":"Bob","email":"bob@acme.test"}""")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PayTest.StartPay(client, token, "slot-open-c", """{"name":"Cid","email":"cid@acme.test"}""")).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        var get = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-open-c");
+        using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("full"));
+        Assert.That(doc.RootElement.GetProperty("paid_count").GetInt32(), Is.EqualTo(0));
+        Assert.That(doc.RootElement.GetProperty("taken_count").GetInt32(), Is.EqualTo(2));
+    }
+
+    [Test]
     public async Task Concurrent_start_on_one_person_link_admits_one_psp()
     {
         await using var factory = new PayApiFactory();
