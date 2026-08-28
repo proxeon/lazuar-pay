@@ -51,4 +51,12 @@ describe('visibleRails', () => {
     expect(hostListsTest([stripe])).toBe(false)
     expect(visibleRails([test, stripe])).toContain('test')
   })
+
+  it('treats Solana as a real rail', () => {
+    const solana: Processor = { provider: 'solana', configured: true, last4: 'mmc1' }
+    expect(readyMintRails([solana]).map((p) => p.provider)).toEqual(['solana'])
+    expect(defaultMintRail([solana])).toBe('solana')
+    expect(visibleRails([])).toContain('solana')
+    expect(vaultedNonTest([solana, test])).toEqual([solana])
+  })
 })

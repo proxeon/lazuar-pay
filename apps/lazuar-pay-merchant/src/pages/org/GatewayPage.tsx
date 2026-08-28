@@ -77,10 +77,10 @@ export function GatewayPage() {
     setKeyId('')
     setKeySecret('')
     const row = processors.find((p) => p.provider === next)
-    if (row?.environment === 'test' || row?.environment === 'live') {
+    if (row?.environment === 'test' || row?.environment === 'live' || row?.environment === 'devnet' || row?.environment === 'mainnet') {
       setEnvironment(row.environment)
     } else {
-      setEnvironment('test')
+      setEnvironment(next === 'solana' ? 'devnet' : 'test')
     }
     setPublicMerchantId(row?.public_merchant_id ?? '')
     setEditing(next)
@@ -90,20 +90,33 @@ export function GatewayPage() {
     if (!write || !editing) return
     setSaving(true)
     setError(null)
-    const payload: Record<string, string> = {
-      provider: editing,
-      webhook_secret: webhookSecret,
-    }
-    if (editing === 'razorpay') {
-      payload.secret = `${keyId}:${keySecret}`
-    } else {
-      payload.secret = secret
-    }
-    if (editing === 'chip' || editing === 'billplz') {
-      payload.public_merchant_id = publicMerchantId
-    }
-    if (editing === 'billplz') {
+    const payload: Record<string, string> = { provider: editing }
+    if (editing === 'solana') {
+      const address = publicMerchantId.trim()
+      if (
+        /BEGIN|END|-----|sk_|rk_|whsec_|lzr_sk_|:/.test(address) ||
+        address.includes(' ') ||
+        address.length < 32
+      ) {
+        setError('Paste a public receive address, not a secret')
+        setSaving(false)
+        return
+      }
+      payload.public_merchant_id = address
       payload.environment = environment
+    } else {
+      payload.webhook_secret = webhookSecret
+      if (editing === 'razorpay') {
+        payload.secret = `${keyId}:${keySecret}`
+      } else {
+        payload.secret = secret
+      }
+      if (editing === 'chip' || editing === 'billplz') {
+        payload.public_merchant_id = publicMerchantId
+      }
+      if (editing === 'billplz') {
+        payload.environment = environment
+      }
     }
     try {
       const response = await payFetch(token, `/v1/orgs/${orgId}/gateway`, {
@@ -168,6 +181,11 @@ export function GatewayPage() {
               <CardContent className="px-4 text-xs text-slate-500">
                 {isTest ? (
                   <p>No keys. Use this on Pay links.</p>
+                ) : r === 'solana' ? (
+                  <p>
+                    {on && row?.last4 ? `…${row.last4}` : 'No address on file'}
+                    {on ? '' : ''}
+                  </p>
                 ) : (
                   <p>
                     {on && row?.last4 ? `…${row.last4}` : 'No key on file'}
@@ -215,7 +233,33 @@ export function GatewayPage() {
                 </p>
               ) : null}
               <div className="space-y-4">
-                {editing === 'razorpay' ? (
+                {editing === 'solana' ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="receive_address">Receive address</Label>
+                      <Input
+                        id="receive_address"
+                        value={publicMerchantId}
+                        onChange={(e) => setPublicMerchantId(e.target.value)}
+                        autoComplete="off"
+                        placeholder="Your USDC receive address"
+                      />
+                      <p className="text-xs text-slate-500">Public wallet address only. Pay never asks for a private key.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Environment</Label>
+                      <Select value={environment} onValueChange={setEnvironment}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="devnet">devnet</SelectItem>
+                          <SelectItem value="mainnet">mainnet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : editing === 'razorpay' ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="key_id">key_id</Label>
@@ -251,7 +295,7 @@ export function GatewayPage() {
                   </div>
                 )}
 
-                <div className="space-y-2">
+                {editing === 'solana' ? null : <div className="space-y-2">
                   <Label htmlFor="webhook_secret">Webhook secret (Stripe signs; Pay verifies)</Label>
                   {editing === 'chip' ? (
                     <Textarea
@@ -284,7 +328,7 @@ export function GatewayPage() {
                       Webhook secret on file. Saving again requires a fresh value.
                     </p>
                   ) : null}
-                </div>
+                </div>}
 
                 {(editing === 'chip' || editing === 'billplz') && (
                   <div className="space-y-2">
@@ -316,6 +360,8 @@ export function GatewayPage() {
                   </div>
                 )}
 
+                {editing === 'solana' ? null : (
+                <>
                 <p className="text-xs leading-relaxed text-slate-500">
                   Webhook path:{' '}
                   <code>
@@ -326,13 +372,15 @@ export function GatewayPage() {
                   Dashboard callback must be public https on Pay:PublicBaseUrl. This SPA does not know that
                   origin. Localhost will fail.
                 </p>
+                </>
+                )}
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeEdit} disabled={saving}>
                   Cancel
                 </Button>
                 <Button type="button" onClick={() => void pasteKey()} disabled={saving}>
-                  Save key
+                  {editing === 'solana' ? 'Save address' : 'Save key'}
                 </Button>
               </DialogFooter>
             </>

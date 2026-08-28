@@ -1,4 +1,4 @@
-export const rails = ['test', 'stripe', 'chip', 'billplz', 'xendit', 'razorpay'] as const
+export const rails = ['test', 'stripe', 'chip', 'billplz', 'xendit', 'razorpay', 'solana'] as const
 
 export type Rail = (typeof rails)[number]
 
@@ -9,6 +9,7 @@ export const railLabel: Record<Rail, string> = {
   billplz: 'Billplz',
   xendit: 'Xendit',
   razorpay: 'Razorpay',
+  solana: 'Solana',
 }
 
 export const railCopy: Record<Rail, string> = {
@@ -18,6 +19,8 @@ export const railCopy: Record<Rail, string> = {
   billplz: 'Reminder + hosted bill. We do not auto-debit. Callback must be public https (localhost will fail).',
   xendit: 'Hosted invoice. Wallets on Xendit’s page if you enabled them there. We do not auto-debit.',
   razorpay: 'Hosted payment link. Not e-mandate. We do not auto-debit.',
+  solana:
+    'Solana Pay QR on the hosted checkout. USDC only. Paste the merchant receive address — a public wallet address, not a private key, not a PEM, not a Razorpay key_id. Pay does not import a wallet SDK and does not register a Solana program. Official Receipt, not an e-invoice. We do not auto-debit.',
 }
 
 export const railBlurb: Record<Rail, string> = {
@@ -27,6 +30,7 @@ export const railBlurb: Record<Rail, string> = {
   billplz: 'Reminder + hosted bill. Public https callback.',
   xendit: 'Hosted invoice. Wallets on Xendit.',
   razorpay: 'Hosted payment link. Not e-mandate.',
+  solana: 'Solana Pay QR on checkout. USDC. Paste a receive address.',
 }
 
 export type Processor = {

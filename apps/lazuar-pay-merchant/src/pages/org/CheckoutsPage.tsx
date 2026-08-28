@@ -156,19 +156,24 @@ export function CheckoutsPage() {
     setBusy(true)
     setError(null)
     let productCreated = false
+    const currency = provider === 'solana' ? 'USDC' : 'MYR'
     try {
-      const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
-        method: 'POST',
-        orgHint: orgId,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: productName, amount: Number(amount), currency: 'MYR' }),
-      })
-      if (!created.ok) {
-        setError(await problemDetail(created, `product ${created.status}`))
-        return
+      let productId: string | undefined
+      if (provider !== 'solana') {
+        const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
+          method: 'POST',
+          orgHint: orgId,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: productName, amount: Number(amount), currency }),
+        })
+        if (!created.ok) {
+          setError(await problemDetail(created, `product ${created.status}`))
+          return
+        }
+        productCreated = true
+        const product = (await created.json()) as { id?: string }
+        productId = product.id
       }
-      productCreated = true
-      const product = (await created.json()) as { id?: string }
       const checkout = await payFetch(token, '/v1/payment-links', {
         method: 'POST',
         orgHint: orgId,
@@ -176,9 +181,9 @@ export function CheckoutsPage() {
         body: JSON.stringify({
           org_id: orgId,
           amount: Number(amount),
-          currency: 'MYR',
+          currency,
           provider,
-          product_id: product.id,
+          product_id: productId,
           max_payers: capacity === 'one' ? 1 : capacity === 'limited' ? limited : undefined,
           unlimited: capacity === 'unlimited',
         }),
@@ -344,7 +349,7 @@ export function CheckoutsPage() {
           <DialogHeader>
             <DialogTitle>Create pay link</DialogTitle>
             <DialogDescription>
-              MYR. Success URL defaults to checkout ?status=verifying (not paid).
+              {provider === 'solana' ? 'USDC' : 'MYR'}. Success URL defaults to checkout ?status=verifying (not paid).
             </DialogDescription>
           </DialogHeader>
           {error ? (
@@ -363,7 +368,7 @@ export function CheckoutsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount (MYR)</Label>
+                <Label htmlFor="amount">Amount ({provider === 'solana' ? 'USDC' : 'MYR'})</Label>
                 <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
             </div>

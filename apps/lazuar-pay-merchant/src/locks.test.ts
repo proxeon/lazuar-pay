@@ -35,6 +35,7 @@ describe('merchant honesty locks', () => {
     expect(pkg).not.toContain('@repo/pay-types-ts')
     expect(pkg).not.toContain('@repo/aura-ui')
     expect(pkg).not.toContain('lazuar-ops')
+    expect(pkg).not.toContain('@solana/')
   })
 
   it('plane C webhooks are pay-posts-you-verify', () => {
@@ -167,6 +168,18 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('/v1/webhooks/')
     expect(src).toContain('Pay:PublicBaseUrl')
     expect(src).not.toContain('localhost:8081')
+  })
+
+  it('solana is a processor card with a receive address, not a second app', () => {
+    const processors = readFileSync(join(root, 'src', 'lib', 'processors.ts'), 'utf8')
+    const gateway = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    const nav = readFileSync(join(root, 'src', 'layout', 'nav.ts'), 'utf8')
+    const app = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(processors).toContain("'solana'")
+    expect(processors).not.toContain("'paypal'")
+    expect(gateway).toContain('Receive address')
+    expect(nav).not.toMatch(/\bSolana\b/)
+    expect(app).not.toContain('path="solana"')
   })
 
   it('org shell uses copied AppSidebar not Aura ops nav', () => {
