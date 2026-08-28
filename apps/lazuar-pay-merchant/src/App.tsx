@@ -11,6 +11,7 @@ import { GatewayPage } from './pages/org/GatewayPage'
 import { OverviewPage } from './pages/org/OverviewPage'
 import { PaymentsPage } from './pages/org/PaymentsPage'
 import { ReceiptsPage } from './pages/org/ReceiptsPage'
+import { WebhooksPage } from './pages/org/WebhooksPage'
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="checkouts" element={<CheckoutsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="receipts" element={<ReceiptsPage />} />
+        <Route path="webhooks" element={<WebhooksPage />} />
       </Route>
     </Routes>
   )

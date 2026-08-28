@@ -130,7 +130,7 @@ export function GatewayPage() {
 
   return (
     <PageCanvas>
-      <PageHeader subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links." />
+      <PageHeader subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links. Stripe signs; Pay verifies. This is not the URL Pay POSTs to your app." />
 
       {listError ? (
         <p role="alert" className="text-sm text-red-600">
@@ -252,7 +252,7 @@ export function GatewayPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="webhook_secret">Webhook secret</Label>
+                  <Label htmlFor="webhook_secret">Webhook secret (Stripe signs; Pay verifies)</Label>
                   {editing === 'chip' ? (
                     <Textarea
                       id="webhook_secret"

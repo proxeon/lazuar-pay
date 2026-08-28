@@ -32,8 +32,19 @@ describe('merchant honesty locks', () => {
   it('package.json does not depend on Hub types', () => {
     const pkg = readFileSync(join(root, 'package.json'), 'utf8')
     expect(pkg).not.toContain('@repo/api-types-ts')
+    expect(pkg).not.toContain('@repo/pay-types-ts')
     expect(pkg).not.toContain('@repo/aura-ui')
     expect(pkg).not.toContain('lazuar-ops')
+  })
+
+  it('plane C webhooks are pay-posts-you-verify', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'WebhooksPage.tsx'), 'utf8')
+    expect(src).toContain('Pay will POST here; you verify')
+    expect(src).toContain('webhooks/rotate')
+    expect(src).toContain('Copy now. Pay will not show this again.')
+    expect(src).not.toContain('lzr_sk_')
+    expect(src).not.toContain('/api-keys')
+    expect(src).not.toContain('GenerateApi')
   })
 
   it('CHIP PEM uses a textarea', () => {
@@ -103,7 +114,7 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('1 person only')
     expect(src).toContain('The link closes after one person starts Pay. Unpaid starts free after 30 minutes.')
     expect(src).not.toContain('The link closes after one successful payment.')
-    expect(src).toContain('started · unlimited')
+    expect(readFileSync(join(root, 'src', 'lib', 'occupancyDisplay.ts'), 'utf8')).toContain('started · unlimited')
   })
 
   it('mint rails trust the host list and default to the first real rail', () => {

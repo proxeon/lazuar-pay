@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { payJson } from '../../lib/payApi'
+import { listItems, payJson } from '../../lib/payApi'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/components/table'
@@ -49,10 +49,10 @@ export function ReceiptsPage() {
     let stop = false
     setLoaded(false)
     setListError(null)
-    payJson<Receipt[]>(token, `/v1/orgs/${orgId}/receipts`, { orgHint: orgId })
+    payJson<Receipt[] | { items: Receipt[] }>(token, `/v1/orgs/${orgId}/receipts`, { orgHint: orgId })
       .then((rows) => {
         if (stop) return
-        setReceipts(rows)
+        setReceipts(listItems(rows))
         setLoaded(true)
       })
       .catch((err: unknown) => {

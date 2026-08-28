@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getWhoami, payJson } from './payApi'
+import { getWhoami, listItems, payJson } from './payApi'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -43,6 +43,14 @@ describe('getWhoami', () => {
       }),
     )
     await expect(getWhoami('tok')).rejects.toThrow('Pay unreachable')
+  })
+})
+
+describe('listItems', () => {
+  it('accepts a raw array or { items }', () => {
+    expect(listItems([1, 2])).toEqual([1, 2])
+    expect(listItems({ items: [3], next_cursor: 'x' })).toEqual([3])
+    expect(listItems(null)).toEqual([])
   })
 })
 

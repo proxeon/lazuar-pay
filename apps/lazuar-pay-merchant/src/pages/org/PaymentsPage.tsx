@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { payJson } from '../../lib/payApi'
+import { listItems, payJson } from '../../lib/payApi'
 import { isRail, railLabel } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -49,10 +49,10 @@ export function PaymentsPage() {
     let stop = false
     setLoaded(false)
     setListError(null)
-    payJson<Payment[]>(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
+    payJson<Payment[] | { items: Payment[] }>(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
       .then((rows) => {
         if (stop) return
-        setPayments(rows)
+        setPayments(listItems(rows))
         setLoaded(true)
       })
       .catch((err: unknown) => {

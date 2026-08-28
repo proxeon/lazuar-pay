@@ -80,4 +80,12 @@ export async function payJson<T>(
   }
 }
 
+export type PayPage<T> = { items: T[]; next_cursor?: string | null }
+
+export function listItems<T>(payload: T[] | PayPage<T> | null | undefined): T[] {
+  if (payload == null) return []
+  if (Array.isArray(payload)) return payload
+  return payload.items ?? []
+}
+
 export { payApi }

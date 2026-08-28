@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
-import { payFetch, payJson } from '../../lib/payApi'
+import { listItems, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
 import { defaultMintRail, isRail, railLabel, readyMintRails, type Processor, type Rail } from '../../lib/processors'
@@ -103,8 +103,10 @@ export function CheckoutsPage() {
   const [copied, setCopied] = useState<string | null>(null)
 
   async function loadLinks() {
-    const rows = await payJson<PayLink[]>(token, `/v1/orgs/${orgId}/payment-links`, { orgHint: orgId })
-    setLinks(rows)
+    const rows = await payJson<PayLink[] | { items: PayLink[] }>(token, `/v1/orgs/${orgId}/payment-links`, {
+      orgHint: orgId,
+    })
+    setLinks(listItems(rows))
     setListError(null)
     setLinksLoaded(true)
   }
