@@ -73,15 +73,14 @@ internal static class PublicPayEndpoints
 
         if (mine is not null)
         {
-            return CheckoutView(link.PublicToken, mine, remaining, link.MaxPayers, paid, taken);
+            return CheckoutView(link.PublicToken, mine, remaining, link.MaxPayers, paid, taken, mine: true);
         }
 
         if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
         {
             if (link.MaxPayers == 1 && paid >= 1)
             {
-                var paidRow = children.First(c => c.Status == "paid");
-                return CheckoutView(link.PublicToken, paidRow, remaining, link.MaxPayers, paid, taken);
+                return LinkView(link, "already_paid", remaining, paid, taken, started: false, redirectUrl: null);
             }
 
             return LinkView(link, "full", remaining, paid, taken, started: false, redirectUrl: null);
@@ -365,7 +364,8 @@ internal static class PublicPayEndpoints
         int? remaining = null,
         int? maxPayers = null,
         int? paidCount = null,
-        int? takenCount = null)
+        int? takenCount = null,
+        bool mine = true)
     {
         var provider = row.Provider;
         var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
@@ -380,6 +380,7 @@ internal static class PublicPayEndpoints
             payer_email = row.PayerEmail,
             email_required = emailRequired,
             started,
+            mine,
             provider,
             redirect_url = started && row.Status == "open" ? row.PspRedirectUrl : null,
             remaining,
@@ -407,6 +408,7 @@ internal static class PublicPayEndpoints
             status,
             email_required = emailRequired,
             started,
+            mine = false,
             provider = link.Provider,
             redirect_url = redirectUrl,
             remaining,

@@ -193,7 +193,7 @@ public class PaymentLinkTests
     }
 
     [Test]
-    public async Task One_person_link_shows_paid_without_slot_after_pay()
+    public async Task One_person_link_shows_already_paid_without_slot_after_pay()
     {
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
@@ -202,7 +202,24 @@ public class PaymentLinkTests
         Assert.That((await PayTest.StartPay(client, token, "slot-only-1")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var get = await client.GetAsync($"/v1/pay/{token}");
         using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("already_paid"));
+        Assert.That(doc.RootElement.GetProperty("mine").GetBoolean(), Is.False);
+        Assert.That(doc.RootElement.GetProperty("started").GetBoolean(), Is.False);
+        Assert.That(doc.RootElement.TryGetProperty("payer_email", out _), Is.False);
+    }
+
+    [Test]
+    public async Task One_person_link_shows_paid_with_payer_slot_after_pay()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (token, _) = await PayTest.SeedPaymentLink(client, maxPayers: 1);
+        Assert.That((await PayTest.StartPay(client, token, "slot-only-1")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var get = await client.GetAsync($"/v1/pay/{token}?slot_key=slot-only-1");
+        using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
         Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("paid"));
+        Assert.That(doc.RootElement.GetProperty("mine").GetBoolean(), Is.True);
     }
 
     [Test]
