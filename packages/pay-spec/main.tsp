@@ -135,6 +135,15 @@ model PutGateway {
   key_secret?: string;
 }
 
+model PutOneWebhook {
+  webhook_secret: string;
+}
+
+model OneWebhookView {
+  org_id: string;
+  webhook_configured: boolean;
+}
+
 model CreateProductRequest {
   name: string;
   description?: string;
@@ -253,14 +262,6 @@ model OneWebhookEvent {
   id?: string;
   org_id?: string;
   tenant_id?: string;
-}
-
-@tag("Health")
-interface HostReady {
-  /** Host-only process probe. Postgres CanConnect; Testing InMemory returns 200. Not versioned. */
-  @get
-  @route("/ready")
-  ready(): HealthResponse;
 }
 
 @route("/v1")
@@ -417,4 +418,13 @@ interface Webhooks {
     @header("X-Lazuar-Timestamp") timestamp?: string,
     @body body?: OneWebhookEvent,
   ): OneWebhookResult;
+
+  /** Writer stores this shop's One `whsec_`. Process `Pay:OneWebhookSecret` is the one-shop fallback. */
+  @put
+  @route("/orgs/{orgId}/one-webhook")
+  putOne(@path orgId: string, @body body: PutOneWebhook): OneWebhookView;
+
+  @get
+  @route("/orgs/{orgId}/one-webhook")
+  getOne(@path orgId: string): OneWebhookView;
 }

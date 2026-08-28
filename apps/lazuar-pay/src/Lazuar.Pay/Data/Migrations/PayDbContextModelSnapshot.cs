@@ -379,6 +379,9 @@ namespace Lazuar.Pay.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OneWebhookCiphertext")
+                        .HasColumnType("text");
+
                     b.Property<bool?>("SstRegistered")
                         .HasColumnType("boolean");
 

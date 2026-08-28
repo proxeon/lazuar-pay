@@ -2,6 +2,7 @@ using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Identity.OneWebhooks;
@@ -11,17 +12,20 @@ internal static class OneWebhookEndpoints
     public static void MapOneWebhooks(this WebApplication app)
     {
         app.MapPost("/v1/one/webhooks", Handle);
+        app.MapPut("/v1/orgs/{orgId}/one-webhook", Put);
+        app.MapGet("/v1/orgs/{orgId}/one-webhook", Get);
     }
 
     static async Task<IResult> Handle(
         HttpRequest request,
         PayDbContext db,
         IConfiguration config,
+        SecretBox box,
         CancellationToken ct)
     {
         using var reader = new StreamReader(request.Body);
         var json = await reader.ReadToEndAsync(ct);
-        var secret = config["Pay:OneWebhookSecret"];
+        var secret = await ResolveSecretAsync(json, db, config, box, ct);
         if (string.IsNullOrWhiteSpace(secret))
         {
             return PayErrors.Status(503, "Service Unavailable", "One webhook secret missing");
@@ -52,6 +56,125 @@ internal static class OneWebhookEndpoints
         using (doc)
         {
             return await ApplyAsync(doc, request, db, ct);
+        }
+    }
+
+    static async Task<IResult> Put(
+        string orgId,
+        PutOneWebhookRequest? body,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        SecretBox box,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireWriterAsync(request, one, orgId, ct);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var webhookSecret = body?.WebhookSecret?.Trim();
+        if (string.IsNullOrWhiteSpace(webhookSecret))
+        {
+            return PayErrors.Status(400, "Bad Request", "webhook_secret is required");
+        }
+
+        string wrapped;
+        try
+        {
+            wrapped = box.Protect(webhookSecret);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("WrapKey", StringComparison.Ordinal))
+        {
+            return PayErrors.Status(503, "Service Unavailable", ex.Message);
+        }
+
+        var settings = await db.OrgSettings.FindAsync([orgId], ct);
+        if (settings is null)
+        {
+            settings = new OrgSettingsRow { OrgId = orgId, OneWebhookCiphertext = wrapped };
+            db.OrgSettings.Add(settings);
+        }
+        else
+        {
+            settings.OneWebhookCiphertext = wrapped;
+        }
+
+        db.AuditEvents.Add(new AuditEventRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = orgId,
+            Action = "one.webhook_secret.upsert",
+            At = DateTimeOffset.UtcNow
+        });
+
+        await db.SaveChangesAsync(ct);
+        return Results.Json(View(orgId, configured: true), OneClient.Json);
+    }
+
+    static async Task<IResult> Get(
+        string orgId,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var settings = await db.OrgSettings.FindAsync([orgId], ct);
+        var configured = !string.IsNullOrWhiteSpace(settings?.OneWebhookCiphertext);
+        return Results.Json(View(orgId, configured), OneClient.Json);
+    }
+
+    static async Task<string?> ResolveSecretAsync(
+        string json,
+        PayDbContext db,
+        IConfiguration config,
+        SecretBox box,
+        CancellationToken ct)
+    {
+        var orgId = PeekOrgId(json);
+        if (!string.IsNullOrWhiteSpace(orgId))
+        {
+            var settings = await db.OrgSettings.FindAsync([orgId], ct);
+            if (!string.IsNullOrWhiteSpace(settings?.OneWebhookCiphertext))
+            {
+                try
+                {
+                    var stored = box.Unprotect(settings.OneWebhookCiphertext);
+                    return string.IsNullOrWhiteSpace(stored) ? null : stored;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+        }
+
+        var process = config["Pay:OneWebhookSecret"];
+        return string.IsNullOrWhiteSpace(process) ? null : process;
+    }
+
+    static string? PeekOrgId(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return ReadOrgId(doc.RootElement);
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
@@ -103,6 +226,12 @@ internal static class OneWebhookEndpoints
         return Results.Json(new { ok = true }, OneClient.Json);
     }
 
+    static object View(string orgId, bool configured) => new
+    {
+        org_id = orgId,
+        webhook_configured = configured
+    };
+
     static string? ReadOrgId(JsonElement root)
     {
         if (root.TryGetProperty("org_id", out var o))
@@ -125,4 +254,9 @@ internal static class OneWebhookEndpoints
 
         return null;
     }
+}
+
+public sealed class PutOneWebhookRequest
+{
+    public string? WebhookSecret { get; set; }
 }

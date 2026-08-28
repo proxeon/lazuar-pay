@@ -10,10 +10,51 @@ public class OneWebhookTests
 {
     const string Secret = "one_whsec_test";
 
-    static string Sign(string body, long unix)
+    static string Sign(string body, long unix) => SignWith(Secret, body, unix);
+
+    static string SignWith(string secret, string body, long unix)
     {
-        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(Secret), Encoding.UTF8.GetBytes($"{unix}.{body}"));
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes($"{unix}.{body}"));
         return $"t={unix},v1={Convert.ToHexString(mac).ToLowerInvariant()}";
+    }
+
+    static HttpResponseMessage TwoOwners(HttpRequestMessage req)
+    {
+        var path = req.RequestUri?.AbsolutePath ?? "";
+        if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+        {
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"owner","status":"active"},{"id":"t2","role":"owner","status":"active"}]}""");
+        }
+
+        return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+    }
+
+    static async Task PutSecret(HttpClient client, string orgId, string secret)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"/v1/orgs/{orgId}/one-webhook")
+        {
+            Content = new StringContent($$"""{"webhook_secret":"{{secret}}"}""", Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Not.Contain(secret));
+    }
+
+    static async Task<HttpResponseMessage> PostOne(HttpClient client, string body, string secret, string? eventId = null)
+    {
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", SignWith(secret, body, t));
+        if (eventId is not null)
+        {
+            req.Headers.TryAddWithoutValidation("X-Lazuar-Event-Id", eventId);
+        }
+
+        return await client.SendAsync(req);
     }
 
     [Test]
@@ -254,5 +295,112 @@ public class OneWebhookTests
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("event id required"));
+    }
+
+    [Test]
+    public async Task Member_cannot_put_one_webhook_secret()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = "" };
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"member","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        using var req = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/one-webhook")
+        {
+            Content = new StringContent("""{"webhook_secret":"whsec_a"}""", Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Put_requires_webhook_secret()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = "" };
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        using var req = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/one-webhook")
+        {
+            Content = new StringContent("""{}""", Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Put_and_get_does_not_echo_secret()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = "" };
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PutSecret(client, "t1", "whsec_shop_a");
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/one-webhook");
+        get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var got = await client.SendAsync(get);
+        Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.OK), await got.Content.ReadAsStringAsync());
+        var json = await got.Content.ReadAsStringAsync();
+        Assert.That(json, Does.Contain("\"webhook_configured\":true"));
+        Assert.That(json, Does.Not.Contain("whsec_shop_a"));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.AuditEvents.Any(a => a.Action == "one.webhook_secret.upsert" && a.OrgId == "t1"));
+        Assert.That(db.OrgSettings.Single(x => x.OrgId == "t1").OneWebhookCiphertext, Is.Not.EqualTo("whsec_shop_a"));
+    }
+
+    [Test]
+    public async Task Two_orgs_only_matching_secret_pauses()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = "" };
+        factory.One.Responder = TwoOwners;
+        var client = factory.CreateClient();
+        await PutSecret(client, "t1", "whsec_a");
+        await PutSecret(client, "t2", "whsec_b");
+
+        var aBody = """{"id":"del_a","type":"tenant.suspended","org_id":"t1"}""";
+        Assert.That((await PostOne(client, aBody, "whsec_a")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var stealT1 = """{"id":"del_steal_t1","type":"tenant.suspended","org_id":"t1"}""";
+        Assert.That((await PostOne(client, stealT1, "whsec_b")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        var stealT2 = """{"id":"del_steal_t2","type":"tenant.suspended","org_id":"t2"}""";
+        Assert.That((await PostOne(client, stealT2, "whsec_a")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        using (var mid = factory.Services.CreateScope())
+        {
+            var db = mid.ServiceProvider.GetRequiredService<PayDbContext>();
+            Assert.That(db.OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
+            Assert.That(db.OrgSettings.Single(x => x.OrgId == "t2").ChargesPaused, Is.False);
+        }
+
+        var bBody = """{"id":"del_b","type":"tenant.suspended","org_id":"t2"}""";
+        Assert.That((await PostOne(client, bBody, "whsec_b")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var scope = factory.Services.CreateScope();
+        var paused = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(paused.OrgSettings.Single(x => x.OrgId == "t2").ChargesPaused, Is.True);
+        Assert.That(paused.OneWebhookEvents.Count(x => x.DeliveryId.StartsWith("del_steal_")), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Stored_secret_wins_over_process_fallback()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PutSecret(client, "t1", "whsec_stored");
+        var body = """{"id":"del_stored","type":"tenant.suspended","org_id":"t1"}""";
+        Assert.That((await PostOne(client, body, Secret)).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That((await PostOne(client, body, "whsec_stored")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
     }
 }

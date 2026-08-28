@@ -9,6 +9,8 @@ public sealed class OrgSettingsRow
     public bool? SstRegistered { get; set; }
     /// <summary>Unused. Vault save does not pick a default rail. Column kept; do not read on the pay path.</summary>
     public string? ActiveProvider { get; set; }
+    /// <summary>Per-org One <c>whsec_</c>. Process <c>Pay:OneWebhookSecret</c> is the one-shop fallback.</summary>
+    public string? OneWebhookCiphertext { get; set; }
 }
 
 public sealed class CheckoutRow
