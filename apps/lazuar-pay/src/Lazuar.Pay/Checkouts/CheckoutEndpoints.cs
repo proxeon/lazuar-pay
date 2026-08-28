@@ -74,6 +74,12 @@ internal static class CheckoutEndpoints
             }
         }
 
+        var interval = string.IsNullOrWhiteSpace(body.Interval) ? "one_off" : body.Interval.Trim();
+        if (interval is not ("one_off" or "mo" or "yr"))
+        {
+            return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
+        }
+
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
         var idempotency = request.Headers["Idempotency-Key"].ToString();
         if (string.IsNullOrWhiteSpace(idempotency))
@@ -91,7 +97,7 @@ internal static class CheckoutEndpoints
             Amount = body.Amount.Value,
             Currency = currency,
             Status = "open",
-            Interval = "one_off",
+            Interval = interval,
             SuccessUrl = body.SuccessUrl,
             CancelUrl = body.CancelUrl,
             CreatedAt = DateTimeOffset.UtcNow
@@ -108,6 +114,20 @@ internal static class CheckoutEndpoints
         }
 
         var created = session.Id == mintedId;
+        if (created && interval is "mo" or "yr")
+        {
+            db.Subscriptions.Add(new SubscriptionRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = session.OrgId,
+                CheckoutId = session.Id,
+                Status = "incomplete",
+                Interval = interval,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         StampPayUrl(session, config, env);
         return Results.Json(session, OneClient.Json, statusCode: created ? 201 : 200);
     }
@@ -158,6 +178,8 @@ internal static class CheckoutEndpoints
 
     static async Task<IResult> List(
         string orgId,
+        int? limit,
+        string? after,
         HttpRequest request,
         OneClient one,
         PayDbContext db,
@@ -169,9 +191,22 @@ internal static class CheckoutEndpoints
             return denied;
         }
 
-        var rows = await db.Checkouts.AsNoTracking()
-            .Where(x => x.OrgId == orgId && x.PaymentLinkId == null)
+        var take = PayList.Clamp(limit);
+        var q = db.Checkouts.AsNoTracking().Where(x => x.OrgId == orgId && x.PaymentLinkId == null);
+        if (!string.IsNullOrWhiteSpace(after))
+        {
+            var cursor = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, cancellationToken);
+            if (cursor is not null)
+            {
+                q = q.Where(x => x.CreatedAt < cursor.CreatedAt
+                    || (x.CreatedAt == cursor.CreatedAt && x.Id.CompareTo(cursor.Id) < 0));
+            }
+        }
+
+        var rows = await q
             .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Take(take + 1)
             .ToListAsync(cancellationToken);
         var productIds = rows
             .Select(x => x.ProductId)
@@ -184,17 +219,28 @@ internal static class CheckoutEndpoints
                 .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
-        return Results.Json(rows.Select(r => new
+        string? next = null;
+        if (rows.Count > take)
         {
-            id = r.Id,
-            org_id = r.OrgId,
-            provider = r.Provider,
-            amount = r.Amount,
-            currency = r.Currency,
-            status = r.Status,
-            public_token = r.PublicToken,
-            created_at = r.CreatedAt,
-            label = r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null
-        }), OneClient.Json);
+            rows = rows.Take(take).ToList();
+            next = rows[^1].Id;
+        }
+
+        return Results.Json(new
+        {
+            items = rows.Select(r => new
+            {
+                id = r.Id,
+                org_id = r.OrgId,
+                provider = r.Provider,
+                amount = r.Amount,
+                currency = r.Currency,
+                status = r.Status,
+                public_token = r.PublicToken,
+                created_at = r.CreatedAt,
+                label = r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null
+            }),
+            next_cursor = next
+        }, OneClient.Json);
     }
 }

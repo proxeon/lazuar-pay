@@ -83,6 +83,29 @@ public class IsolationTests
             var text = File.ReadAllText(pkg);
             Assert.That(text, Does.Not.Contain("@repo/api-types-ts"), pkg);
         }
+
+        var sample = Path.Combine(repo, "examples", "pay-node", "package.json");
+        Assert.That(File.Exists(sample), Is.True, sample);
+        var sampleText = File.ReadAllText(sample);
+        Assert.That(sampleText, Does.Not.Contain("@repo/api-types-ts"), sample);
+        Assert.That(sampleText, Does.Not.Contain("@repo/pay-types-ts"), sample);
+    }
+
+    [Test]
+    public void Pay_types_generate_from_pay_spec_not_hub()
+    {
+        var repo = FindPayRoot();
+        while (repo is not null && !Directory.Exists(Path.Combine(repo, "packages", "pay-types-ts")))
+        {
+            repo = Directory.GetParent(repo)?.FullName;
+        }
+
+        Assert.That(repo, Is.Not.Null);
+        var pkg = Path.Combine(repo, "packages", "pay-types-ts", "package.json");
+        var text = File.ReadAllText(pkg);
+        Assert.That(text, Does.Contain("../pay-spec/dist/openapi.yaml"));
+        Assert.That(text, Does.Not.Contain("api-spec"));
+        Assert.That(text, Does.Not.Contain("@repo/api-types-ts"));
     }
 
     [Test]

@@ -64,6 +64,8 @@ internal static class CatalogEndpoints
 
     static async Task<IResult> List(
         string orgId,
+        int? limit,
+        string? after,
         HttpRequest request,
         OneClient one,
         PayDbContext db,
@@ -71,17 +73,41 @@ internal static class CatalogEndpoints
     {
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
         if (denied is not null) return denied;
-        var products = await db.Products.AsNoTracking().Where(p => p.OrgId == orgId).ToListAsync(ct);
+        var take = PayList.Clamp(limit);
+        var q = db.Products.AsNoTracking().Where(p => p.OrgId == orgId);
+        if (!string.IsNullOrWhiteSpace(after))
+        {
+            var cursor = await db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, ct);
+            if (cursor is not null)
+            {
+                q = q.Where(x => x.CreatedAt < cursor.CreatedAt
+                    || (x.CreatedAt == cursor.CreatedAt && x.Id.CompareTo(cursor.Id) < 0));
+            }
+        }
+
+        var products = await q.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
+            .Take(take + 1)
+            .ToListAsync(ct);
+        string? next = null;
+        if (products.Count > take)
+        {
+            products = products.Take(take).ToList();
+            next = products[^1].Id;
+        }
+
         var ids = products.Select(p => p.Id).ToList();
         var prices = await db.Prices.AsNoTracking().Where(p => ids.Contains(p.ProductId)).ToListAsync(ct);
-        var payload = products.Select(p => new
+        return Results.Json(new
         {
-            id = p.Id,
-            org_id = p.OrgId,
-            name = p.Name,
-            prices = prices.Where(x => x.ProductId == p.Id).Select(x => new { x.Id, x.Amount, x.Currency, x.Interval })
-        });
-        return Results.Json(payload, OneClient.Json);
+            items = products.Select(p => new
+            {
+                id = p.Id,
+                org_id = p.OrgId,
+                name = p.Name,
+                prices = prices.Where(x => x.ProductId == p.Id).Select(x => new { x.Id, x.Amount, x.Currency, x.Interval })
+            }),
+            next_cursor = next
+        }, OneClient.Json);
     }
 }
 

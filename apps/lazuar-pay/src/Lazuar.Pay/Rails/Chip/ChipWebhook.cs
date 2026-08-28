@@ -69,7 +69,25 @@ internal static class ChipWebhook
 
         if (eventType == "purchase.payment_failure")
         {
-            return new PspParseResult { EventId = "failed:" + purchaseId, Ignored = true, IgnoreReason = "payment_failure" };
+            string? failedCheckout = null;
+            if (root.TryGetProperty("purchase", out var failPurchase)
+                && failPurchase.ValueKind == JsonValueKind.Object
+                && failPurchase.TryGetProperty("metadata", out var failMeta)
+                && failMeta.ValueKind == JsonValueKind.Object
+                && failMeta.TryGetProperty("checkout_id", out var failCid))
+            {
+                failedCheckout = failCid.GetString();
+            }
+
+            return new PspParseResult
+            {
+                EventId = "failed:" + purchaseId,
+                Failed = true,
+                IgnoreReason = "payment_failure",
+                CheckoutId = failedCheckout,
+                HostedSessionId = purchaseId,
+                ProviderRef = purchaseId
+            };
         }
 
         if (eventType != "purchase.paid")

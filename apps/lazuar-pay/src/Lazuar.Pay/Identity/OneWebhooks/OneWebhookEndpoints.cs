@@ -21,6 +21,7 @@ internal static class OneWebhookEndpoints
         PayDbContext db,
         IConfiguration config,
         SecretBox box,
+        OneWhoamiCache cache,
         CancellationToken ct)
     {
         using var reader = new StreamReader(request.Body);
@@ -55,7 +56,7 @@ internal static class OneWebhookEndpoints
 
         using (doc)
         {
-            return await ApplyAsync(doc, request, db, ct);
+            return await ApplyAsync(doc, request, db, cache, ct);
         }
     }
 
@@ -178,7 +179,12 @@ internal static class OneWebhookEndpoints
         }
     }
 
-    static async Task<IResult> ApplyAsync(JsonDocument doc, HttpRequest request, PayDbContext db, CancellationToken ct)
+    static async Task<IResult> ApplyAsync(
+        JsonDocument doc,
+        HttpRequest request,
+        PayDbContext db,
+        OneWhoamiCache cache,
+        CancellationToken ct)
     {
         var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() : null;
         var bodyId = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
@@ -222,6 +228,15 @@ internal static class OneWebhookEndpoints
             if (settings is not null) settings.ChargesPaused = false;
         }
 
+        if (type == "api_key.revoked")
+        {
+            var keyId = ReadKeyId(doc.RootElement);
+            if (!string.IsNullOrWhiteSpace(keyId))
+            {
+                cache.InvalidateKey(keyId);
+            }
+        }
+
         await db.SaveChangesAsync(ct);
         return Results.Json(new { ok = true }, OneClient.Json);
     }
@@ -255,6 +270,25 @@ internal static class OneWebhookEndpoints
         if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
         {
             return ReadOrgId(data);
+        }
+
+        return null;
+    }
+
+    static string? ReadKeyId(JsonElement root)
+    {
+        if (root.TryGetProperty("key_id", out var k))
+        {
+            var keyId = k.GetString();
+            if (!string.IsNullOrWhiteSpace(keyId))
+            {
+                return keyId.Trim();
+            }
+        }
+
+        if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
+        {
+            return ReadKeyId(data);
         }
 
         return null;

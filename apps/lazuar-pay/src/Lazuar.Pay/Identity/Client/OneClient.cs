@@ -16,11 +16,13 @@ public sealed class OneClient
     };
 
     private readonly HttpClient _http;
+    readonly OneWhoamiCache? _cache;
 
-    public OneClient(HttpClient http, IOptions<OneOptions> options)
+    public OneClient(HttpClient http, IOptions<OneOptions> options, OneWhoamiCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(http);
         _http = http;
+        _cache = cache;
         var opt = options.Value;
         var baseUrl = (string.IsNullOrWhiteSpace(opt.BaseUrl)
             ? "http://localhost:8080/api/v1"
@@ -37,6 +39,12 @@ public sealed class OneClient
         string? tenantHint,
         CancellationToken cancellationToken)
     {
+        var machine = Bearer.IsMachineKey(authorization);
+        if (machine && _cache is not null && _cache.TryGet(authorization, out var cached))
+        {
+            return new OneCallResult<WhoamiResponse> { Value = cached, StatusCode = 200 };
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Get, "me");
         request.Headers.TryAddWithoutValidation("Authorization", authorization);
         if (!string.IsNullOrWhiteSpace(tenantHint))
@@ -44,7 +52,7 @@ public sealed class OneClient
             request.Headers.TryAddWithoutValidation("X-Lazuar-Tenant-Id", tenantHint);
         }
 
-        return await SendAsync(request, async (response, ct) =>
+        var result = await SendAsync(request, async (response, ct) =>
         {
             OneMeResponse? me;
             try
@@ -64,6 +72,18 @@ public sealed class OneClient
 
             return new OneCallResult<WhoamiResponse> { Value = who, StatusCode = 200 };
         }, cancellationToken);
+
+        if (result.StatusCode == 401)
+        {
+            _cache?.RemoveToken(authorization);
+        }
+
+        if (machine && result.StatusCode == 200 && result.Value is not null)
+        {
+            _cache?.Set(authorization, result.Value, machineKey: true);
+        }
+
+        return result;
     }
 
     internal async Task<OneCallResult<bool>> CheckMemberAsync(

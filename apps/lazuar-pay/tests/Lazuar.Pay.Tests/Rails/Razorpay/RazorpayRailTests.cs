@@ -100,7 +100,7 @@ public class RazorpayRailTests
         wh.Headers.TryAddWithoutValidation("X-Razorpay-Signature", Convert.ToHexString(mac).ToLowerInvariant());
         var response = await client.SendAsync(wh);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("payment_failed"));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("failed"));
         using var scope = factory.Services.CreateScope();
         Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(0));
     }

@@ -4,6 +4,7 @@ public sealed class PspParseResult
 {
     public required string EventId { get; init; }
     public bool Ignored { get; init; }
+    public bool Failed { get; init; }
     public string? IgnoreReason { get; init; }
     public string? CheckoutId { get; init; }
     public string? HostedSessionId { get; init; }

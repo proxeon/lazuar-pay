@@ -1,5 +1,4 @@
 using Lazuar.Pay.Hosting;
-using Lazuar.Pay.Identity.Client;
 
 namespace Lazuar.Pay.Identity.Client;
 
@@ -30,12 +29,19 @@ internal static class MemberGate
         request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
         if (Bearer.IsMachineKey(authorization))
         {
-            return await RequireKeyBoundAsync(one, authorization, orgId, hint.ToString(), cancellationToken);
+            var keyDenied = await RequireKeyBoundAsync(one, authorization, orgId, hint.ToString(), cancellationToken);
+            if (keyDenied is null)
+            {
+                request.HttpContext.Items[RequestLog.OrgItemKey] = orgId;
+            }
+
+            return keyDenied;
         }
 
         var result = await one.CheckMemberAsync(authorization, orgId, hint.ToString(), cancellationToken);
         if (result.StatusCode == 200 && result.Value)
         {
+            request.HttpContext.Items[RequestLog.OrgItemKey] = orgId;
             return null;
         }
 

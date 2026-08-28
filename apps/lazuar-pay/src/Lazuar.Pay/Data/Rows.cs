@@ -115,6 +115,25 @@ public sealed class SubscriptionRow
     public string? PayerId { get; set; }
     public required string Status { get; set; }
     public required string Interval { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTimeOffset? PastDueAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class RefundRow
+{
+    public required string Id { get; set; }
+    public required string OrgId { get; set; }
+    public required string CheckoutId { get; set; }
+    public string? ChargeId { get; set; }
+    public required decimal Amount { get; set; }
+    public required string Currency { get; set; }
+    public required string Status { get; set; }
+    public required string Provider { get; set; }
+    public string? ProviderRef { get; set; }
+    public string Reason { get; set; } = "merchant";
+    public string? IdempotencyKey { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public sealed class JournalEntryRow

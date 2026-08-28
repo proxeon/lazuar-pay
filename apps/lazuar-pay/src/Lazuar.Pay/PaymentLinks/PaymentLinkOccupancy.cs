@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.PaymentLinks;
@@ -73,42 +74,49 @@ internal static class PaymentLinkOccupancy
             ct).ConfigureAwait(false);
     }
 
-    public static async Task ExpireStaleAsync(PayDbContext db, string linkId, TimeSpan ttl, CancellationToken ct)
+    public static async Task<IReadOnlyList<CheckoutRow>> ExpireStaleAsync(PayDbContext db, string linkId, TimeSpan ttl, CancellationToken ct)
     {
         var cutoff = DateTimeOffset.UtcNow - ttl;
         var stale = await db.Checkouts
             .Where(x => x.PaymentLinkId == linkId && x.Status == "open" && x.CreatedAt < cutoff)
             .ToListAsync(ct)
             .ConfigureAwait(false);
-        if (stale.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var row in stale)
-        {
-            row.Status = "expired";
-        }
-
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        return await MarkExpiredAsync(db, stale, "ttl", ct).ConfigureAwait(false);
     }
 
-    public static async Task ExpireOpenAsync(PayDbContext db, string linkId, CancellationToken ct)
+    public static async Task<IReadOnlyList<CheckoutRow>> ExpireOpenAsync(PayDbContext db, string linkId, CancellationToken ct)
     {
         var open = await db.Checkouts
             .Where(x => x.PaymentLinkId == linkId && x.Status == "open")
             .ToListAsync(ct)
             .ConfigureAwait(false);
-        if (open.Count == 0)
+        return await MarkExpiredAsync(db, open, "charges_paused", ct).ConfigureAwait(false);
+    }
+
+    static async Task<IReadOnlyList<CheckoutRow>> MarkExpiredAsync(
+        PayDbContext db,
+        List<CheckoutRow> rows,
+        string reason,
+        CancellationToken ct)
+    {
+        if (rows.Count == 0)
         {
-            return;
+            return rows;
         }
 
-        foreach (var row in open)
+        foreach (var row in rows)
         {
             row.Status = "expired";
+            await OutboundWebhookEnqueue.TryAddAsync(
+                db,
+                row.OrgId,
+                "expired:" + row.Id,
+                PayWebhookEnvelope.Expired,
+                new { checkout_id = row.Id, payment_link_id = row.PaymentLinkId, reason },
+                ct).ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        return rows;
     }
 }

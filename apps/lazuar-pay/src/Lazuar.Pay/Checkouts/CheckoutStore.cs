@@ -86,7 +86,8 @@ public sealed class CheckoutStore(PayDbContext db)
     static bool SameFingerprint(CheckoutRow existing, CheckoutSession session) =>
         existing.Amount == session.Amount
         && string.Equals(existing.Currency, session.Currency, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(existing.Provider, session.Provider, StringComparison.OrdinalIgnoreCase);
+        && string.Equals(existing.Provider, session.Provider, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(existing.Interval ?? "one_off", session.Interval ?? "one_off", StringComparison.OrdinalIgnoreCase);
 
     public async Task<CheckoutSession?> GetAsync(string id, CancellationToken ct)
     {

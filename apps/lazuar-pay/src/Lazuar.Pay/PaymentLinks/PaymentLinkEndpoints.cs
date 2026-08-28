@@ -126,6 +126,8 @@ internal static class PaymentLinkEndpoints
 
     static async Task<IResult> List(
         string orgId,
+        int? limit,
+        string? after,
         HttpRequest request,
         OneClient one,
         PayDbContext db,
@@ -139,10 +141,29 @@ internal static class PaymentLinkEndpoints
             return denied;
         }
 
-        var rows = await db.PaymentLinks.AsNoTracking()
-            .Where(x => x.OrgId == orgId)
+        var take = PayList.Clamp(limit);
+        var q = db.PaymentLinks.AsNoTracking().Where(x => x.OrgId == orgId);
+        if (!string.IsNullOrWhiteSpace(after))
+        {
+            var cursor = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, cancellationToken);
+            if (cursor is not null)
+            {
+                q = q.Where(x => x.CreatedAt < cursor.CreatedAt
+                    || (x.CreatedAt == cursor.CreatedAt && x.Id.CompareTo(cursor.Id) < 0));
+            }
+        }
+
+        var rows = await q
             .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Take(take + 1)
             .ToListAsync(cancellationToken);
+        string? next = null;
+        if (rows.Count > take)
+        {
+            rows = rows.Take(take).ToList();
+            next = rows[^1].Id;
+        }
         var ids = rows.Select(r => r.Id).ToList();
         var children = ids.Count == 0
             ? []
@@ -169,12 +190,16 @@ internal static class PaymentLinkEndpoints
                 .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
-        return Results.Json(rows.Select(r =>
+        return Results.Json(new
         {
-            var taken = takenBy.GetValueOrDefault(r.Id);
-            var paid = paidBy.GetValueOrDefault(r.Id);
-            return Map(r, taken, paid, config, env, r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null);
-        }), OneClient.Json);
+            items = rows.Select(r =>
+            {
+                var taken = takenBy.GetValueOrDefault(r.Id);
+                var paid = paidBy.GetValueOrDefault(r.Id);
+                return Map(r, taken, paid, config, env, r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null);
+            }),
+            next_cursor = next
+        }, OneClient.Json);
     }
 
     static PaymentLinkView Map(

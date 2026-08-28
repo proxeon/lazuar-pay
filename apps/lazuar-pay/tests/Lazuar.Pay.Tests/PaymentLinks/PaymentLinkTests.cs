@@ -85,10 +85,11 @@ public class PaymentLinkTests
         var response = await client.SendAsync(list);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(2));
-        Assert.That(doc.RootElement[0].GetProperty("max_payers").GetInt32(), Is.EqualTo(3));
-        Assert.That(doc.RootElement[0].GetProperty("remaining").GetInt32(), Is.EqualTo(3));
-        Assert.That(doc.RootElement[1].GetProperty("max_payers").GetInt32(), Is.EqualTo(1));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items.GetArrayLength(), Is.EqualTo(2));
+        Assert.That(items[0].GetProperty("max_payers").GetInt32(), Is.EqualTo(3));
+        Assert.That(items[0].GetProperty("remaining").GetInt32(), Is.EqualTo(3));
+        Assert.That(items[1].GetProperty("max_payers").GetInt32(), Is.EqualTo(1));
     }
 
     [Test]
@@ -171,8 +172,9 @@ public class PaymentLinkTests
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var listed = await client.SendAsync(list);
         using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("remaining").GetInt32(), Is.EqualTo(1));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("remaining").GetInt32(), Is.EqualTo(1));
     }
 
     [Test]
@@ -593,10 +595,11 @@ public class PaymentLinkTests
         var listed = await client.SendAsync(list);
         Assert.That(listed.StatusCode, Is.EqualTo(HttpStatusCode.OK), await listed.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(2));
-        Assert.That(doc.RootElement[0].GetProperty("max_payers").GetInt32(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("remaining").GetInt32(), Is.EqualTo(-1));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("over_capacity"));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(2));
+        Assert.That(items[0].GetProperty("max_payers").GetInt32(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("remaining").GetInt32(), Is.EqualTo(-1));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("over_capacity"));
     }
 
     static CheckoutRow OpenChild(string linkId, string slot) =>

@@ -287,10 +287,11 @@ public class CheckoutTests
         var response = await client.SendAsync(list);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(2));
-        Assert.That(doc.RootElement[0].GetProperty("provider").GetString(), Is.EqualTo("test"));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("open"));
-        Assert.That(doc.RootElement[0].GetProperty("public_token").GetString(), Is.Not.Null.And.Not.Empty);
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items.GetArrayLength(), Is.EqualTo(2));
+        Assert.That(items[0].GetProperty("provider").GetString(), Is.EqualTo("test"));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(items[0].GetProperty("public_token").GetString(), Is.Not.Null.And.Not.Empty);
     }
 
     [Test]
@@ -307,8 +308,9 @@ public class CheckoutTests
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var response = await client.SendAsync(list);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("open"));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("open"));
     }
 
     [Test]

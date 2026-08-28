@@ -28,5 +28,7 @@ internal static class PayBoot
         {
             throw new InvalidOperationException("One:BaseUrl must be a public URL in Production and Staging");
         }
+
+        Identity.Client.OneWorkerClient.ThrowIfInvalid(config);
     }
 }

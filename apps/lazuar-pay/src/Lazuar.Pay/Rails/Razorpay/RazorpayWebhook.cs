@@ -54,7 +54,21 @@ internal static class RazorpayWebhook
                 throw new PspVerifyException("missing event id");
             }
 
-            return new PspParseResult { EventId = failedId, Ignored = true, IgnoreReason = "payment_failed" };
+            string? failedCheckout = null;
+            if (hasEntity && entity.TryGetProperty("notes", out var failNotes) && failNotes.ValueKind == JsonValueKind.Object
+                && failNotes.TryGetProperty("checkout_id", out var failCid))
+            {
+                failedCheckout = failCid.GetString();
+            }
+
+            return new PspParseResult
+            {
+                EventId = failedId,
+                Failed = true,
+                IgnoreReason = "payment_failed",
+                CheckoutId = failedCheckout,
+                ProviderRef = paymentId
+            };
         }
 
         if (eventType is "payment_link.paid" or "payment_link.expired" or "order.paid"

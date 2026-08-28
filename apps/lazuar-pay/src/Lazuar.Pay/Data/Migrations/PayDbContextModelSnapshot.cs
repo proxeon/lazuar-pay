@@ -599,14 +599,78 @@ namespace Lazuar.Pay.Data.Migrations
                     b.ToTable("psp_webhook_events", "public");
                 });
 
-            modelBuilder.Entity("Lazuar.Pay.Data.SubscriptionRow", b =>
+            modelBuilder.Entity("Lazuar.Pay.Data.RefundRow", b =>
                 {
                     b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ChargeId")
                         .HasColumnType("text");
 
                     b.Property<string>("CheckoutId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrgId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderRef")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CheckoutId");
+
+                    b.HasIndex("OrgId");
+
+                    b.HasIndex("OrgId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                    b.ToTable("refunds", "public");
+                });
+
+            modelBuilder.Entity("Lazuar.Pay.Data.SubscriptionRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CheckoutId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Interval")
                         .IsRequired()
@@ -616,6 +680,9 @@ namespace Lazuar.Pay.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("PastDueAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PayerId")
                         .HasColumnType("text");
 
@@ -624,6 +691,10 @@ namespace Lazuar.Pay.Data.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CheckoutId");
+
+                    b.HasIndex("OrgId");
 
                     b.ToTable("subscriptions", "public");
                 });

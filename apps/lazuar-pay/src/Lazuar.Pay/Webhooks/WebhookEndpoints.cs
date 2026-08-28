@@ -11,6 +11,7 @@ using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Lazuar.Pay.Secrets;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
@@ -32,6 +33,7 @@ internal static class WebhookEndpoints
         IHostEnvironment env,
         SecretBox box,
         IFulfillPaid fulfillment,
+        ProcessorRemote remote,
         CancellationToken ct)
     {
         if (!PayProviders.TryNormalize(provider, out var name))
@@ -92,7 +94,7 @@ internal static class WebhookEndpoints
             return Results.Ok(new { duplicate = true });
         }
 
-        if (parsed.Ignored)
+        if (parsed.Ignored && !parsed.Failed)
         {
             await InsertEventAsync(db, orgId, name, parsed.EventId, ct);
             return Results.Json(new { ignored = parsed.IgnoreReason }, OneClient.Json);
@@ -127,6 +129,99 @@ internal static class WebhookEndpoints
         if (orgSettings?.ChargesPaused == true)
         {
             return PayErrors.Status(409, "Conflict", "Org charges are paused");
+        }
+
+        if (parsed.Failed)
+        {
+            if (checkout.Status == "paid")
+            {
+                await InsertEventAsync(db, orgId, name, parsed.EventId, ct);
+                return Results.Json(new { ignored = "already_paid" }, OneClient.Json);
+            }
+
+            await using var failTx = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                db.PspWebhookEvents.Add(new PspWebhookEventRow
+                {
+                    OrgId = orgId,
+                    Provider = name,
+                    EventId = parsed.EventId,
+                    ReceivedAt = DateTimeOffset.UtcNow
+                });
+                if (checkout.Status == "open")
+                {
+                    checkout.Status = "failed";
+                    var sub = await db.Subscriptions.FirstOrDefaultAsync(x => x.CheckoutId == checkout.Id, ct);
+                    if (sub is not null)
+                    {
+                        sub.Status = "past_due";
+                        sub.PastDueAt ??= DateTimeOffset.UtcNow;
+                        sub.AttemptCount += 1;
+                    }
+
+                    await OutboundWebhookEnqueue.TryAddAsync(
+                        db,
+                        checkout.OrgId,
+                        parsed.EventId,
+                        PayWebhookEnvelope.Failed,
+                        new
+                        {
+                            checkout_id = checkout.Id,
+                            reason = parsed.IgnoreReason ?? "payment_failed",
+                            provider = name
+                        },
+                        ct);
+                }
+
+                await db.SaveChangesAsync(ct);
+                await failTx.CommitAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                await failTx.RollbackAsync(ct);
+                return Results.Ok(new { duplicate = true });
+            }
+
+            return Results.Json(new { failed = true }, OneClient.Json);
+        }
+
+        if (checkout.Status is "expired" or "failed")
+        {
+            await using var lateTx = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                db.PspWebhookEvents.Add(new PspWebhookEventRow
+                {
+                    OrgId = orgId,
+                    Provider = name,
+                    EventId = parsed.EventId,
+                    ReceivedAt = DateTimeOffset.UtcNow
+                });
+                db.Refunds.Add(new RefundRow
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    OrgId = orgId,
+                    CheckoutId = checkout.Id,
+                    Amount = checkout.Amount,
+                    Currency = checkout.Currency,
+                    Status = "succeeded",
+                    Provider = name,
+                    ProviderRef = parsed.ProviderRef,
+                    Reason = "late_pay",
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
+                await db.SaveChangesAsync(ct);
+                await lateTx.CommitAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                await lateTx.RollbackAsync(ct);
+                return Results.Ok(new { duplicate = true });
+            }
+
+            await remote.RefundLateAsync(checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
+            return Results.Json(new { refunded = true }, OneClient.Json);
         }
 
         if (parsed.Currency is not null

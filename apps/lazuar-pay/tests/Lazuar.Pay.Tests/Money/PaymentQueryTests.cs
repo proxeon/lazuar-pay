@@ -23,11 +23,12 @@ public class PaymentQueryTests
         var response = await client.SendAsync(list);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("provider").GetString(), Is.EqualTo("test"));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("paid"));
-        Assert.That(doc.RootElement[0].GetProperty("payer_name").GetString(), Is.EqualTo("Ada"));
-        Assert.That(doc.RootElement[0].GetProperty("amount").GetDecimal(), Is.EqualTo(10m));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("provider").GetString(), Is.EqualTo("test"));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("paid"));
+        Assert.That(items[0].GetProperty("payer_name").GetString(), Is.EqualTo("Ada"));
+        Assert.That(items[0].GetProperty("amount").GetDecimal(), Is.EqualTo(10m));
     }
 
     [Test]
@@ -48,12 +49,13 @@ public class PaymentQueryTests
         var response = await client.SendAsync(list);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("number").GetString(), Does.StartWith("RCPT-"));
-        Assert.That(doc.RootElement[0].GetProperty("title").GetString(), Is.EqualTo("Official Receipt"));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("issued"));
-        Assert.That(doc.RootElement[0].GetProperty("payer_name").GetString(), Is.EqualTo("Ada"));
-        Assert.That(doc.RootElement[0].GetProperty("amount").GetDecimal(), Is.EqualTo(10m));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items.GetArrayLength(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("number").GetString(), Does.StartWith("RCPT-"));
+        Assert.That(items[0].GetProperty("title").GetString(), Is.EqualTo("Official Receipt"));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("issued"));
+        Assert.That(items[0].GetProperty("payer_name").GetString(), Is.EqualTo("Ada"));
+        Assert.That(items[0].GetProperty("amount").GetDecimal(), Is.EqualTo(10m));
     }
 
     [Test]
@@ -73,7 +75,7 @@ public class PaymentQueryTests
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var listed = await client.SendAsync(list);
         using var listDoc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
-        var id = listDoc.RootElement[0].GetProperty("id").GetString();
+        var id = PayTest.Items(listDoc.RootElement)[0].GetProperty("id").GetString();
 
         using var get = new HttpRequestMessage(HttpMethod.Get, $"/v1/orgs/t1/receipts/{id}");
         get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");

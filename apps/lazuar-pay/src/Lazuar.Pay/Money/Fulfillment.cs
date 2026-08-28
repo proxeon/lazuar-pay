@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.PaymentLinks;
+using Lazuar.Pay.Rails;
 using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,7 @@ public interface IFulfillPaid
     Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct);
 }
 
-public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
+public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulfillPaid
 {
     static readonly ConcurrentDictionary<string, SemaphoreSlim> CheckoutGates = new(StringComparer.Ordinal);
 
@@ -64,7 +65,15 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
                 if (PaymentLinkOccupancy.IsFull(link.MaxPayers, paid))
                 {
                     checkout.Status = "expired";
+                    await OutboundWebhookEnqueue.TryAddAsync(
+                        db,
+                        checkout.OrgId,
+                        "expired:" + checkout.Id,
+                        PayWebhookEnvelope.Expired,
+                        new { checkout_id = checkout.Id, payment_link_id = checkout.PaymentLinkId, reason = "over_capacity" },
+                        ct);
                     await db.SaveChangesAsync(ct);
+                    await remote.RefundLateAsync(checkout, providerRef, MoneyMath.ToMinor(checkout.Amount), ct);
                     return;
                 }
             }
@@ -99,15 +108,25 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 
         if (checkout.Interval is "mo" or "yr")
         {
-            db.Subscriptions.Add(new SubscriptionRow
+            var sub = await db.Subscriptions.FirstOrDefaultAsync(x => x.CheckoutId == checkout.Id, ct);
+            if (sub is null)
             {
-                Id = Guid.NewGuid().ToString("N"),
-                OrgId = checkout.OrgId,
-                CheckoutId = checkout.Id,
-                PayerId = payerId,
-                Status = "active",
-                Interval = checkout.Interval
-            });
+                db.Subscriptions.Add(new SubscriptionRow
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    OrgId = checkout.OrgId,
+                    CheckoutId = checkout.Id,
+                    PayerId = payerId,
+                    Status = "active",
+                    Interval = checkout.Interval,
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
+            }
+            else
+            {
+                sub.Status = "active";
+                sub.PayerId = payerId ?? sub.PayerId;
+            }
         }
 
         var entryId = Guid.NewGuid().ToString("N");
@@ -163,34 +182,22 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             At = DateTimeOffset.UtcNow
         });
 
-        if (await db.OrgWebhookEndpoints.FindAsync([checkout.OrgId], ct) is not null)
-        {
-            var payload = PayWebhookEnvelope.Serialize(
-                PayWebhookEnvelope.Completed,
-                chargeId,
-                checkout.OrgId,
-                new
-                {
-                    checkout_id = checkout.Id,
-                    charge_id = chargeId,
-                    amount = checkout.Amount,
-                    currency = checkout.Currency,
-                    provider,
-                    number,
-                    payer_name = checkout.PayerName
-                });
-            db.OrgWebhookDeliveries.Add(new OrgWebhookDeliveryRow
+        await OutboundWebhookEnqueue.TryAddAsync(
+            db,
+            checkout.OrgId,
+            chargeId,
+            PayWebhookEnvelope.Completed,
+            new
             {
-                Id = Guid.NewGuid().ToString("N"),
-                OrgId = checkout.OrgId,
-                EventId = chargeId,
-                EventType = PayWebhookEnvelope.Completed,
-                PayloadJson = payload,
-                Status = "pending",
-                NextAttemptAt = DateTimeOffset.UtcNow,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
-        }
+                checkout_id = checkout.Id,
+                charge_id = chargeId,
+                amount = checkout.Amount,
+                currency = checkout.Currency,
+                provider,
+                number,
+                payer_name = checkout.PayerName
+            },
+            ct);
 
         try
         {

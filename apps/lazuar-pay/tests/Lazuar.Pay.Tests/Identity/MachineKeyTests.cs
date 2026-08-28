@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -127,18 +128,25 @@ public class MachineKeyTests
     [Test]
     public async Task Revoked_key_is_401()
     {
-        await using var factory = new PayApiFactory();
-        var n = 0;
-        factory.One.Responder = _ =>
-        {
-            n++;
-            return n == 1
-                ? FakeOneHandler.Json(HttpStatusCode.OK, PayTest.KeyMeJson())
-                : new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        };
+        await using var factory = new PayApiFactory { OneWebhookSecret = "one_whsec_revoked" };
+        factory.One.Responder = PayTest.Key;
         var client = factory.CreateClient();
         using var first = BearerGet("/v1/whoami", PayTest.MachineKey);
         Assert.That((await client.SendAsync(first)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var body = """{"id":"del_m19","type":"api_key.revoked","data":{"key_id":"key-1","tenant_id":"t1"}}""";
+        var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var mac = HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes("one_whsec_revoked"),
+            Encoding.UTF8.GetBytes($"{unix}.{body}"));
+        using var rev = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        rev.Headers.TryAddWithoutValidation("X-Lazuar-Signature", $"t={unix},v1={Convert.ToHexString(mac).ToLowerInvariant()}");
+        Assert.That((await client.SendAsync(rev)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        factory.One.Responder = _ => new HttpResponseMessage(HttpStatusCode.Unauthorized);
         using var second = BearerGet("/v1/whoami", PayTest.MachineKey);
         Assert.That((await client.SendAsync(second)).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var mint = BearerPost(

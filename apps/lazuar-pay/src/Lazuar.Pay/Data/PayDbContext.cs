@@ -15,6 +15,7 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
     public DbSet<PspWebhookEventRow> PspWebhookEvents => Set<PspWebhookEventRow>();
     public DbSet<ChargeRow> Charges => Set<ChargeRow>();
     public DbSet<SubscriptionRow> Subscriptions => Set<SubscriptionRow>();
+    public DbSet<RefundRow> Refunds => Set<RefundRow>();
     public DbSet<JournalEntryRow> JournalEntries => Set<JournalEntryRow>();
     public DbSet<JournalLineRow> JournalLines => Set<JournalLineRow>();
     public DbSet<DocumentRow> Documents => Set<DocumentRow>();
@@ -96,6 +97,22 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         {
             e.ToTable("subscriptions");
             e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OrgId);
+            e.HasIndex(x => x.CheckoutId);
+        });
+        model.Entity<RefundRow>(e =>
+        {
+            e.ToTable("refunds");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OrgId);
+            e.HasIndex(x => x.CheckoutId);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            if (Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
+            {
+                e.HasIndex(x => new { x.OrgId, x.IdempotencyKey })
+                    .IsUnique()
+                    .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            }
         });
         model.Entity<JournalEntryRow>(e =>
         {

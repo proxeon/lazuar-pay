@@ -7,6 +7,9 @@ namespace Lazuar.Pay.Tests;
 
 internal static class PayTest
 {
+    public static JsonElement Items(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Array ? root : root.GetProperty("items");
+
     public const string MachineKey = "lzr_sk_testfixture";
 
     public static string KeyMeJson(string orgId = "t1", string status = "active") =>

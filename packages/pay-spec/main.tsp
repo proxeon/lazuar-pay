@@ -47,6 +47,8 @@ model CreateCheckoutRequest {
   success_url?: string;
   cancel_url?: string;
   idempotency_key?: string;
+  /** one_off | mo | yr. Default one_off. Recurring mints an incomplete subscription row; no Plane C subscription events. */
+  interval?: string;
 }
 
 model CheckoutSession {
@@ -255,6 +257,73 @@ model Receipt {
   status?: string;
 }
 
+model CreateRefundRequest {
+  checkout_id: string;
+  amount?: decimal;
+  idempotency_key?: string;
+}
+
+model Refund {
+  id: string;
+  org_id: string;
+  checkout_id: string;
+  charge_id?: string;
+  amount: decimal;
+  currency: string;
+  status: string;
+  provider?: string;
+  reason?: string;
+  number?: string;
+  created_at: utcDateTime;
+}
+
+model Subscription {
+  id: string;
+  org_id: string;
+  checkout_id: string;
+  interval: string;
+  status: string;
+  dunning_status?: string;
+  attempt_count?: int32;
+  past_due_at?: utcDateTime;
+  created_at: utcDateTime;
+}
+
+model CheckoutListPage {
+  items: CheckoutListItem[];
+  next_cursor?: string;
+}
+
+model PaymentLinkListPage {
+  items: PaymentLink[];
+  next_cursor?: string;
+}
+
+model ProductListPage {
+  items: Product[];
+  next_cursor?: string;
+}
+
+model PaymentListPage {
+  items: Payment[];
+  next_cursor?: string;
+}
+
+model ReceiptListPage {
+  items: Receipt[];
+  next_cursor?: string;
+}
+
+model RefundListPage {
+  items: Refund[];
+  next_cursor?: string;
+}
+
+model SubscriptionListPage {
+  items: Subscription[];
+  next_cursor?: string;
+}
+
 model WebhookOk {
   ok: boolean;
 }
@@ -267,10 +336,20 @@ model WebhookIgnored {
   ignored?: string;
 }
 
+model WebhookFailed {
+  failed: boolean;
+}
+
+model WebhookRefunded {
+  refunded: boolean;
+}
+
 union PspWebhookResult {
   ok: WebhookOk,
   duplicate: WebhookDuplicate,
   ignored: WebhookIgnored,
+  failed: WebhookFailed,
+  refunded: WebhookRefunded,
 }
 
 union OneWebhookResult {
@@ -334,10 +413,10 @@ interface Checkouts {
   @route("/checkouts/{id}")
   get(@path id: string): CheckoutSession;
 
-  /** Member list. Mixes one-off mints and payment-link children. */
+  /** Member list. Cursor `limit` (default 50, max 100) and `after`. Not /v2. */
   @get
   @route("/orgs/{orgId}/checkouts")
-  list(@path orgId: string): CheckoutListItem[];
+  list(@path orgId: string, @query limit?: int32, @query after?: string): CheckoutListPage;
 }
 
 @route("/v1")
@@ -353,7 +432,7 @@ interface PaymentLinks {
 
   @get
   @route("/orgs/{orgId}/payment-links")
-  list(@path orgId: string): PaymentLink[];
+  list(@path orgId: string, @query limit?: int32, @query after?: string): PaymentLinkListPage;
 }
 
 @route("/v1")
@@ -386,7 +465,7 @@ interface Catalog {
 
   @get
   @route("/orgs/{orgId}/products")
-  listProducts(@path orgId: string): Product[];
+  listProducts(@path orgId: string, @query limit?: int32, @query after?: string): ProductListPage;
 }
 
 @route("/v1")
@@ -413,21 +492,45 @@ interface Gateways {
 interface Money {
   @get
   @route("/orgs/{orgId}/payments")
-  listPayments(@path orgId: string): Payment[];
+  listPayments(@path orgId: string, @query limit?: int32, @query after?: string): PaymentListPage;
 
   @get
   @route("/orgs/{orgId}/receipts")
-  listReceipts(@path orgId: string): Receipt[];
+  listReceipts(@path orgId: string, @query limit?: int32, @query after?: string): ReceiptListPage;
 
   @get
   @route("/orgs/{orgId}/receipts/{id}")
   getReceipt(@path orgId: string, @path id: string): Receipt;
+
+  /** Writer. Reverse journal. Document series REF-, never RCPT-. Plane C refund.created after the writer. */
+  @post
+  @route("/orgs/{orgId}/refunds")
+  createRefund(
+    @path orgId: string,
+    @header("Idempotency-Key") idempotencyKey?: string,
+    @body body: CreateRefundRequest,
+  ): {
+    @statusCode statusCode: 201;
+    @body body: Refund;
+  } | {
+    @statusCode statusCode: 200;
+    @body body: Refund;
+  };
+
+  @get
+  @route("/orgs/{orgId}/refunds")
+  listRefunds(@path orgId: string, @query limit?: int32, @query after?: string): RefundListPage;
+
+  /** Member list. Dunning status is the row status. No Plane C subscription.* events. */
+  @get
+  @route("/orgs/{orgId}/subscriptions")
+  listSubscriptions(@path orgId: string, @query limit?: int32, @query after?: string): SubscriptionListPage;
 }
 
 @route("/v1")
 @tag("Webhooks")
 interface Webhooks {
-  /** Plane B. provider is stripe|chip|billplz|xendit|razorpay|test. 200 is paid `{ok}`, replay `{duplicate}`, or `{ignored}`. */
+  /** Plane B. 200 is paid `{ok}`, replay `{duplicate}`, `{ignored}`, persisted `{failed}`, or late-pay `{refunded}`. */
   @post
   @route("/webhooks/{provider}/{orgId}")
   psp(@path provider: string, @path orgId: string): PspWebhookResult;

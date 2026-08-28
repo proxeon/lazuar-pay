@@ -24,6 +24,10 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string OneWebhookSecret { get; init; } = "";
 
+    public string? OneApiKey { get; init; }
+
+    public string? OneWorkerOrgId { get; init; }
+
     public string PublicBaseUrl { get; init; } = "https://pay.test.example";
 
     public string? CorsOrigins { get; init; }
@@ -50,6 +54,15 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
         builder.UseSetting("Pay:StartMaxPerMinute", StartMaxPerMinute.ToString());
+        if (!string.IsNullOrWhiteSpace(OneApiKey))
+        {
+            builder.UseSetting("One:ApiKey", OneApiKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(OneWorkerOrgId))
+        {
+            builder.UseSetting("One:WorkerOrgId", OneWorkerOrgId);
+        }
         if (!string.IsNullOrWhiteSpace(CorsOrigins))
         {
             builder.UseSetting("Pay:CorsOrigins", CorsOrigins);
@@ -87,7 +100,9 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
             services.AddSingleton(Probe);
             services.AddScoped<IFulfillPaid>(sp =>
                 new ProbingFulfillment(sp.GetRequiredService<Fulfillment>(), Probe));
-            services.AddTransient(_ =>
+            services.AddMemoryCache();
+            services.AddSingleton<OneWhoamiCache>();
+            services.AddTransient(sp =>
             {
                 var http = new HttpClient(One, disposeHandler: false)
                 {
@@ -98,7 +113,7 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
                 {
                     BaseUrl = "http://one.test/api/v1",
                     TimeoutSeconds = 2
-                }));
+                }), sp.GetRequiredService<OneWhoamiCache>());
             });
         });
     }

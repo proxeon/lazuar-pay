@@ -77,8 +77,9 @@ public class PostgresTxTests
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var listed = await client.SendAsync(list);
         using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(1));
-        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("full"));
+        var items = PayTest.Items(doc.RootElement);
+        Assert.That(items[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(1));
+        Assert.That(items[0].GetProperty("status").GetString(), Is.EqualTo("full"));
     }
 
     [Test]

@@ -10,4 +10,5 @@ public sealed class CreateCheckoutRequest
     public string? SuccessUrl { get; set; }
     public string? CancelUrl { get; set; }
     public string? IdempotencyKey { get; set; }
+    public string? Interval { get; set; }
 }

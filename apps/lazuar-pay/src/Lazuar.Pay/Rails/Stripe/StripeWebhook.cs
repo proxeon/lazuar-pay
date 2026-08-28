@@ -43,6 +43,22 @@ internal static class StripeWebhook
             throw new PspVerifyException("invalid event");
         }
 
+        if (stripeEvent.Type == "checkout.session.async_payment_failed")
+        {
+            var failedSession = stripeEvent.Data.Object as Session;
+            var failedCheckout = failedSession?.ClientReferenceId
+                ?? failedSession?.Metadata?.GetValueOrDefault("checkout_id");
+            return new PspParseResult
+            {
+                EventId = stripeEvent.Id,
+                Failed = true,
+                IgnoreReason = "async_payment_failed",
+                CheckoutId = failedCheckout,
+                HostedSessionId = failedSession?.Id,
+                ProviderRef = failedSession?.Id
+            };
+        }
+
         if (stripeEvent.Type is not "checkout.session.completed"
             and not "checkout.session.async_payment_succeeded")
         {

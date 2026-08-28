@@ -11,6 +11,8 @@ using Lazuar.Pay.Money;
 using Lazuar.Pay.Money.Queries;
 using Lazuar.Pay.PaymentLinks;
 using Lazuar.Pay.PublicPay;
+using Lazuar.Pay.Subscriptions;
+using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Rails.Razorpay;
@@ -23,13 +25,26 @@ using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Logging.AddJsonConsole(o =>
+    {
+        o.IncludeScopes = false;
+        o.TimestampFormat = "O";
+        o.UseUtcTimestamp = true;
+    });
+}
+
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
     o.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<OneWhoamiCache>();
 builder.Services.AddOptions<OneOptions>().BindConfiguration(OneOptions.Section);
 builder.Services.AddHttpClient<OneClient>();
+builder.Services.AddHttpClient<OneWorkerClient>();
 builder.Services.AddHttpClient("chip");
 builder.Services.AddHttpClient("billplz");
 builder.Services.AddHttpClient("xendit");
@@ -50,6 +65,7 @@ builder.Services.AddScoped<BillplzHosted>();
 builder.Services.AddScoped<XenditHosted>();
 builder.Services.AddScoped<RazorpayHosted>();
 builder.Services.AddScoped<TestHosted>();
+builder.Services.AddScoped<ProcessorRemote>();
 builder.Services.AddScoped<Fulfillment>();
 builder.Services.AddScoped<IFulfillPaid>(sp => sp.GetRequiredService<Fulfillment>());
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -69,6 +85,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 PayCors.Add(builder);
 PayBoot.ThrowIfMisconfigured(builder.Configuration, builder.Environment);
+OneWorkerClient.ThrowIfInvalid(builder.Configuration);
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
@@ -77,13 +94,14 @@ if (app.Environment.IsDevelopment())
         using var scope = app.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.MigrateAsync();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
-        app.Logger.LogError(ex, "pay-db schema mismatch; run task pay:db:migrate");
+        app.Logger.LogError("pay-db schema mismatch; run task pay:db:migrate");
     }
 }
 
 app.UseCors();
+app.UsePayRequestLog();
 
 app.MapHealth();
 app.MapWhoami();
@@ -95,6 +113,8 @@ app.MapPublicPay();
 app.MapGateways();
 app.MapWebhooks();
 app.MapPaymentQueries();
+app.MapRefunds();
+app.MapSubscriptions();
 app.MapOneWebhooks();
 app.MapOrgWebhooks();
 

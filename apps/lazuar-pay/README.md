@@ -77,9 +77,13 @@ curl -sS -H "Authorization: Bearer $PAY_API_KEY" \
   http://localhost:8081/v1/checkouts
 ```
 
-Pay does not mint keys and does not hold the merchant’s `lzr_sk_` in process env.
+Pay does not mint keys and does not hold the merchant’s `lzr_sk_` in process env. A hosted **job** may set `One:ApiKey` (`lzr_sk_` only) plus `One:WorkerOrgId` for **that one tenant**. Stripe/Hub `sk_live_` in that slot fails boot. Interactive `/v1` doors still 401 without a request Bearer even when the env key is set. `OneClient` never copies the env key onto `DefaultRequestHeaders`.
 
-Writer `PUT /v1/orgs/{orgId}/webhooks` registers the URL Pay POSTs after a paid fulfill (`payment.completed`). That `whsec_` is **Pay signing for your app** (One dialect: `X-Lazuar-Signature: v1=` + `X-Lazuar-Timestamp`). It is not Stripe’s vault secret and not One inbound `PUT …/one-webhook`. GET never echoes the secret. Testing allows loopback URLs. Sample: `examples/pay-node` (port **3021**). Hub `examples/hub-cashier-next` is museum.
+Lists (`/v1/orgs/{orgId}/checkouts|payment-links|products|payments|receipts|refunds|subscriptions`) return `{ items, next_cursor }` with `limit` (default 50, max 100) and `after`. There is no `/v2`.
+
+Writer `POST /v1/orgs/{orgId}/refunds` reverses the journal and issues `REF-…` (never `RCPT-`). Plane C `refund.created` fires after that writer. Late PSP pay on an expired reservation is refunded at the processor and **not** fulfilled (occupancy). Subscriptions persist `mo`/`yr` interval + dunning status; Pay does not emit `subscription.*` webhooks.
+
+Writer `PUT /v1/orgs/{orgId}/webhooks` registers the URL Pay POSTs after a paid fulfill (`payment.completed`, plus `payment.failed` / `checkout.expired` / `refund.created` when those writers run). That `whsec_` is **Pay signing for your app** (One dialect: `X-Lazuar-Signature: v1=` + `X-Lazuar-Timestamp`). It is not Stripe’s vault secret and not One inbound `PUT …/one-webhook`. GET never echoes the secret. Merchant **Webhooks** is “Pay will POST here; you verify”; Processor vault is “Stripe signs; Pay verifies”. Testing allows loopback URLs. Sample: `examples/pay-node` (port **3021**, still `fetch`, not `@repo/pay-types-ts`). Hub `examples/hub-cashier-next` is museum. Generated types: `packages/pay-types-ts` from `packages/pay-spec`.
 
 Checkouts persist in Postgres `lazuar_pay` on **5435**. `owner`/`admin` paste keys **per rail** (stripe, chip, billplz, xendit, razorpay). Saving a vault does not pick a default. Mint a pay link with an explicit `provider` that already has keys. Capability is `hosted_link`. A verified PSP webhook writes an Official Receipt `RCPT-…` and a two-line journal. Pay does not compute SST or file e-invoices. Buyers have no One account (`:5179/c/{token}`).
 

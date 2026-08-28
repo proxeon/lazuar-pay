@@ -65,7 +65,16 @@ internal static class TestWebhook
                 throw new PspVerifyException("missing checkout id");
             }
 
-            if (!root.TryGetProperty("amount_total", out var amountEl) || !amountEl.TryGetInt64(out var amount))
+            var failed = root.TryGetProperty("status", out var statusEl)
+                && statusEl.ValueKind == JsonValueKind.String
+                && string.Equals(statusEl.GetString(), "failed", StringComparison.OrdinalIgnoreCase);
+
+            long? amount = null;
+            if (root.TryGetProperty("amount_total", out var amountEl) && amountEl.TryGetInt64(out var parsedAmount))
+            {
+                amount = parsedAmount;
+            }
+            else if (!failed)
             {
                 throw new PspVerifyException("missing amount");
             }
@@ -76,7 +85,7 @@ internal static class TestWebhook
                 MoneyMath.TryNormalizeCurrency(ccyEl.GetString(), out currency);
             }
 
-            if (string.IsNullOrWhiteSpace(currency))
+            if (!failed && string.IsNullOrWhiteSpace(currency))
             {
                 throw new PspVerifyException("missing currency");
             }
@@ -87,7 +96,9 @@ internal static class TestWebhook
                 CheckoutId = checkoutId,
                 ProviderRef = eventId,
                 AmountMinor = amount,
-                Currency = currency
+                Currency = currency,
+                Failed = failed,
+                IgnoreReason = failed ? "payment_failed" : null
             };
         }
     }

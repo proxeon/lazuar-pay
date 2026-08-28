@@ -11,6 +11,7 @@ using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
@@ -30,12 +31,13 @@ internal static class PublicPayEndpoints
         CheckoutStore store,
         PayDbContext db,
         IConfiguration config,
+        ProcessorRemote remote,
         CancellationToken ct)
     {
         var link = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.PublicToken == token, ct);
         if (link is not null)
         {
-            return await GetLink(link, slot_key, db, config, ct);
+            return await GetLink(link, slot_key, db, config, remote, ct);
         }
 
         var session = await store.GetByPublicTokenAsync(token, ct);
@@ -51,7 +53,7 @@ internal static class PublicPayEndpoints
                 .FirstOrDefaultAsync(x => x.Id == row.PaymentLinkId, ct);
             if (parent is not null)
             {
-                return await GetLink(parent, row.SlotKey ?? slot_key, db, config, ct);
+                return await GetLink(parent, row.SlotKey ?? slot_key, db, config, remote, ct);
             }
         }
 
@@ -63,21 +65,24 @@ internal static class PublicPayEndpoints
         string? slotKey,
         PayDbContext db,
         IConfiguration config,
+        ProcessorRemote remote,
         CancellationToken ct)
     {
         await PaymentLinkOccupancy.SerializeAsync(link.Id, async () =>
         {
             var settings = await db.OrgSettings.FindAsync([link.OrgId], ct);
+            IReadOnlyList<CheckoutRow> expired;
             if (settings?.ChargesPaused == true)
             {
-                await PaymentLinkOccupancy.ExpireOpenAsync(db, link.Id, ct);
+                expired = await PaymentLinkOccupancy.ExpireOpenAsync(db, link.Id, ct);
             }
             else
             {
-                await PaymentLinkOccupancy.ExpireStaleAsync(
+                expired = await PaymentLinkOccupancy.ExpireStaleAsync(
                     db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
             }
 
+            await ExpireRemoteAsync(remote, expired, ct);
             return 0;
         }, ct);
 
@@ -120,6 +125,7 @@ internal static class PublicPayEndpoints
         RazorpayHosted razorpay,
         TestHosted test,
         IFulfillPaid fulfillment,
+        ProcessorRemote remote,
         IConfiguration config,
         IHostEnvironment env,
         CancellationToken ct)
@@ -134,7 +140,7 @@ internal static class PublicPayEndpoints
         CheckoutRow row;
         if (link is not null)
         {
-            var minted = await MintOrResume(link, body, db, config, env, ct);
+            var minted = await MintOrResume(link, body, db, config, env, remote, ct);
             if (minted.Error is not null)
             {
                 return minted.Error;
@@ -236,13 +242,13 @@ internal static class PublicPayEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            await ExpireFailedReservation(db, row, ct);
+            await ExpireFailedReservation(db, row, remote, ct);
             var status = ex.Message.Contains("callback base", StringComparison.Ordinal) ? 400 : 503;
             return PayErrors.Status(status, status == 400 ? "Bad Request" : "Service Unavailable", ex.Message);
         }
         catch (Stripe.StripeException)
         {
-            await ExpireFailedReservation(db, row, ct);
+            await ExpireFailedReservation(db, row, remote, ct);
             return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
         }
     }
@@ -253,6 +259,7 @@ internal static class PublicPayEndpoints
         PayDbContext db,
         IConfiguration config,
         IHostEnvironment env,
+        ProcessorRemote remote,
         CancellationToken ct)
     {
         var settings = await db.OrgSettings.FindAsync([link.OrgId], ct);
@@ -294,8 +301,9 @@ internal static class PublicPayEndpoints
             try
             {
                 await PaymentLinkOccupancy.LockParentAsync(db, link.Id, ct);
-                await PaymentLinkOccupancy.ExpireStaleAsync(
+                var expired = await PaymentLinkOccupancy.ExpireStaleAsync(
                     db, link.Id, PaymentLinkOccupancy.ReservationTtl(config), ct);
+                await ExpireRemoteAsync(remote, expired, ct);
 
                 var existing = await db.Checkouts.FirstOrDefaultAsync(
                     x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
@@ -370,7 +378,7 @@ internal static class PublicPayEndpoints
         }, ct);
     }
 
-    static async Task ExpireFailedReservation(PayDbContext db, CheckoutRow row, CancellationToken ct)
+    static async Task ExpireFailedReservation(PayDbContext db, CheckoutRow row, ProcessorRemote remote, CancellationToken ct)
     {
         if (row.PaymentLinkId is null
             || row.Status != "open"
@@ -380,7 +388,23 @@ internal static class PublicPayEndpoints
         }
 
         row.Status = "expired";
+        await OutboundWebhookEnqueue.TryAddAsync(
+            db,
+            row.OrgId,
+            "expired:" + row.Id,
+            PayWebhookEnvelope.Expired,
+            new { checkout_id = row.Id, payment_link_id = row.PaymentLinkId, reason = "start_failed" },
+            ct);
         await db.SaveChangesAsync(ct);
+        await remote.ExpireAsync(row, ct);
+    }
+
+    static async Task ExpireRemoteAsync(ProcessorRemote remote, IReadOnlyList<CheckoutRow> rows, CancellationToken ct)
+    {
+        foreach (var row in rows)
+        {
+            await remote.ExpireAsync(row, ct);
+        }
     }
 
     static IResult CheckoutView(
