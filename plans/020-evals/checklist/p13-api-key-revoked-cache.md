@@ -21,6 +21,6 @@
 
 ## P13.1 When unparking
 
-- [ ] Cache key → whoami projection with TTL
-- [ ] Plane A `api_key.revoked` invalidates by `key_id` (not prefix uniqueness)
-- [ ] Tests: revoke event then mint 401
+- [x] Cache key → whoami projection with TTL
+- [x] Plane A `api_key.revoked` invalidates by `key_id` (not prefix uniqueness)
+- [x] Tests: revoke event then mint 401

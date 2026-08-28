@@ -20,6 +20,6 @@
 
 ## P18.1 When unparking
 
-- [ ] Console JSON; request id; route; status; duration; org **after** authz
-- [ ] No headers, bodies, CS, `whsec_`
-- [ ] Redact Npgsql exceptions
+- [x] Console JSON; request id; route; status; duration; org **after** authz
+- [x] No headers, bodies, CS, `whsec_`
+- [x] Redact Npgsql exceptions

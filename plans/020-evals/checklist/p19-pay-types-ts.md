@@ -22,6 +22,6 @@
 
 ## P19.1 Must not
 
-- [ ] Do not import Hub `api-types-ts` into merchant/checkout
-- [ ] Do not make `examples/pay-node` depend on generated types (006 G5)
-- [ ] Do not wait on npm `@lazuar/one-client`
+- [x] Do not import Hub `api-types-ts` into merchant/checkout
+- [x] Do not make `examples/pay-node` depend on generated types (006 G5)
+- [x] Do not wait on npm `@lazuar/one-client`

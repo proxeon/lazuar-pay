@@ -20,5 +20,5 @@
 
 ## P16.1 Must not
 
-- [ ] Do not block W18 on this event
-- [ ] Do not add `IHostedService` expire as a fake Plane C
+- [x] Do not block W18 on this event
+- [x] Do not add `IHostedService` expire as a fake Plane C

@@ -21,5 +21,5 @@
 
 ## P14.1 Must not (this program)
 
-- [ ] Do not invent `/v2` for pagination
-- [ ] Do not block M14 on list shape
+- [x] Do not invent `/v2` for pagination
+- [x] Do not block M14 on list shape

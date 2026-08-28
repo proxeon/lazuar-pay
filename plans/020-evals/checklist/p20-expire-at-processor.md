@@ -22,6 +22,6 @@
 
 ## P20.1 Must not
 
-- [ ] Do not staff as Job A
-- [ ] Do not take live CHIP volume until this is named on that rail
-- [ ] Do not fulfill expired over-capacity to “fix” cash (occupancy rule)
+- [x] Do not staff as Job A
+- [x] Do not take live CHIP volume until this is named on that rail
+- [x] Do not fulfill expired over-capacity to “fix” cash (occupancy rule)

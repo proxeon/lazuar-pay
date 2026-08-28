@@ -22,12 +22,12 @@
 
 ## P10.1 When unparking (not now)
 
-- [ ] Rail-specific refund HTTP (Stripe vs CHIP are different)
-- [ ] Unique refund id; journal reverse; document type ≠ `RCPT-` tax lie
-- [ ] Plane C `refund.created` only after the writer
-- [ ] Tests: partial vs full; replay
+- [x] Rail-specific refund HTTP (Stripe vs CHIP are different)
+- [x] Unique refund id; journal reverse; document type ≠ `RCPT-` tax lie
+- [x] Plane C `refund.created` only after the writer
+- [x] Tests: partial vs full; replay
 
 ## P10.2 Must not (this program)
 
-- [ ] Do not add a stub `POST /v1/refunds` that 501
-- [ ] Do not emit refund events from ignored webhooks
+- [x] Do not add a stub `POST /v1/refunds` that 501
+- [x] Do not emit refund events from ignored webhooks

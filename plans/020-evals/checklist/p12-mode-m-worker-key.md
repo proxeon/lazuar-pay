@@ -21,8 +21,8 @@
 
 ## P12.1 When unparking
 
-- [ ] Prefix-check `lzr_sk_` before outbound
-- [ ] Bound to **one** tenant in docs
-- [ ] Separate client instance — not `DefaultRequestHeaders` on the interactive `OneClient`
-- [ ] Reject `sk_live_` in that slot
-- [ ] Tests: missing request Bearer still 401 even if env is set
+- [x] Prefix-check `lzr_sk_` before outbound
+- [x] Bound to **one** tenant in docs
+- [x] Separate client instance — not `DefaultRequestHeaders` on the interactive `OneClient`
+- [x] Reject `sk_live_` in that slot
+- [x] Tests: missing request Bearer still 401 even if env is set

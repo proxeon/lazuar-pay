@@ -21,6 +21,6 @@
 
 ## P17.1 When unparking
 
-- [ ] Labels: “Pay will POST here; you verify” vs “Stripe signs; Pay verifies”
-- [ ] Rotate button; never echo secret
-- [ ] Do not mint One keys in this page
+- [x] Labels: “Pay will POST here; you verify” vs “Stripe signs; Pay verifies”
+- [x] Rotate button; never echo secret
+- [x] Do not mint One keys in this page

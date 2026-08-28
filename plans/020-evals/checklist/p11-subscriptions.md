@@ -21,6 +21,6 @@
 
 ## P11.1 Must not
 
-- [ ] Do not add Plane C subscription types
-- [ ] Do not put buyers in One as members for “access”
-- [ ] Do not staff Hub Billing module
+- [x] Do not add Plane C subscription types
+- [x] Do not put buyers in One as members for “access”
+- [x] Do not staff Hub Billing module

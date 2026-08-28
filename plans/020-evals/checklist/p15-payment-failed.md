@@ -20,5 +20,5 @@
 
 ## P15.1 Must not
 
-- [ ] Do not add `payment.failed` to the catalog in W12
-- [ ] Do not emit from ignored PSP events
+- [x] Do not add `payment.failed` to the catalog in W12
+- [x] Do not emit from ignored PSP events
