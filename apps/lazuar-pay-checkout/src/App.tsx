@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from './ui/components/input'
 import { Label } from './ui/components/label'
 import { payApi, payPath, slotKey, tokenFromPath, usableEmail, verifyingQuery } from './pay'
+import { SolanaQr } from './SolanaQr'
 
 type PayView = {
   token: string
@@ -16,6 +17,7 @@ type PayView = {
   mine?: boolean
   provider?: string | null
   redirect_url?: string | null
+  solana_pay_url?: string | null
   payer_name?: string | null
   payer_email?: string | null
 }
@@ -149,13 +151,19 @@ function App() {
     }
   }, [token, verifying, payStatus, error, pollNonce])
 
+  useEffect(() => {
+    if (pay?.provider === 'solana' && pay.solana_pay_url && pay.status === 'open') {
+      setVerifying(true)
+    }
+  }, [pay?.provider, pay?.solana_pay_url, pay?.status])
+
   async function startPay() {
     if (!token) return
     if (pay?.email_required && !usableEmail(email)) {
       setError('email is required')
       return
     }
-    if (pay?.started && pay.redirect_url) {
+    if (pay?.provider !== 'solana' && pay?.started && pay.redirect_url) {
       window.location.assign(pay.redirect_url)
       return
     }
@@ -185,7 +193,16 @@ function App() {
         setError(detail ?? `start ${response.status}`)
         return
       }
-      const body = (await response.json()) as { redirect_url?: string }
+      const body = (await response.json()) as { redirect_url?: string; solana_pay_url?: string }
+      if (body.solana_pay_url) {
+        setPay((prev) =>
+          prev
+            ? { ...prev, started: true, solana_pay_url: body.solana_pay_url, redirect_url: null }
+            : prev,
+        )
+        setVerifying(true)
+        return
+      }
       if (body.redirect_url) {
         window.location.assign(body.redirect_url)
       } else {
@@ -337,7 +354,7 @@ function App() {
     )
   }
 
-  if (verifying && pay.status !== 'paid') {
+  if (verifying && pay.status !== 'paid' && pay.provider !== 'solana') {
     return (
       <Shell>
         <Card aria-live="polite">
@@ -390,7 +407,9 @@ function App() {
             Buyers have no One account.
             {pay.provider === 'test'
               ? ' Test processor: Pay marks this paid. No card, no secret.'
-              : ' Completing payment on the processor is not the same as a success URL.'}
+              : pay.provider === 'solana'
+                ? ' Solana Pay QR. USDC. Wallet confirmation is not paid until Pay sees the transfer.'
+                : ' Completing payment on the processor is not the same as a success URL.'}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -430,8 +449,20 @@ function App() {
               </p>
             ) : null}
           </div>
-          {started ? <p className="text-sm text-slate-500">You already started this payment.</p> : null}
+          {pay.provider === 'solana' && pay.solana_pay_url ? (
+            <div className="space-y-3">
+              <SolanaQr url={pay.solana_pay_url} />
+              <a className="block text-center text-sm text-sky-700 underline-offset-2 hover:underline" href={pay.solana_pay_url}>
+                Open in wallet
+              </a>
+              <p className="text-center text-xs text-slate-500">Waiting for USDC on Solana. Not a card.</p>
+            </div>
+          ) : null}
+          {started && pay.provider !== 'solana' ? (
+            <p className="text-sm text-slate-500">You already started this payment.</p>
+          ) : null}
         </CardContent>
+        {pay.provider === 'solana' && pay.solana_pay_url ? null : (
         <CardFooter>
           <Button
             type="button"
@@ -443,6 +474,7 @@ function App() {
             {started ? 'Continue to processor' : 'Pay'}
           </Button>
         </CardFooter>
+        )}
       </Card>
     </Shell>
   )

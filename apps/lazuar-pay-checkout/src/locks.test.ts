@@ -24,7 +24,7 @@ describe('checkout honesty', () => {
 
   it('does not render wallet tiles or card PAN', () => {
     const text = src().toLowerCase()
-    expect(text).not.toMatch(/grabpay|tng|touchngo|boost|duitnow|fpx|shopee/)
+    expect(text).not.toMatch(/grabpay|tng|touchngo|boost|duitnow|fpx|shopee|phantom|solflare|backpack|wallet-adapter|@solana\/web3/)
     expect(src()).not.toContain('autocomplete="cc-number"')
   })
 
@@ -49,6 +49,18 @@ describe('checkout honesty', () => {
   it('test processor copy is not a wallet tile', () => {
     expect(src()).toContain("pay.provider === 'test'")
     expect(src()).toContain('No card, no secret')
+  })
+
+  it('solana stays on-page with a QR and does not assign', () => {
+    expect(src()).toContain("pay.provider !== 'solana'")
+    expect(src()).toContain('solana_pay_url')
+    expect(src()).toContain('SolanaQr')
+    expect(src()).toContain('Open in wallet')
+    expect(src()).toContain('Wallet confirmation is not paid until Pay sees the transfer')
+    expect(src()).not.toContain('Pay with Phantom')
+    const pkg = readFileSync(join(root, 'package.json'), 'utf8')
+    expect(pkg).not.toContain('@solana/')
+    expect(pkg).not.toContain('wallet-adapter')
   })
 
   it('uses copied aura-ui card chrome not a Hub portal', () => {
