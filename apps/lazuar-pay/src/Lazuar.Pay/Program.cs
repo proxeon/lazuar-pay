@@ -58,6 +58,7 @@ builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddHostedService<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookWorker>();
+    builder.Services.AddHostedService<Lazuar.Pay.Rails.Solana.SolanaConfirmWorker>();
 }
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<SecretBox>();
@@ -68,6 +69,8 @@ builder.Services.AddScoped<BillplzHosted>();
 builder.Services.AddScoped<XenditHosted>();
 builder.Services.AddScoped<RazorpayHosted>();
 builder.Services.AddScoped<SolanaHosted>();
+builder.Services.AddScoped<SolanaRpc>();
+builder.Services.AddScoped<SolanaConfirm>();
 builder.Services.AddScoped<TestHosted>();
 builder.Services.AddScoped<ProcessorRemote>();
 builder.Services.AddScoped<Fulfillment>();

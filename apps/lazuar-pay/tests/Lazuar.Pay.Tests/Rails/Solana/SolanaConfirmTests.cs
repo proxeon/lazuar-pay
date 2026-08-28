@@ -1,0 +1,222 @@
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Lazuar.Pay.Data;
+using Lazuar.Pay.Rails.Solana;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Lazuar.Pay.Tests;
+
+public class SolanaConfirmTests
+{
+    [Test]
+    public async Task Confirm_paid_replay_and_mismatch()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        var started = await PayTest.StartPay(client, token, null, """{"name":"Ada"}""");
+        Assert.That(started.StatusCode, Is.EqualTo(HttpStatusCode.OK), await started.Content.ReadAsStringAsync());
+        using var startDoc = JsonDocument.Parse(await started.Content.ReadAsStringAsync());
+        var url = startDoc.RootElement.GetProperty("solana_pay_url").GetString()!;
+        var reference = ReferenceFrom(url);
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+        factory.Psp.Responder = (_, body) => RpcTx(body, Fixture(
+            signature, address, SolanaUsdc.DevnetMint, "10000000", reference, checkoutId));
+
+        using var confirm = Confirm(token, signature);
+        var paid = await client.SendAsync(confirm);
+        Assert.That(paid.StatusCode, Is.EqualTo(HttpStatusCode.OK), await paid.Content.ReadAsStringAsync());
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("paid"));
+        Assert.That(db.Charges.Single().ProviderRef, Is.EqualTo(signature));
+        Assert.That(db.Charges.Single().Currency, Is.EqualTo("USDC"));
+        Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
+        Assert.That(db.PspWebhookEvents.Single().EventId, Is.EqualTo(signature));
+        var envelope = db.OrgWebhookDeliveries.Select(x => x.PayloadJson).ToList();
+        Assert.That(db.JournalLines.Where(l => l.Dc == "D").Sum(l => l.Amount), Is.EqualTo(10m));
+
+        using var replay = Confirm(token, signature);
+        Assert.That(await (await client.SendAsync(replay)).Content.ReadAsStringAsync(), Does.Contain("duplicate"));
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Confirm_mismatch_consumes_zero_events()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var startDoc = JsonDocument.Parse(await (await client.GetAsync("/v1/pay/" + token)).Content.ReadAsStringAsync());
+        var url = startDoc.RootElement.GetProperty("solana_pay_url").GetString()!;
+        var reference = ReferenceFrom(url);
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+        factory.Psp.Responder = (_, body) => RpcTx(body, Fixture(
+            signature, address, SolanaUsdc.DevnetMint, "1000", reference, checkoutId));
+
+        using var confirm = Confirm(token, signature);
+        var res = await client.SendAsync(confirm);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await res.Content.ReadAsStringAsync(), Does.Contain("amount mismatch"));
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Get_does_not_fulfill()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = SolanaVaultTests.SampleAddress(),
+            environment = "devnet"
+        }));
+        var (token, _) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"jsonrpc":"2.0","result":null}""", Encoding.UTF8, "application/json")
+        };
+        using var get = await client.GetAsync("/v1/pay/" + token);
+        using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(factory.Psp.SendCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Pause_does_not_consume_signature()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        db.OrgSettings.Single().ChargesPaused = true;
+        await db.SaveChangesAsync();
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+        using var confirm = Confirm(token, signature);
+        var res = await client.SendAsync(confirm);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+        _ = checkoutId;
+    }
+
+    static HttpRequestMessage Confirm(string token, string signature)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/confirm")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new { signature }), Encoding.UTF8, "application/json")
+        };
+        return req;
+    }
+
+    static string ReferenceFrom(string url)
+    {
+        var q = url.Split('?', 2)[1];
+        foreach (var part in q.Split('&'))
+        {
+            var kv = part.Split('=', 2);
+            if (kv[0] == "reference")
+            {
+                return kv[1];
+            }
+        }
+
+        throw new InvalidOperationException("reference missing");
+    }
+
+    static HttpResponseMessage RpcTx(string? requestBody, string resultJson)
+    {
+        if (requestBody is not null && requestBody.Contains("getSignaturesForAddress", StringComparison.Ordinal))
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"jsonrpc":"2.0","result":[]}""", Encoding.UTF8, "application/json")
+            };
+        }
+
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(resultJson, Encoding.UTF8, "application/json")
+        };
+    }
+
+    public static string Fixture(string signature, string owner, string mint, string atomic, string reference, string memo) =>
+        $$"""
+        {
+          "jsonrpc": "2.0",
+          "result": {
+            "slot": 1,
+            "meta": {
+              "err": null,
+              "postTokenBalances": [
+                { "accountIndex": 1, "mint": "{{mint}}", "owner": "{{owner}}", "uiTokenAmount": { "amount": "{{atomic}}", "decimals": 6 } }
+              ]
+            },
+            "transaction": {
+              "signatures": ["{{signature}}"],
+              "message": {
+                "accountKeys": [
+                  { "pubkey": "11111111111111111111111111111111", "signer": true, "writable": true },
+                  { "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "signer": false, "writable": true },
+                  { "pubkey": "{{reference}}", "signer": false, "writable": false }
+                ],
+                "instructions": [
+                  {
+                    "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                    "parsed": {
+                      "type": "transferChecked",
+                      "info": {
+                        "mint": "{{mint}}",
+                        "destination": "ata",
+                        "tokenAmount": { "amount": "{{atomic}}", "decimals": 6 }
+                      }
+                    }
+                  },
+                  {
+                    "programId": "{{SolanaTx.MemoProgram}}",
+                    "parsed": "{{memo}}"
+                  }
+                ]
+              }
+            }
+          }
+        }
+        """;
+}

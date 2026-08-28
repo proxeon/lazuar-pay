@@ -54,6 +54,8 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
         builder.UseSetting("Pay:StartMaxPerMinute", StartMaxPerMinute.ToString());
+        builder.UseSetting("Pay:Solana:RpcUrl", "http://solana.test/");
+        builder.UseSetting("Pay:Solana:Cluster", "devnet");
         if (!string.IsNullOrWhiteSpace(OneApiKey))
         {
             builder.UseSetting("One:ApiKey", OneApiKey);

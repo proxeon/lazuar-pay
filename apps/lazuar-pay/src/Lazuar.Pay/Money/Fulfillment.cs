@@ -194,6 +194,7 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
                 amount = checkout.Amount,
                 currency = checkout.Currency,
                 provider,
+                provider_ref = providerRef,
                 number,
                 payer_name = checkout.PayerName
             },

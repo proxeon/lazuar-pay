@@ -24,6 +24,7 @@ internal static class PublicPayEndpoints
     {
         app.MapGet("/v1/pay/{token}", Get);
         app.MapPost("/v1/pay/{token}/start", Start);
+        app.MapPost("/v1/pay/{token}/confirm", Confirm);
     }
 
     static async Task<IResult> Get(
@@ -271,6 +272,46 @@ internal static class PublicPayEndpoints
         }
     }
 
+    static async Task<IResult> Confirm(
+        string token,
+        ConfirmPayRequest? body,
+        CheckoutStore store,
+        PayDbContext db,
+        SolanaConfirm confirm,
+        IConfiguration config,
+        CancellationToken ct)
+    {
+        var maxStarts = config.GetValue("Pay:StartMaxPerMinute", 20);
+        if (maxStarts > 0 && !PublicPayLimiter.TryAcquire("confirm:" + token, maxStarts, 60))
+        {
+            return PayErrors.Status(429, "Too Many Requests", "Too many confirm attempts");
+        }
+
+        var session = await store.GetByPublicTokenAsync(token, ct);
+        CheckoutRow? row = null;
+        if (session is not null)
+        {
+            row = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == session.Id, ct);
+        }
+        else
+        {
+            var link = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.PublicToken == token, ct);
+            if (link is null)
+            {
+                return PayErrors.Status(404, "Not Found", "Checkout not found");
+            }
+
+            return PayErrors.Status(400, "Bad Request", "confirm a started checkout token");
+        }
+
+        if (row is null)
+        {
+            return PayErrors.Status(404, "Not Found", "Checkout not found");
+        }
+
+        return await confirm.ConfirmAsync(row, body?.Signature?.Trim() ?? "", ct);
+    }
+
     static async Task<(CheckoutRow? Row, IResult? Error)> MintOrResume(
         PaymentLinkRow link,
         StartPayRequest? body,
@@ -507,4 +548,9 @@ public sealed class StartPayRequest
     public string? Name { get; set; }
     public string? Email { get; set; }
     public string? SlotKey { get; set; }
+}
+
+public sealed class ConfirmPayRequest
+{
+    public string? Signature { get; set; }
 }
