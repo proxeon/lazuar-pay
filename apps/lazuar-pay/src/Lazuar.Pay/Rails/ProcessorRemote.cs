@@ -104,6 +104,11 @@ public sealed class ProcessorRemote(
             return;
         }
 
+        if (PayProviders.IsSolana(provider))
+        {
+            throw new InvalidOperationException("refund not supported on this rail");
+        }
+
         throw new InvalidOperationException("refund not supported on this rail");
     }
 
