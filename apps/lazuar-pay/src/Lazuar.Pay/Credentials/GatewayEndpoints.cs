@@ -180,7 +180,7 @@ internal static class GatewayEndpoints
 
         if (string.IsNullOrWhiteSpace(provider))
         {
-            return await List(orgId, request, one, db, env, ct);
+            return PayErrors.Status(400, "Bad Request", "provider is required");
         }
 
         if (!PayProviders.TryNormalize(provider, out var name))

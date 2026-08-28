@@ -129,6 +129,7 @@ tasks:
     dir: packages/pay-spec
     cmds:
       - pnpm exec tsp compile .
+      - node ../../scripts/check-pay-openapi-honesty.mjs
 
   pay:merchant:
     desc: Merchant Vite shell on http://localhost:5178 (not lazuar-ops)

@@ -116,3 +116,5 @@ jobs:
           pnpm --filter lazuar-pay-checkout build
       - name: Compile pay-spec
         run: pnpm --filter @repo/pay-spec exec tsp compile .
+      - name: Pay OpenAPI ↔ Map* honesty
+        run: node scripts/check-pay-openapi-honesty.mjs

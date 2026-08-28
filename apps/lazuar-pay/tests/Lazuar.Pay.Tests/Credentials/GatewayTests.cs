@@ -161,16 +161,23 @@ public class GatewayTests
         Assert.That(xendit.GetProperty("configured").GetBoolean(), Is.False);
         Assert.That(test.GetProperty("configured").GetBoolean());
 
-        using var bare = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
-        bare.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var bareGot = await client.SendAsync(bare);
-        using var bareDoc = JsonDocument.Parse(await bareGot.Content.ReadAsStringAsync());
-        Assert.That(bareDoc.RootElement.GetProperty("processors").GetArrayLength(), Is.EqualTo(6));
-
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.OrgSettings.Single().ActiveProvider, Is.Null);
         Assert.That(db.GatewayCredentials.Count(), Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Get_singular_without_provider_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        using var bare = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
+        bare.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var got = await client.SendAsync(bare);
+        Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await got.Content.ReadAsStringAsync(), Does.Contain("provider is required"));
     }
 
     [Test]

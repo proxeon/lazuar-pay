@@ -3,7 +3,7 @@
 **Date:** 26 August 2026  
 **HEAD:** `9f04ad58` — `fix(pay-ui): match receipts table to pay-link chrome`  
 **Source:** [plans/019-evals](../../plans/019-evals/README.md)  
-**Status:** 001–018, 020–028, 030–061 resolved on `fix/002-pay-host-bugs`. Remaining: 019, 029, 062–080.
+**Status:** 001–028, 030–061, 067–074 resolved on `fix/002-pay-host-bugs`. Remaining: 029, 062–066, 075–080.
 
 Extracted from the uncondensed 019 evaluation of:
 
