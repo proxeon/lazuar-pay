@@ -51,6 +51,38 @@ public class PayBootTests
         Assert.DoesNotThrow(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Testing")));
     }
 
+    [Test]
+    public void Production_devnet_cluster_throws()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Pay:WrapKey"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ["ConnectionStrings:Pay"] = "Host=db",
+            ["One:BaseUrl"] = "https://one.example/api/v1",
+            ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:Solana:Cluster"] = "devnet",
+            ["Pay:Solana:RpcUrl"] = "https://rpc.example/devnet"
+        }).Build();
+        var ex = Assert.Throws<InvalidOperationException>(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
+        Assert.That(ex!.Message, Does.Contain("mainnet-beta"));
+    }
+
+    [Test]
+    public void Production_public_solana_rpc_throws()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Pay:WrapKey"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ["ConnectionStrings:Pay"] = "Host=db",
+            ["One:BaseUrl"] = "https://one.example/api/v1",
+            ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:Solana:Cluster"] = "mainnet-beta",
+            ["Pay:Solana:RpcUrl"] = "https://api.mainnet-beta.solana.com"
+        }).Build();
+        var ex = Assert.Throws<InvalidOperationException>(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
+        Assert.That(ex!.Message, Does.Contain("RpcUrl"));
+    }
+
     sealed class NamedEnv(string name) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = name;
