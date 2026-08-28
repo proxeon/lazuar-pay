@@ -113,7 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Member list. processors is five rails, or six with `test` outside Production. */
+        /** @description Member list. processors is six rails, or seven with `test` outside Production. */
         get: operations["Gateways_list"];
         put?: never;
         post?: never;
@@ -338,6 +338,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pay/{token}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Wake-up only. Pay fetches the tx; the SPA cannot assert paid. */
+        post: operations["PublicPayApi_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pay/{token}/start": {
         parameters: {
             query?: never;
@@ -451,7 +468,16 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        /** @description stripe|chip|billplz|xendit|razorpay|test. Host has no default; unknown → 400. */
+        ConfirmPayRequest: {
+            signature?: string;
+        };
+        ConfirmPayResponse: {
+            ok?: boolean;
+            duplicate?: boolean;
+            refunded?: boolean;
+            reason?: string;
+        };
+        /** @description stripe|chip|billplz|xendit|razorpay|solana|test. Host has no default; unknown → 400. solana requires USDC. */
         CreateCheckoutRequest: {
             org_id: string;
             provider: string;
@@ -622,6 +648,8 @@ export interface components {
             mine?: boolean;
             provider?: string;
             redirect_url?: string;
+            /** @description solana: URI for QR. Present when provider is solana and start has run. redirect_url is null. */
+            solana_pay_url?: string;
             /** Format: int32 */
             remaining?: number;
             /** Format: int32 */
@@ -631,11 +659,11 @@ export interface components {
             /** Format: int32 */
             taken_count?: number;
         };
-        /** @description BYOK. provider is stripe|chip|billplz|xendit|razorpay. PUT test → 400. key_id+key_secret concat into secret when secret is empty. */
+        /** @description BYOK. provider is stripe|chip|billplz|xendit|razorpay|solana. PUT test → 400. Solana: public_merchant_id + environment devnet|mainnet; no secret/webhook_secret. */
         PutGateway: {
             provider: string;
             secret?: string;
-            webhook_secret: string;
+            webhook_secret?: string;
             public_merchant_id?: string;
             environment?: string;
             key_id?: string;
@@ -695,7 +723,8 @@ export interface components {
             slot_key?: string;
         };
         StartPayResponse: {
-            redirect_url: string;
+            redirect_url?: string;
+            solana_pay_url?: string;
         };
         Subscription: {
             id: string;
@@ -1373,6 +1402,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicPay"];
+                };
+            };
+        };
+    };
+    PublicPayApi_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPayRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmPayResponse"];
                 };
             };
         };

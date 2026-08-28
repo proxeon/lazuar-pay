@@ -37,7 +37,7 @@ model OrgReadyResponse {
   ready: boolean;
 }
 
-/** stripe|chip|billplz|xendit|razorpay|test. Host has no default; unknown → 400. */
+/** stripe|chip|billplz|xendit|razorpay|solana|test. Host has no default; unknown → 400. solana requires USDC. */
 model CreateCheckoutRequest {
   org_id: string;
   provider: string;
@@ -95,6 +95,8 @@ model PublicPay {
   mine?: boolean;
   provider?: string;
   redirect_url?: string;
+  /** solana: URI for QR. Present when provider is solana and start has run. redirect_url is null. */
+  solana_pay_url?: string;
   remaining?: int32;
   max_payers?: int32;
   paid_count?: int32;
@@ -127,11 +129,11 @@ model GatewayList {
   processors: GatewayView[];
 }
 
-/** BYOK. provider is stripe|chip|billplz|xendit|razorpay. PUT test → 400. key_id+key_secret concat into secret when secret is empty. */
+/** BYOK. provider is stripe|chip|billplz|xendit|razorpay|solana. PUT test → 400. Solana: public_merchant_id + environment devnet|mainnet; no secret/webhook_secret. */
 model PutGateway {
   provider: string;
   secret?: string;
-  webhook_secret: string;
+  webhook_secret?: string;
   public_merchant_id?: string;
   environment?: string;
   key_id?: string;
@@ -199,7 +201,19 @@ model Product {
 }
 
 model StartPayResponse {
-  redirect_url: string;
+  redirect_url?: string;
+  solana_pay_url?: string;
+}
+
+model ConfirmPayRequest {
+  signature?: string;
+}
+
+model ConfirmPayResponse {
+  ok?: boolean;
+  duplicate?: boolean;
+  refunded?: boolean;
+  reason?: string;
 }
 
 model CreatePaymentLinkRequest {
@@ -450,6 +464,11 @@ interface PublicPayApi {
   @post
   @route("/pay/{token}/start")
   start(@path token: string, @body body?: StartPayRequest): StartPayResponse;
+
+  /** Wake-up only. Pay fetches the tx; the SPA cannot assert paid. */
+  @post
+  @route("/pay/{token}/confirm")
+  confirm(@path token: string, @body body?: ConfirmPayRequest): ConfirmPayResponse;
 }
 
 @route("/v1")
@@ -481,7 +500,7 @@ interface Gateways {
   @route("/orgs/{orgId}/gateway")
   get(@path orgId: string, @query provider: string): GatewayView;
 
-  /** Member list. processors is five rails, or six with `test` outside Production. */
+  /** Member list. processors is six rails, or seven with `test` outside Production. */
   @get
   @route("/orgs/{orgId}/gateways")
   list(@path orgId: string): GatewayList;
