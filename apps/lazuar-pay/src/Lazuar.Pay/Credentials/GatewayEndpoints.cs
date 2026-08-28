@@ -27,6 +27,7 @@ internal static class GatewayEndpoints
         OneClient one,
         PayDbContext db,
         SecretBox box,
+        IConfiguration config,
         CancellationToken ct)
     {
         var denied = await MemberGate.RequireWriterAsync(request, one, orgId, ct);
@@ -47,7 +48,7 @@ internal static class GatewayEndpoints
 
         if (PayProviders.IsSolana(provider))
         {
-            return await PutSolana(orgId, body, db, ct);
+            return await PutSolana(orgId, body, db, config, ct);
         }
 
         var secret = body?.Secret?.Trim();
@@ -258,7 +259,7 @@ internal static class GatewayEndpoints
         return Results.Json(new { org_id = orgId, processors }, OneClient.Json);
     }
 
-    static async Task<IResult> PutSolana(string orgId, PutGatewayRequest? body, PayDbContext db, CancellationToken ct)
+    static async Task<IResult> PutSolana(string orgId, PutGatewayRequest? body, PayDbContext db, IConfiguration config, CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(body?.Secret)
             || !string.IsNullOrWhiteSpace(body?.KeyId)
@@ -280,6 +281,12 @@ internal static class GatewayEndpoints
         if (!PayProviders.TryNormalizeSolanaEnvironment(body?.Environment, out var environment))
         {
             return PayErrors.Status(400, "Bad Request", "environment must be devnet or mainnet");
+        }
+
+        var cluster = SolanaCluster.FromConfig(config);
+        if (!SolanaCluster.MatchesVault(cluster, environment))
+        {
+            return PayErrors.Status(400, "Bad Request", "solana cluster mismatch");
         }
 
         var last4 = SolanaAddress.Last4(address);

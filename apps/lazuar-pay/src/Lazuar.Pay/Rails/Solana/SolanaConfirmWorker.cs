@@ -4,6 +4,7 @@ public sealed class SolanaConfirmWorker(IServiceScopeFactory scopes, ILogger<Sol
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var delay = TimeSpan.FromSeconds(2);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -11,6 +12,11 @@ public sealed class SolanaConfirmWorker(IServiceScopeFactory scopes, ILogger<Sol
                 await using var scope = scopes.CreateAsyncScope();
                 var confirm = scope.ServiceProvider.GetRequiredService<SolanaConfirm>();
                 await confirm.ConfirmOpenByReferenceAsync(stoppingToken);
+                delay = TimeSpan.FromSeconds(2);
+            }
+            catch (SolanaRpcThrottledException)
+            {
+                delay = TimeSpan.FromSeconds(15);
             }
             catch (Exception ex)
             {
@@ -19,7 +25,7 @@ public sealed class SolanaConfirmWorker(IServiceScopeFactory scopes, ILogger<Sol
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                await Task.Delay(delay, stoppingToken);
             }
             catch (OperationCanceledException)
             {

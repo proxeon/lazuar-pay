@@ -119,16 +119,26 @@ public class SolanaVaultTests
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(await res.Content.ReadAsStringAsync(), Does.Contain("devnet or mainnet"));
 
-        await PayTest.Put(client, JsonSerializer.Serialize(new
+        using var mainnet = JsonPut(JsonSerializer.Serialize(new
         {
             provider = "solana",
             public_merchant_id = address,
             environment = "mainnet-beta"
         }));
+        var mainnetRes = await client.SendAsync(mainnet);
+        Assert.That(mainnetRes.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await mainnetRes.Content.ReadAsStringAsync(), Does.Contain("cluster mismatch"));
+
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
         using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway?provider=solana");
         get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         using var doc = JsonDocument.Parse(await (await client.SendAsync(get)).Content.ReadAsStringAsync());
-        Assert.That(doc.RootElement.GetProperty("environment").GetString(), Is.EqualTo("mainnet"));
+        Assert.That(doc.RootElement.GetProperty("environment").GetString(), Is.EqualTo("devnet"));
     }
 
     [Test]

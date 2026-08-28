@@ -11,7 +11,8 @@ public static class SolanaTx
         JsonDocument rpc,
         CheckoutRow checkout,
         GatewayCredentialRow cred,
-        string signature)
+        string signature,
+        string cluster)
     {
         if (!rpc.RootElement.TryGetProperty("result", out var result) || result.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
@@ -37,7 +38,7 @@ public static class SolanaTx
             return "transaction missing";
         }
 
-        var mint = SolanaUsdc.MintFor(cred.Environment);
+        var mint = SolanaCluster.Mint(cluster);
         if (!TryTransfer(message, out var foundMint, out var atomic, out var programId))
         {
             return "transfer missing";

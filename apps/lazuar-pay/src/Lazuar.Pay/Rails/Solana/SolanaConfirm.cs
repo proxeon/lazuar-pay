@@ -3,11 +3,13 @@ using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PaymentLinks;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Rails.Solana;
 
-public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid fulfillment)
+public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid fulfillment, IConfiguration config)
 {
     public async Task<IResult> ConfirmAsync(CheckoutRow checkout, string signature, CancellationToken ct)
     {
@@ -40,10 +42,20 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
             return PayErrors.Status(400, "Bad Request", "rail not configured");
         }
 
-        System.Text.Json.JsonDocument doc;
+        var cluster = SolanaCluster.FromConfig(config);
+        if (!SolanaCluster.MatchesVault(cluster, cred.Environment))
+        {
+            return PayErrors.Status(400, "Bad Request", "solana cluster mismatch");
+        }
+
+        JsonDocument doc;
         try
         {
             doc = await rpc.GetTransactionAsync(signature, ct);
+        }
+        catch (SolanaRpcThrottledException)
+        {
+            throw;
         }
         catch (InvalidOperationException ex)
         {
@@ -52,7 +64,7 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
 
         using (doc)
         {
-            var mismatch = SolanaTx.Validate(doc, checkout, cred, signature);
+            var mismatch = SolanaTx.Validate(doc, checkout, cred, signature, cluster);
             if (mismatch is not null)
             {
                 return PayErrors.Status(400, "Bad Request", mismatch);
@@ -122,6 +134,8 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
 
     public async Task ConfirmOpenByReferenceAsync(CancellationToken ct)
     {
+        var ttl = PaymentLinkOccupancy.ReservationTtl(config);
+        var cutoff = DateTimeOffset.UtcNow - ttl;
         var open = await db.Checkouts
             .Where(x => x.Provider == PayProviders.Solana && x.Status == "open" && x.SolanaPayUrl != null && x.ProviderSessionId != null)
             .OrderBy(x => x.CreatedAt)
@@ -129,10 +143,20 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
             .ToListAsync(ct);
         foreach (var row in open)
         {
-            System.Text.Json.JsonDocument sigs;
+            if (row.CreatedAt < cutoff)
+            {
+                await FailWatchTimeoutAsync(row, ct);
+                continue;
+            }
+
+            JsonDocument sigs;
             try
             {
                 sigs = await rpc.GetSignaturesForAddressAsync(row.ProviderSessionId!, ct);
+            }
+            catch (SolanaRpcThrottledException)
+            {
+                throw;
             }
             catch (InvalidOperationException)
             {
@@ -160,6 +184,51 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
                     break;
                 }
             }
+        }
+    }
+
+    public async Task FailWatchTimeoutAsync(CheckoutRow checkout, CancellationToken ct)
+    {
+        if (checkout.Status != "open")
+        {
+            return;
+        }
+
+        var eventId = "watch_timeout:" + checkout.Id;
+        if (await db.PspWebhookEvents.FindAsync([checkout.OrgId, PayProviders.Solana, eventId], ct) is not null)
+        {
+            return;
+        }
+
+        await using var failTx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            db.PspWebhookEvents.Add(new PspWebhookEventRow
+            {
+                OrgId = checkout.OrgId,
+                Provider = PayProviders.Solana,
+                EventId = eventId,
+                ReceivedAt = DateTimeOffset.UtcNow
+            });
+            checkout.Status = "failed";
+            await OutboundWebhookEnqueue.TryAddAsync(
+                db,
+                checkout.OrgId,
+                eventId,
+                PayWebhookEnvelope.Failed,
+                new
+                {
+                    checkout_id = checkout.Id,
+                    reason = "watch_timeout",
+                    provider = PayProviders.Solana
+                },
+                ct);
+            await db.SaveChangesAsync(ct);
+            await failTx.CommitAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            await failTx.RollbackAsync(ct);
         }
     }
 }

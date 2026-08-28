@@ -6,7 +6,7 @@ namespace Lazuar.Pay.Rails.Solana;
 
 public static class SolanaPayUri
 {
-    public static HostedSession Create(CheckoutRow checkout, GatewayCredentialRow cred)
+    public static HostedSession Create(CheckoutRow checkout, GatewayCredentialRow cred, string cluster)
     {
         if (!SolanaAddress.TryNormalize(cred.PublicMerchantId, out var recipient))
         {
@@ -18,7 +18,7 @@ public static class SolanaPayUri
             throw new InvalidOperationException("amount is not a valid USDC amount");
         }
 
-        var mint = SolanaUsdc.MintFor(cred.Environment);
+        var mint = SolanaCluster.Mint(cluster);
         var reference = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(32));
         var amount = checkout.Amount.ToString("0.######", CultureInfo.InvariantCulture);
         var memo = Uri.EscapeDataString(checkout.Id);

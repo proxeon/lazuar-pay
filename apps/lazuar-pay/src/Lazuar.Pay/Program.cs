@@ -94,6 +94,10 @@ PayCors.Add(builder);
 PayBoot.ThrowIfMisconfigured(builder.Configuration, builder.Environment);
 OneWorkerClient.ThrowIfInvalid(builder.Configuration);
 var app = builder.Build();
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+{
+    await PayBoot.ProbeSolanaRpcAsync(app.Services, app.Configuration, default);
+}
 if (app.Environment.IsDevelopment())
 {
     try

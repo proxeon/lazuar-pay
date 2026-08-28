@@ -18,6 +18,7 @@ type PayView = {
   provider?: string | null
   redirect_url?: string | null
   solana_pay_url?: string | null
+  solana_cluster?: string | null
   payer_name?: string | null
   payer_email?: string | null
 }
@@ -408,7 +409,9 @@ function App() {
             {pay.provider === 'test'
               ? ' Test processor: Pay marks this paid. No card, no secret.'
               : pay.provider === 'solana'
-                ? ' Solana Pay QR. USDC. Wallet confirmation is not paid until Pay sees the transfer.'
+                ? pay.solana_cluster === 'devnet'
+                  ? ' Solana Pay QR. USDC on Solana devnet — no real money. Wallet confirmation is not paid until Pay sees the transfer.'
+                  : ' Solana Pay QR. USDC on Solana mainnet. Wallet confirmation is not paid until Pay sees the transfer.'
                 : ' Completing payment on the processor is not the same as a success URL.'}
           </p>
         </CardHeader>

@@ -9,8 +9,11 @@ public static class SolanaUsdc
     public const string TokenProgram = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
     public const string Token2022Program = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 
-    public static string MintFor(string environment) =>
-        environment == "mainnet" ? MainnetMint : DevnetMint;
+    public static string MintFor(string environment)
+    {
+        PayProviders.TryNormalizeSolanaEnvironment(environment, out var env);
+        return env == "mainnet" ? MainnetMint : DevnetMint;
+    }
 
     public static bool IsPinnedMint(string mint) =>
         mint is MainnetMint or DevnetMint;

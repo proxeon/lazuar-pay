@@ -650,6 +650,8 @@ export interface components {
             redirect_url?: string;
             /** @description solana: URI for QR. Present when provider is solana and start has run. redirect_url is null. */
             solana_pay_url?: string;
+            /** @description Process cluster. `devnet` or `mainnet-beta`. Present when provider is solana. */
+            solana_cluster?: string;
             /** Format: int32 */
             remaining?: number;
             /** Format: int32 */

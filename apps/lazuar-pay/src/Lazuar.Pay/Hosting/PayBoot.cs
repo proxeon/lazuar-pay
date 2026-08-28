@@ -1,3 +1,4 @@
+using Lazuar.Pay.Rails.Solana;
 using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Hosting;
@@ -53,6 +54,25 @@ internal static class PayBoot
             throw new InvalidOperationException("Pay:CheckoutBaseUrl must be public https in Production and Staging");
         }
 
+        var corsOrigins = PayCors.Resolve(config[PayCors.Key], env.EnvironmentName);
+        if (env.IsProduction())
+        {
+            foreach (var origin in corsOrigins)
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri)
+                    || originUri.Scheme != Uri.UriSchemeHttps)
+                {
+                    throw new InvalidOperationException("Pay:CorsOrigins must be https in Production");
+                }
+            }
+        }
+
+        var checkoutOrigin = checkoutUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+        if (!corsOrigins.Contains(checkoutOrigin, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Pay:CheckoutBaseUrl origin must be in Pay:CorsOrigins");
+        }
+
         var startMax = config.GetValue("Pay:StartMaxPerMinute", 20);
         if (startMax <= 0)
         {
@@ -88,6 +108,37 @@ internal static class PayBoot
         }
 
         if (cluster == "devnet" && rpc.Contains("mainnet", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Pay:Solana:RpcUrl genesis hash mismatch");
+        }
+
+        var mintOverride = config["Pay:Solana:UsdcMint"]?.Trim() ?? "";
+        if (mintOverride.Length > 0)
+        {
+            var other = cluster == SolanaCluster.Mainnet ? SolanaUsdc.DevnetMint : SolanaUsdc.MainnetMint;
+            if (mintOverride == other)
+            {
+                throw new InvalidOperationException("Pay:Solana:UsdcMint does not match cluster");
+            }
+        }
+    }
+
+    public static async Task ProbeSolanaRpcAsync(IServiceProvider services, IConfiguration config, CancellationToken ct)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var rpc = scope.ServiceProvider.GetRequiredService<SolanaRpc>();
+        var cluster = SolanaCluster.FromConfig(config);
+        string hash;
+        try
+        {
+            hash = await rpc.GetGenesisHashAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new InvalidOperationException("Pay:Solana:RpcUrl is unreachable", ex);
+        }
+
+        if (!string.Equals(hash, SolanaCluster.GenesisHash(cluster), StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Pay:Solana:RpcUrl genesis hash mismatch");
         }

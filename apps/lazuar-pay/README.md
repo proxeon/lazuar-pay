@@ -51,7 +51,9 @@ Not `task pay:test`. Not mainnet.
 6. Host poller or `POST /v1/pay/{token}/confirm` with the signature. GET `status=paid`, Official Receipt `RCPT-`, Plane C, `examples/pay-node` unlock.
 7. `rg @solana examples/pay-node` stays empty.
 
-Receive-only: Pay cannot claw back USDC. Merchant refunds are `refund not supported on this rail`. Late pay does not book a fake succeeded refund.
+The Solana confirm poller is in-process. Run **one Pay replica** until it uses a claim (`FOR UPDATE SKIP LOCKED`). Two replicas can both poll the same open QR.
+
+Receive-only: Pay cannot claw back USDC. Merchant refunds are `refund not supported on this rail`. Late pay does not book a fake succeeded refund. An open Solana checkout older than the 30-minute reservation TTL is marked `failed` (`watch_timeout`), not paid.
 
 ## Live whoami (not CI)
 

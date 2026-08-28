@@ -137,6 +137,63 @@ public class SolanaConfirmTests
         _ = checkoutId;
     }
 
+    [Test]
+    public async Task Confirm_rejects_other_mint()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var startDoc = JsonDocument.Parse(await (await client.GetAsync("/v1/pay/" + token)).Content.ReadAsStringAsync());
+        var reference = ReferenceFrom(startDoc.RootElement.GetProperty("solana_pay_url").GetString()!);
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+        factory.Psp.Responder = (_, body) => RpcTx(body, Fixture(
+            signature, address, SolanaUsdc.MainnetMint, "10000000", reference, checkoutId));
+        using var confirm = Confirm(token, signature);
+        var res = await client.SendAsync(confirm);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await res.Content.ReadAsStringAsync(), Does.Contain("mint mismatch"));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
+    }
+
+    [Test]
+    public async Task Stale_open_checkout_emits_payment_failed()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = SolanaVaultTests.SampleAddress(),
+            environment = "devnet"
+        }));
+        var (token, _) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        var row = db.Checkouts.Single();
+        row.CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-31);
+        await db.SaveChangesAsync();
+        var confirm = scope.ServiceProvider.GetRequiredService<SolanaConfirm>();
+        await confirm.ConfirmOpenByReferenceAsync(CancellationToken.None);
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("failed"));
+        Assert.That(db.PspWebhookEvents.Single().EventId, Does.StartWith("watch_timeout:"));
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+    }
+
     static HttpRequestMessage Confirm(string token, string signature)
     {
         var req = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/confirm")

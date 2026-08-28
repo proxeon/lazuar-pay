@@ -59,7 +59,7 @@ internal static class PublicPayEndpoints
             }
         }
 
-        return CheckoutView(token, row);
+        return CheckoutView(token, row, config);
     }
 
     static async Task<IResult> GetLink(
@@ -99,20 +99,20 @@ internal static class PublicPayEndpoints
 
         if (mine is not null)
         {
-            return CheckoutView(link.PublicToken, mine, remaining, link.MaxPayers, paid, taken, mine: true);
+            return CheckoutView(link.PublicToken, mine, config, remaining, link.MaxPayers, paid, taken, mine: true);
         }
 
         if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
         {
             if (link.MaxPayers == 1 && paid >= 1)
             {
-                return LinkView(link, "already_paid", remaining, paid, taken, started: false, redirectUrl: null);
+                return LinkView(link, "already_paid", remaining, paid, taken, started: false, redirectUrl: null, config);
             }
 
-            return LinkView(link, "full", remaining, paid, taken, started: false, redirectUrl: null);
+            return LinkView(link, "full", remaining, paid, taken, started: false, redirectUrl: null, config);
         }
 
-        return LinkView(link, "open", remaining, paid, taken, started: false, redirectUrl: null);
+        return LinkView(link, "open", remaining, paid, taken, started: false, redirectUrl: null, config);
     }
 
     static async Task<IResult> Start(
@@ -470,6 +470,7 @@ internal static class PublicPayEndpoints
     static IResult CheckoutView(
         string token,
         CheckoutRow row,
+        IConfiguration config,
         int? remaining = null,
         int? maxPayers = null,
         int? paidCount = null,
@@ -495,6 +496,7 @@ internal static class PublicPayEndpoints
             provider,
             redirect_url = started && row.Status == "open" && !isSolana ? row.PspRedirectUrl : null,
             solana_pay_url = started && row.Status == "open" && isSolana ? row.SolanaPayUrl : null,
+            solana_cluster = isSolana ? SolanaCluster.FromConfig(config) : null,
             remaining,
             max_payers = maxPayers,
             paid_count = paidCount,
@@ -509,9 +511,11 @@ internal static class PublicPayEndpoints
         int paid,
         int taken,
         bool started,
-        string? redirectUrl)
+        string? redirectUrl,
+        IConfiguration config)
     {
         var emailRequired = PayProviders.TryNormalize(link.Provider, out var p) && PayProviders.RequiresEmail(p);
+        var isSolana = PayProviders.TryNormalize(link.Provider, out var rail) && PayProviders.IsSolana(rail);
         return Results.Json(new
         {
             token = link.PublicToken,
@@ -524,6 +528,7 @@ internal static class PublicPayEndpoints
             provider = link.Provider,
             redirect_url = redirectUrl,
             solana_pay_url = (string?)null,
+            solana_cluster = isSolana ? SolanaCluster.FromConfig(config) : null,
             remaining,
             max_payers = link.MaxPayers,
             paid_count = paid,

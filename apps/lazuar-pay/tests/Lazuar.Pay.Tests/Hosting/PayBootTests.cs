@@ -1,4 +1,5 @@
 using Lazuar.Pay.Hosting;
+using Lazuar.Pay.Rails.Solana;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -60,6 +61,7 @@ public class PayBootTests
             ["ConnectionStrings:Pay"] = "Host=db",
             ["One:BaseUrl"] = "https://one.example/api/v1",
             ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:CorsOrigins"] = "https://checkout.example",
             ["Pay:Solana:Cluster"] = "devnet",
             ["Pay:Solana:RpcUrl"] = "https://rpc.example/devnet"
         }).Build();
@@ -76,11 +78,53 @@ public class PayBootTests
             ["ConnectionStrings:Pay"] = "Host=db",
             ["One:BaseUrl"] = "https://one.example/api/v1",
             ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:CorsOrigins"] = "https://checkout.example",
             ["Pay:Solana:Cluster"] = "mainnet-beta",
             ["Pay:Solana:RpcUrl"] = "https://api.mainnet-beta.solana.com"
         }).Build();
         var ex = Assert.Throws<InvalidOperationException>(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
         Assert.That(ex!.Message, Does.Contain("RpcUrl"));
+    }
+
+    [Test]
+    public void Production_checkout_origin_must_be_in_cors()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Pay:WrapKey"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ["ConnectionStrings:Pay"] = "Host=db",
+            ["One:BaseUrl"] = "https://one.example/api/v1",
+            ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:CorsOrigins"] = "https://merchant.example"
+        }).Build();
+        var ex = Assert.Throws<InvalidOperationException>(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
+        Assert.That(ex!.Message, Does.Contain("CorsOrigins"));
+    }
+
+    [Test]
+    public void Production_http_cors_origin_throws()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Pay:WrapKey"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ["ConnectionStrings:Pay"] = "Host=db",
+            ["One:BaseUrl"] = "https://one.example/api/v1",
+            ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:CorsOrigins"] = "http://checkout.example"
+        }).Build();
+        var ex = Assert.Throws<InvalidOperationException>(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
+        Assert.That(ex!.Message, Does.Contain("https"));
+    }
+
+    [Test]
+    public void Genesis_hash_is_pinned_per_cluster()
+    {
+        Assert.That(SolanaCluster.ParseGenesisHash("""{"jsonrpc":"2.0","result":"5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"}"""),
+            Is.EqualTo(SolanaCluster.MainnetGenesis));
+        Assert.That(SolanaCluster.GenesisHash(SolanaCluster.Devnet), Is.EqualTo(SolanaCluster.DevnetGenesis));
+        Assert.That(SolanaCluster.MatchesVault(SolanaCluster.Devnet, "devnet"));
+        Assert.That(SolanaCluster.MatchesVault(SolanaCluster.Mainnet, "mainnet"));
+        Assert.That(SolanaCluster.MatchesVault(SolanaCluster.Devnet, "mainnet"), Is.False);
     }
 
     sealed class NamedEnv(string name) : IHostEnvironment
