@@ -20,11 +20,11 @@
 
 ## H16.1
 
-- [ ] Audit `appsettings.json` vs `appsettings.Development.json` vs `appsettings.Production.json`
-- [ ] One BaseUrl laptop default only in Development
-- [ ] CORS Production already throws if empty — keep
-- [ ] Compose `--profile apps` documented as laptop in G15; do not “fix” it by retargeting Hub compose
+- [x] Audit `appsettings.json` vs `appsettings.Development.json` vs `appsettings.Production.json`
+- [x] One BaseUrl laptop default only in Development
+- [x] CORS Production already throws if empty — keep
+- [x] Compose `--profile apps` documented as laptop in G15; do not “fix” it by retargeting Hub compose
 
 ## H16.2 Exit
 
-- [ ] Track H complete when H10–H16 checked
+- [x] Track H complete when H10–H16 checked

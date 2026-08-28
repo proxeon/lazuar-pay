@@ -22,15 +22,15 @@
 
 ## H12.1
 
-- [ ] Outside Testing: missing/invalid `Pay:WrapKey` → throw at startup (`ValidateOnStart` or check after Build)
-- [ ] Testing: existing dev wrap fallback may remain
-- [ ] PUT-503 on missing WrapKey in Development can stay as belt; Production should not reach PUT
+- [x] Outside Testing: missing/invalid `Pay:WrapKey` → throw at startup (`ValidateOnStart` or check after Build)
+- [x] Testing: existing dev wrap fallback may remain
+- [x] PUT-503 on missing WrapKey in Development can stay as belt; Production should not reach PUT
 
 ## H12.2 Tests
 
-- [ ] WebApplicationFactory `EnvironmentName=Production` without WrapKey fails `CreateClient` / host start
-- [ ] Do not weaken SecretBoxTests
+- [x] WebApplicationFactory `EnvironmentName=Production` without WrapKey fails `CreateClient` / host start
+- [x] Do not weaken SecretBoxTests
 
 ## H12.3 Exit
 
-- [ ] Unblocked for H13
+- [x] Unblocked for H13

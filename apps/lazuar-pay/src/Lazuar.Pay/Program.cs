@@ -49,12 +49,18 @@ if (!builder.Environment.IsEnvironment("Testing"))
     var payCs = builder.Configuration.GetConnectionString("Pay");
     if (string.IsNullOrWhiteSpace(payCs))
     {
+        if (!builder.Environment.IsDevelopment())
+        {
+            throw new InvalidOperationException("ConnectionStrings:Pay is required");
+        }
+
         payCs = "Host=localhost;Port=5435;Database=lazuar_pay;Username=postgres;Password=postgres";
     }
 
     builder.Services.AddDbContext<PayDbContext>(o => o.UseNpgsql(payCs));
 }
 PayCors.Add(builder);
+PayBoot.ThrowIfMisconfigured(builder.Configuration, builder.Environment);
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {

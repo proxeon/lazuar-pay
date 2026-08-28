@@ -19,10 +19,10 @@
 
 ## H11.1
 
-- [ ] Prefer: fake `CanConnect` false without live Postgres
-- [ ] Or Testcontainers: stop DB → 503
-- [ ] Existing HealthTests 200 path still green in Testing
+- [x] Prefer: fake `CanConnect` false without live Postgres
+- [x] Or Testcontainers: stop DB → 503
+- [x] Existing HealthTests 200 path still green in Testing
 
 ## H11.2 Exit
 
-- [ ] Unblocked for H12
+- [x] Unblocked for H12

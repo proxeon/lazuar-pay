@@ -12,12 +12,11 @@ internal static class HealthEndpoints
         {
             try
             {
-                await db.Database.CanConnectAsync(ct);
-                return Results.Ok(new { status = "ready" });
+                return PayReady.From(await db.Database.CanConnectAsync(ct));
             }
             catch
             {
-                return Results.Json(new { status = "not_ready" }, statusCode: 503);
+                return PayReady.From(false);
             }
         });
     }

@@ -1,3 +1,6 @@
+using Lazuar.Pay.Hosting;
+using Microsoft.AspNetCore.Http;
+
 namespace Lazuar.Pay.Tests;
 
 public class HealthTests
@@ -45,5 +48,13 @@ public class HealthTests
         Assert.That(response.IsSuccessStatusCode);
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ready"));
         Assert.That(factory.One.SendCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Ready_false_when_cannot_connect()
+    {
+        var result = PayReady.From(false);
+        var status = ((IStatusCodeHttpResult)result).StatusCode;
+        Assert.That(status, Is.EqualTo(503));
     }
 }

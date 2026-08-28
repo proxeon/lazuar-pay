@@ -22,15 +22,15 @@
 
 ## H15.1
 
-- [ ] `.env.example` comments `Pay__StartMaxPerMinute` default 20
-- [ ] Do not change factory 200
-- [ ] Do not change production default to 200
-- [ ] Optional: `Retry-After` on 429 — if you skip, note it here as leftover
+- [x] `.env.example` comments `Pay__StartMaxPerMinute` default 20
+- [x] Do not change factory 200
+- [x] Do not change production default to 200
+- [x] Optional: `Retry-After` on 429 — if you skip, note it here as leftover
 
 ## H15.2 Must not
 
-- [ ] Do not disable with 0 in prod examples
+- [x] Do not disable with 0 in prod examples
 
 ## H15.3 Exit
 
-- [ ] Track H can complete without Retry-After
+- [x] Track H can complete without Retry-After

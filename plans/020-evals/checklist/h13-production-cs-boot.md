@@ -20,14 +20,14 @@
 
 ## H13.1
 
-- [ ] Outside Development/Testing: empty `ConnectionStrings:Pay` → fail boot
-- [ ] Remove or stop using the hardcoded `localhost:5435` fallback in **Production**
-- [ ] Development may keep laptop default
+- [x] Outside Development/Testing: empty `ConnectionStrings:Pay` → fail boot
+- [x] Remove or stop using the hardcoded `localhost:5435` fallback in **Production**
+- [x] Development may keep laptop default
 
 ## H13.2 Tests
 
-- [ ] Production factory without CS fails start (supply WrapKey/CORS so this is the only failure)
+- [x] Production factory without CS fails start (supply WrapKey/CORS so this is the only failure)
 
 ## H13.3 Exit
 
-- [ ] Unblocked for H14
+- [x] Unblocked for H14

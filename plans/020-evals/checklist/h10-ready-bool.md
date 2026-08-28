@@ -21,17 +21,17 @@
 
 ## H10.1
 
-- [ ] `GET /ready` awaits `Database.CanConnectAsync`
-- [ ] `false` → **503** JSON `{ status: "not_ready" }` (or problem object — **pick `{ status: not_ready }`** to stay a probe)
-- [ ] `true` → 200 `{ status: "ok" }` (or `ready`)
-- [ ] Testing InMemory: CanConnect true → 200 still
-- [ ] `/health` and `/v1/health` unchanged liveness
-- [ ] Not org ready
+- [x] `GET /ready` awaits `Database.CanConnectAsync`
+- [x] `false` → **503** JSON `{ status: "not_ready" }` (or problem object — **pick `{ status: not_ready }`** to stay a probe)
+- [x] `true` → 200 `{ status: "ok" }` (or `ready`)
+- [x] Testing InMemory: CanConnect true → 200 still
+- [x] `/health` and `/v1/health` unchanged liveness
+- [x] Not org ready
 
 ## H10.2 Must not
 
-- [ ] Do not add `/ready` to pay-spec (honesty IMPL_ONLY)
+- [x] Do not add `/ready` to pay-spec (honesty IMPL_ONLY)
 
 ## H10.3 Exit
 
-- [ ] Unblocked for H11
+- [x] Unblocked for H11

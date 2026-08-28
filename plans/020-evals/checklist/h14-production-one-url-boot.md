@@ -21,15 +21,15 @@
 
 ## H14.1
 
-- [ ] Production/Staging: `One:BaseUrl` missing or `localhost` → fail boot
-- [ ] Move laptop default out of base `appsettings.json` into `appsettings.Development.json` if that is where it lives today
-- [ ] Testing factory still sets `http://one.test/api/v1`
+- [x] Production/Staging: `One:BaseUrl` missing or `localhost` → fail boot
+- [x] Move laptop default out of base `appsettings.json` into `appsettings.Development.json` if that is where it lives today
+- [x] Testing factory still sets `http://one.test/api/v1`
 
 ## H14.2 Tests
 
-- [ ] Production factory with WrapKey + CS + CORS but `One:BaseUrl=http://localhost:8080/api/v1` fails boot
-- [ ] HTTPS example URL allowed
+- [x] Production factory with WrapKey + CS + CORS but `One:BaseUrl=http://localhost:8080/api/v1` fails boot
+- [x] HTTPS example URL allowed
 
 ## H14.3 Exit
 
-- [ ] Unblocked for H16
+- [x] Unblocked for H16
