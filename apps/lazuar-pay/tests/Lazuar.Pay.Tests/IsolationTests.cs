@@ -84,6 +84,7 @@ public class IsolationTests
             Assert.That(File.Exists(pkg), Is.True, pkg);
             var text = File.ReadAllText(pkg);
             Assert.That(text, Does.Not.Contain("@repo/api-types-ts"), pkg);
+            Assert.That(text, Does.Not.Contain("@solana/"), pkg);
         }
 
         var sample = Path.Combine(repo, "examples", "pay-node", "package.json");
@@ -91,6 +92,9 @@ public class IsolationTests
         var sampleText = File.ReadAllText(sample);
         Assert.That(sampleText, Does.Not.Contain("@repo/api-types-ts"), sample);
         Assert.That(sampleText, Does.Not.Contain("@repo/pay-types-ts"), sample);
+        Assert.That(sampleText, Does.Not.Contain("@solana"), sample);
+        var sampleSrc = File.ReadAllText(Path.Combine(repo, "examples", "pay-node", "server.mjs"));
+        Assert.That(sampleSrc, Does.Not.Contain("@solana"));
     }
 
     [Test]
