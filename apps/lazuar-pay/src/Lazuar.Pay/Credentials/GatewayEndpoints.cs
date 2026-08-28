@@ -4,6 +4,7 @@ using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Solana;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -42,6 +43,11 @@ internal static class GatewayEndpoints
         if (PayProviders.IsTest(provider))
         {
             return PayErrors.Status(400, "Bad Request", "test processor does not take secrets");
+        }
+
+        if (PayProviders.IsSolana(provider))
+        {
+            return await PutSolana(orgId, body, db, ct);
         }
 
         var secret = body?.Secret?.Trim();
@@ -199,7 +205,9 @@ internal static class GatewayEndpoints
             return Results.Json(new { org_id = orgId, provider = name, configured = false }, OneClient.Json);
         }
 
-        return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
+        var configured = !PayProviders.IsSolana(name)
+            || SolanaAddress.TryNormalize(row.PublicMerchantId, out _);
+        return Results.Json(GatewayJson(orgId, row, configured), OneClient.Json);
     }
 
     static async Task<IResult> List(
@@ -242,10 +250,80 @@ internal static class GatewayEndpoints
                 };
             }
 
-            return GatewayJson(orgId, row, configured: true);
+            var configured = !PayProviders.IsSolana(name)
+                || SolanaAddress.TryNormalize(row.PublicMerchantId, out _);
+            return GatewayJson(orgId, row, configured);
         });
 
         return Results.Json(new { org_id = orgId, processors }, OneClient.Json);
+    }
+
+    static async Task<IResult> PutSolana(string orgId, PutGatewayRequest? body, PayDbContext db, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(body?.Secret)
+            || !string.IsNullOrWhiteSpace(body?.KeyId)
+            || !string.IsNullOrWhiteSpace(body?.KeySecret))
+        {
+            return PayErrors.Status(400, "Bad Request", "solana does not take an API secret");
+        }
+
+        if (!string.IsNullOrWhiteSpace(body?.WebhookSecret))
+        {
+            return PayErrors.Status(400, "Bad Request", "solana does not take a webhook secret");
+        }
+
+        if (!SolanaAddress.TryNormalize(body?.PublicMerchantId, out var address))
+        {
+            return PayErrors.Status(400, "Bad Request", "public_merchant_id must be a Solana wallet address");
+        }
+
+        if (!PayProviders.TryNormalizeSolanaEnvironment(body?.Environment, out var environment))
+        {
+            return PayErrors.Status(400, "Bad Request", "environment must be devnet or mainnet");
+        }
+
+        var last4 = SolanaAddress.Last4(address);
+        var row = await db.GatewayCredentials.FindAsync([orgId, PayProviders.Solana], ct);
+        if (row is null)
+        {
+            row = new GatewayCredentialRow
+            {
+                OrgId = orgId,
+                Provider = PayProviders.Solana,
+                Ciphertext = "",
+                WebhookCiphertext = null,
+                PublicMerchantId = address,
+                Environment = environment,
+                Last4 = last4,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
+            db.GatewayCredentials.Add(row);
+        }
+        else
+        {
+            row.Ciphertext = "";
+            row.WebhookCiphertext = null;
+            row.PublicMerchantId = address;
+            row.Environment = environment;
+            row.Last4 = last4;
+            row.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        if (await db.OrgSettings.FindAsync([orgId], ct) is null)
+        {
+            db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId });
+        }
+
+        db.AuditEvents.Add(new AuditEventRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = orgId,
+            Action = "gateway.credentials.upsert",
+            At = DateTimeOffset.UtcNow
+        });
+
+        await db.SaveChangesAsync(ct);
+        return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
     }
 
     static object GatewayJson(string orgId, GatewayCredentialRow row, bool configured) => new

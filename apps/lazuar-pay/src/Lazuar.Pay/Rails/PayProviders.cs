@@ -40,4 +40,15 @@ public static class PayProviders
 
     public static bool AllowsPublicMerchantId(string provider) =>
         RequiresPublicMerchantId(provider);
+
+    public static bool TryNormalizeSolanaEnvironment(string? raw, out string environment)
+    {
+        environment = (raw ?? "").Trim().ToLowerInvariant();
+        if (environment is "mainnet-beta")
+        {
+            environment = "mainnet";
+        }
+
+        return environment is "devnet" or "mainnet";
+    }
 }
