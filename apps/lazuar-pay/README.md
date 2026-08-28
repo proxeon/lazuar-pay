@@ -39,6 +39,20 @@ TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`). Not
 
 Root `docker-compose.yml` is Hub museum (8080). Pay images live in `docker-compose.pay.yml` (`--profile apps` for 8081 + two Vite apps) and `docker buildx bake pay`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS. Do not set ops/portal `VITE_API_URL` to 8081.
 
+## Live Solana Pay (devnet, not CI)
+
+Not `task pay:test`. Not mainnet.
+
+1. Set `Pay__Solana__Cluster=devnet` and `Pay__Solana__RpcUrl` to a Helius (or equivalent) **devnet** HTTPS URL in gitignored `.env`.
+2. Merchant Processor (`:5178`): paste a **devnet** receive address, environment `devnet`.
+3. Mint a checkout or pay link `provider=solana` `currency=USDC`.
+4. Open `pay_url` on `:5179`. Occupancy starts on Pay. Scan the Solana Pay QR.
+5. Wallet on **devnet**. Pay Circle devnet USDC (`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`).
+6. Host poller or `POST /v1/pay/{token}/confirm` with the signature. GET `status=paid`, Official Receipt `RCPT-`, Plane C, `examples/pay-node` unlock.
+7. `rg @solana examples/pay-node` stays empty.
+
+Receive-only: Pay cannot claw back USDC. Merchant refunds are `refund not supported on this rail`. Late pay does not book a fake succeeded refund.
+
 ## Live whoami (not CI)
 
 One API and old Hub both want **8080**. For this proof, run **One** (API 8080, login 5175) and **Pay** (8081). Leave Hub `task dev` / compose `lazuar-api` **off**.
