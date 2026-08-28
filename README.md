@@ -28,7 +28,7 @@ A second app does not pick a PSP, import a wallet SDK, or talk to Stripe/Solana 
 | `billplz` | Hosted bill. Public **https** callback. | Billplz page |
 | `xendit` | Hosted invoice. | Xendit page |
 | `razorpay` | Hosted payment link. Not e-mandate. | Razorpay page |
-| **`solana`** | **Next processor.** Solana Pay QR, USDC. Same mint / `pay_url` / HMAC as the rows above. The integrating app still does not import a wallet SDK. Not shipped. | Checkout QR |
+| **`solana`** | Solana Pay QR, USDC only. Same mint / `pay_url` / HMAC as the rows above. The integrating app still does not import a wallet SDK. Production needs `Pay__Solana__Cluster=mainnet-beta` and a paid HTTPS RPC. | Checkout QR |
 
 Saving a vault does **not** pick a default rail. Mint with an explicit `provider` that already has keys. Occupancy (how many people can start Pay) is a pay-link field, not a rail. Buyers have no One account.
 
