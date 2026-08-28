@@ -95,8 +95,18 @@ internal static class CheckoutEndpoints
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        session = await store.CreateAsync(session, idempotency, cancellationToken);
-        return Results.Json(session, OneClient.Json, statusCode: 201);
+        var mintedId = session.Id;
+        try
+        {
+            session = await store.CreateAsync(session, idempotency, cancellationToken);
+        }
+        catch (IdempotencyConflictException)
+        {
+            return PayErrors.Status(409, "Conflict", "idempotency key reused with a different body");
+        }
+
+        var created = session.Id == mintedId;
+        return Results.Json(session, OneClient.Json, statusCode: created ? 201 : 200);
     }
 
     static async Task<IResult> Get(

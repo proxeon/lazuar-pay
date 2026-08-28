@@ -16,6 +16,11 @@ public sealed class CheckoutStore(PayDbContext db)
                 var existing = await db.Checkouts.FindAsync([existingKey.CheckoutId], ct);
                 if (existing is not null)
                 {
+                    if (!SameFingerprint(existing, session))
+                    {
+                        throw new IdempotencyConflictException();
+                    }
+
                     return Map(existing);
                 }
             }
@@ -49,9 +54,39 @@ public sealed class CheckoutStore(PayDbContext db)
             });
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged))
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            var raced = await db.IdempotencyKeys.FindAsync([session.OrgId, idempotencyKey], ct);
+            var existing = raced is null ? null : await db.Checkouts.FindAsync([raced.CheckoutId], ct);
+            if (existing is null)
+            {
+                throw;
+            }
+
+            if (!SameFingerprint(existing, session))
+            {
+                throw new IdempotencyConflictException();
+            }
+
+            return Map(existing);
+        }
+
         return Map(row);
     }
+
+    static bool SameFingerprint(CheckoutRow existing, CheckoutSession session) =>
+        existing.Amount == session.Amount
+        && string.Equals(existing.Currency, session.Currency, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(existing.Provider, session.Provider, StringComparison.OrdinalIgnoreCase);
 
     public async Task<CheckoutSession?> GetAsync(string id, CancellationToken ct)
     {
@@ -85,3 +120,5 @@ public sealed class CheckoutStore(PayDbContext db)
         PayerEmail = row.PayerEmail
     };
 }
+
+public sealed class IdempotencyConflictException() : InvalidOperationException("idempotency key reused with a different body");

@@ -42,6 +42,7 @@ public sealed class ChipHosted(PayDbContext db, SecretBox box, IHttpClientFactor
             },
             ["purchase"] = new
             {
+                currency = checkout.Currency,
                 products = new[]
                 {
                     new { name = "Pay", price = MoneyMath.ToMinor(checkout.Amount) }

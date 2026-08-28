@@ -33,6 +33,9 @@ public class ChipRailTests
         using var startDoc = JsonDocument.Parse(startedBody);
         Assert.That(startDoc.RootElement.GetProperty("redirect_url").GetString(), Is.EqualTo("https://gate.chip-in.asia/p/x"));
         Assert.That(factory.Psp.LastBody, Does.Not.Contain("force_recurring"));
+        Assert.That(factory.Psp.LastBody, Does.Contain("\"currency\""));
+        Assert.That(factory.Psp.LastBody, Does.Contain("MYR"));
+        Assert.That(factory.Psp.LastBody, Does.Contain("1000"));
         Assert.That(factory.Psp.LastBody, Does.Contain("checkout_id"));
         Assert.That(factory.Psp.LastBody, Does.Contain("org_id"));
 

@@ -95,8 +95,17 @@ internal static class GatewayEndpoints
             last4 = keyId.Length >= 4 ? keyId[^4..] : keyId;
         }
 
-        var wrapped = box.Protect(secret);
-        var wrappedWh = box.Protect(webhookSecret);
+        string wrapped;
+        string wrappedWh;
+        try
+        {
+            wrapped = box.Protect(secret);
+            wrappedWh = box.Protect(webhookSecret);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("WrapKey", StringComparison.Ordinal))
+        {
+            return PayErrors.Status(503, "Service Unavailable", ex.Message);
+        }
         var row = await db.GatewayCredentials.FindAsync([orgId, provider], ct);
         if (row is null)
         {

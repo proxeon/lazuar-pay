@@ -47,8 +47,7 @@ builder.Services.AddScoped<IFulfillPaid>(sp => sp.GetRequiredService<Fulfillment
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     var payCs = builder.Configuration.GetConnectionString("Pay");
-    if (string.IsNullOrWhiteSpace(payCs)
-        || payCs.IndexOf("Password=", StringComparison.OrdinalIgnoreCase) < 0)
+    if (string.IsNullOrWhiteSpace(payCs))
     {
         payCs = "Host=localhost;Port=5435;Database=lazuar_pay;Username=postgres;Password=postgres";
     }

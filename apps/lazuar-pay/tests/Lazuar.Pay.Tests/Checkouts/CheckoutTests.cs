@@ -126,20 +126,24 @@ public class CheckoutTests
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
 
-        async Task<string> Post()
+        async Task<(HttpStatusCode Status, string Id)> Post(string json)
         {
-            using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"stripe"}""");
+            using var create = JsonPost("/v1/checkouts", json);
             create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
             create.Headers.TryAddWithoutValidation("Idempotency-Key", "k1");
             var response = await client.SendAsync(create);
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            return doc.RootElement.GetProperty("id").GetString()!;
+            var id = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+            return (response.StatusCode, id);
         }
 
-        var a = await Post();
-        var b = await Post();
-        Assert.That(b, Is.EqualTo(a));
+        var a = await Post("""{"org_id":"t1","amount":10,"provider":"stripe"}""");
+        Assert.That(a.Status, Is.EqualTo(HttpStatusCode.Created));
+        var b = await Post("""{"org_id":"t1","amount":10,"provider":"stripe"}""");
+        Assert.That(b.Status, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(b.Id, Is.EqualTo(a.Id));
+        var conflict = await Post("""{"org_id":"t1","amount":20,"provider":"stripe"}""");
+        Assert.That(conflict.Status, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
     [Test]
