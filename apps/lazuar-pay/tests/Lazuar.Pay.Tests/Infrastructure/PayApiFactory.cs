@@ -26,6 +26,8 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string PublicBaseUrl { get; init; } = "https://pay.test.example";
 
+    public string? CorsOrigins { get; init; }
+
     public string EnvironmentName { get; init; } = "Testing";
 
     /// <summary>
@@ -42,6 +44,10 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
         builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
+        if (!string.IsNullOrWhiteSpace(CorsOrigins))
+        {
+            builder.UseSetting("Pay:CorsOrigins", CorsOrigins);
+        }
         builder.ConfigureTestServices(services =>
         {
             foreach (var d in services.Where(s => s.ServiceType == typeof(OneClient)).ToList())
