@@ -228,4 +228,38 @@ public class PublicPayTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("rail not configured"));
     }
+
+    [Test]
+    public async Task Start_does_not_read_leftover_ActiveProvider()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec"}""");
+        const string token = "legacyactive";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.OrgSettings.Single(x => x.OrgId == "t1").ActiveProvider = "stripe";
+            db.Checkouts.Add(new CheckoutRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = "t1",
+                PublicToken = token,
+                Amount = 10m,
+                Currency = "MYR",
+                Status = "open",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
+        };
+        var response = await client.SendAsync(start);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("rail not configured"));
+    }
 }
