@@ -136,7 +136,62 @@ public sealed class OneClient
                 return await onOk(response, cancellationToken);
             }
 
-            return new OneCallResult<T> { StatusCode = code };
+            return new OneCallResult<T>
+            {
+                StatusCode = code,
+                Detail = await ReadDetailAsync(response, cancellationToken)
+            };
         }
     }
+
+    static async Task<string?> ReadDetailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var text = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return Truncate(text);
+            }
+
+            if (TryString(doc.RootElement, "detail", out var detail)
+                || TryString(doc.RootElement, "title", out detail)
+                || TryString(doc.RootElement, "message", out detail))
+            {
+                return detail;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return Truncate(text);
+    }
+
+    static bool TryString(JsonElement root, string name, out string value)
+    {
+        value = "";
+        if (!root.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var raw = el.GetString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        value = raw.Trim();
+        return true;
+    }
+
+    static string Truncate(string text) =>
+        text.Length <= 200 ? text : text[..200];
 }

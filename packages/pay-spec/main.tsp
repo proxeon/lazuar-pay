@@ -31,6 +31,7 @@ model WhoamiResponse {
   tenants: WhoamiTenant[];
 }
 
+/** Member ping plus whether this shop can take money: not charges_paused, and a vault row or Test allowed. */
 model OrgReadyResponse {
   org_id: string;
   ready: boolean;
@@ -224,14 +225,6 @@ model Receipt {
   status?: string;
 }
 
-model ReceiptDetail {
-  id: string;
-  org_id: string;
-  number: string;
-  title?: string;
-  checkout_id: string;
-}
-
 model WebhookOk {
   ok: boolean;
 }
@@ -262,6 +255,14 @@ model OneWebhookEvent {
   tenant_id?: string;
 }
 
+@tag("Health")
+interface HostReady {
+  /** Host-only process probe. Postgres CanConnect; Testing InMemory returns 200. Not versioned. */
+  @get
+  @route("/ready")
+  ready(): HealthResponse;
+}
+
 @route("/v1")
 @tag("Health")
 interface Health {
@@ -283,7 +284,7 @@ interface Session {
 @route("/v1")
 @tag("Orgs")
 interface Orgs {
-  /** Dummy admin: path org id is One tenant id; Pay calls authz/check member. */
+  /** Member ping. ready is true when charges are not paused and (vault on file or Test is allowed). */
   @get
   @route("/orgs/{orgId}/ready")
   ready(@path orgId: string): OrgReadyResponse;
@@ -398,7 +399,7 @@ interface Money {
 
   @get
   @route("/orgs/{orgId}/receipts/{id}")
-  getReceipt(@path orgId: string, @path id: string): ReceiptDetail;
+  getReceipt(@path orgId: string, @path id: string): Receipt;
 }
 
 @route("/v1")

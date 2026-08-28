@@ -4,6 +4,7 @@ import { useAuth } from 'react-oidc-context'
 import { pickApiBearerToken } from '../auth/bearerToken'
 import { getWhoami, type Whoami, type WhoamiTenant } from '../lib/payApi'
 import { canWriteMoney } from '../lib/roles'
+import { workspaceStatusBanner } from '../lib/workspaceStatus'
 import { setOrgHint, setReturnTo } from '../lib/sessionKeys'
 import { DashboardChrome } from './DashboardChrome'
 
@@ -71,6 +72,7 @@ export function OrgLayout() {
   }, [orgId, token, auth, location.pathname, location.search])
 
   const write = canWriteMoney(tenant?.role)
+  const suspendBanner = tenant ? workspaceStatusBanner(tenant) : null
 
   if (error) {
     return (
@@ -114,6 +116,11 @@ export function OrgLayout() {
 
   return (
     <DashboardChrome orgId={orgId} who={who} tenant={tenant} title={titleFromPath(location.pathname, orgId)}>
+      {suspendBanner ? (
+        <div role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:px-6">
+          {suspendBanner}
+        </div>
+      ) : null}
       <Outlet context={outlet} />
     </DashboardChrome>
   )

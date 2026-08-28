@@ -3,6 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
+import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
 import { defaultMintRail, isRail, railLabel, readyMintRails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -78,16 +79,11 @@ type PayLink = {
 type Capacity = 'one' | 'limited' | 'unlimited'
 
 function payersLabel(row: PayLink): string {
-  const taken = row.taken_count ?? 0
-  if (row.unlimited || row.max_payers == null) {
-    return taken === 0 ? 'Unlimited' : `${taken} started · unlimited`
-  }
-  return `${taken} / ${row.max_payers}`
+  return occupancyPayersLabel(row)
 }
 
 function statusLabel(row: PayLink): string {
-  if (row.status === 'full' && row.max_payers === 1 && (row.paid_count ?? 0) >= 1) return 'paid'
-  return row.status
+  return occupancyStatusLabel(row)
 }
 
 export function CheckoutsPage() {
@@ -230,6 +226,12 @@ export function CheckoutsPage() {
         </p>
       ) : null}
 
+      {links.some(occupancyOverCapacity) ? (
+        <p role="alert" className="text-sm text-red-700">
+          A pay link has more payers than its cap. Money already moved — this is leftover over-admit, not a designed full link.
+        </p>
+      ) : null}
+
       {listError && links.length === 0 ? null : (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {!linksLoaded ? (
@@ -288,9 +290,11 @@ export function CheckoutsPage() {
                           'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize',
                           status === 'paid'
                             ? 'bg-emerald-50 text-emerald-800'
-                            : status === 'full' || status === 'expired'
-                              ? 'bg-slate-100 text-slate-600'
-                              : 'bg-amber-50 text-amber-800',
+                            : status === 'over capacity'
+                              ? 'bg-red-50 text-red-800'
+                              : status === 'full' || status === 'expired'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-amber-50 text-amber-800',
                         )}
                       >
                         {status}

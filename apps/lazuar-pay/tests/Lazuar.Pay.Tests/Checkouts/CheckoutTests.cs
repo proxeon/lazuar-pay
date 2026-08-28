@@ -87,6 +87,29 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task Get_without_bearer_is_401_for_unknown()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/v1/checkouts/missing");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(factory.One.SendCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Get_without_bearer_is_401_for_known()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        var (_, id) = await PayTest.SeedCheckout(client, "test");
+        var before = factory.One.SendCount;
+        var response = await client.GetAsync($"/v1/checkouts/{id}");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(factory.One.SendCount, Is.EqualTo(before));
+    }
+
+    [Test]
     public async Task Create_for_other_org_is_403()
     {
         await using var factory = new PayApiFactory();
@@ -99,7 +122,7 @@ public class CheckoutTests
     }
 
     [Test]
-    public async Task Get_other_org_session_is_403()
+    public async Task Get_other_org_session_is_404()
     {
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Allow("t1", req);
@@ -115,7 +138,8 @@ public class CheckoutTests
         using var get = new HttpRequestMessage(HttpMethod.Get, $"/v1/checkouts/{id}");
         get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var fetched = await client.SendAsync(get);
-        Assert.That(fetched.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(fetched.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(await fetched.Content.ReadAsStringAsync(), Does.Contain("Checkout not found"));
     }
 
     [Test]

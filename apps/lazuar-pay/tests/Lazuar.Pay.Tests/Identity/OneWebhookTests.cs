@@ -195,4 +195,64 @@ public class OneWebhookTests
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
+
+    [Test]
+    public async Task Garbage_signed_body_is_400()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = "not-json";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", Sign(body, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("invalid event"));
+    }
+
+    [Test]
+    public async Task Missing_body_id_uses_event_id_header()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = """{"type":"tenant.suspended","org_id":"t1"}""";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", Sign(body, t));
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Event-Id", "del_header");
+        Assert.That((await client.SendAsync(req)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var replay = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        replay.Headers.TryAddWithoutValidation("X-Lazuar-Signature", Sign(body, t));
+        replay.Headers.TryAddWithoutValidation("X-Lazuar-Event-Id", "del_header");
+        var second = await client.SendAsync(replay);
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("duplicate"));
+    }
+
+    [Test]
+    public async Task Signed_json_without_event_id_is_400()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = """{"type":"tenant.suspended","org_id":"t1"}""";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/one/webhooks")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Lazuar-Signature", Sign(body, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("event id required"));
+    }
 }

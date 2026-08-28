@@ -116,6 +116,11 @@ internal static class CheckoutEndpoints
         CheckoutStore store,
         CancellationToken cancellationToken)
     {
+        if (!Bearer.TryGet(request, out _))
+        {
+            return PayErrors.Status(401, "Unauthorized", "Missing bearer token");
+        }
+
         var session = await store.GetAsync(id, cancellationToken);
         if (session is null)
         {
@@ -125,6 +130,12 @@ internal static class CheckoutEndpoints
         var denied = await MemberGate.RequireMemberAsync(request, one, session.OrgId, cancellationToken);
         if (denied is not null)
         {
+            if (PayErrors.TryForbiddenDetail(denied, out var detail)
+                && detail.IndexOf("suspend", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return PayErrors.Status(404, "Not Found", "Checkout not found");
+            }
+
             return denied;
         }
 

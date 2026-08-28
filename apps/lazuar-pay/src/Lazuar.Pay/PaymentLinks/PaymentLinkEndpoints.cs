@@ -175,8 +175,6 @@ internal static class PaymentLinkEndpoints
 
     static PaymentLinkView Map(PaymentLinkRow row, int taken, int paid, string? label = null)
     {
-        var remaining = PaymentLinkOccupancy.Remaining(row.MaxPayers, taken);
-        var full = PaymentLinkOccupancy.IsFull(row.MaxPayers, taken);
         return new PaymentLinkView
         {
             Id = row.Id,
@@ -184,14 +182,14 @@ internal static class PaymentLinkEndpoints
             Provider = row.Provider,
             Amount = row.Amount,
             Currency = row.Currency,
-            Status = full ? "full" : "open",
+            Status = PaymentLinkOccupancy.MerchantStatus(row.MaxPayers, taken),
             PublicToken = row.PublicToken,
             CreatedAt = row.CreatedAt,
             MaxPayers = row.MaxPayers,
             Unlimited = row.MaxPayers is null,
             PaidCount = paid,
             TakenCount = taken,
-            Remaining = remaining,
+            Remaining = PaymentLinkOccupancy.RemainingUnclamped(row.MaxPayers, taken),
             Label = label
         };
     }

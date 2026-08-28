@@ -103,6 +103,46 @@ public class CorsTests
     }
 
     [Test]
+    public async Task Public_pay_post_allows_checkout_origin()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/pay/missing/start")
+        {
+            Content = new StringContent("""{"name":"Ada"}""", System.Text.Encoding.UTF8, "application/json")
+        };
+        request.Headers.TryAddWithoutValidation("Origin", "http://localhost:5179");
+        var response = await client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(response.Headers.GetValues("Access-Control-Allow-Origin"), Does.Contain("http://localhost:5179"));
+    }
+
+    [Test]
+    public async Task Public_pay_options_allows_checkout_origin()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/v1/pay/missing");
+        request.Headers.TryAddWithoutValidation("Origin", "http://localhost:5179");
+        request.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "GET");
+        var response = await client.SendAsync(request);
+        Assert.That((int)response.StatusCode, Is.LessThan(300));
+        Assert.That(response.Headers.GetValues("Access-Control-Allow-Origin"), Does.Contain("http://localhost:5179"));
+    }
+
+    [Test]
+    public async Task Public_pay_options_denies_ops_origin()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/v1/pay/missing");
+        request.Headers.TryAddWithoutValidation("Origin", "http://localhost:3003");
+        request.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "POST");
+        var response = await client.SendAsync(request);
+        Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
+    }
+
+    [Test]
     public void Empty_cors_in_production_fails_boot()
     {
         Assert.That(

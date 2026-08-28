@@ -51,14 +51,21 @@ internal static class OneWebhookEndpoints
 
         using (doc)
         {
-            return await ApplyAsync(doc, db, ct);
+            return await ApplyAsync(doc, request, db, ct);
         }
     }
 
-    static async Task<IResult> ApplyAsync(JsonDocument doc, PayDbContext db, CancellationToken ct)
+    static async Task<IResult> ApplyAsync(JsonDocument doc, HttpRequest request, PayDbContext db, CancellationToken ct)
     {
         var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() : null;
-        var delivery = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : Guid.NewGuid().ToString("N");
+        var bodyId = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        var headerId = request.Headers["X-Lazuar-Event-Id"].ToString().Trim();
+        var delivery = !string.IsNullOrWhiteSpace(bodyId) ? bodyId.Trim() : headerId;
+        if (string.IsNullOrWhiteSpace(delivery))
+        {
+            return PayErrors.Status(400, "Bad Request", "event id required");
+        }
+
         var orgId = ReadOrgId(doc.RootElement);
         if (await db.OneWebhookEvents.AnyAsync(x => x.DeliveryId == delivery, ct))
         {
@@ -68,7 +75,7 @@ internal static class OneWebhookEndpoints
         db.OneWebhookEvents.Add(new OneWebhookEventRow
         {
             Id = Guid.NewGuid().ToString("N"),
-            DeliveryId = delivery ?? Guid.NewGuid().ToString("N"),
+            DeliveryId = delivery,
             EventType = type ?? "unknown",
             ReceivedAt = DateTimeOffset.UtcNow
         });

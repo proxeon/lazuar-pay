@@ -133,13 +133,30 @@ internal static class PaymentQueryEndpoints
             return PayErrors.Status(404, "Not Found", "Receipt not found");
         }
 
+        var checkout = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == doc.CheckoutId, ct);
+        var charge = await db.Charges.AsNoTracking().FirstOrDefaultAsync(c => c.CheckoutId == doc.CheckoutId, ct);
+        string? label = null;
+        if (!string.IsNullOrWhiteSpace(checkout?.ProductId))
+        {
+            label = await db.Products.AsNoTracking()
+                .Where(p => p.Id == checkout.ProductId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync(ct);
+        }
+
         return Results.Json(new
         {
             id = doc.Id,
             org_id = doc.OrgId,
             number = doc.Number ?? "PENDING",
             title = doc.Title,
-            checkout_id = doc.CheckoutId
+            checkout_id = doc.CheckoutId,
+            amount = charge?.Amount ?? checkout?.Amount,
+            currency = charge?.Currency ?? checkout?.Currency,
+            payer_name = checkout?.PayerName,
+            created_at = doc.CreatedAt,
+            label,
+            status = string.IsNullOrWhiteSpace(doc.Number) ? "pending" : "issued"
         }, OneClient.Json);
     }
 }

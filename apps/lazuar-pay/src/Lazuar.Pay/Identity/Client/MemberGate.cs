@@ -36,10 +36,25 @@ internal static class MemberGate
         return result.StatusCode switch
         {
             401 => PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token"),
-            403 => PayErrors.Status(403, "Forbidden", "Not a member of this org"),
+            403 => PayErrors.Status(403, "Forbidden", SuspendedDetail(result.Detail) ?? "Not a member of this org"),
+            400 => PayErrors.Status(400, "Bad Request", string.IsNullOrWhiteSpace(result.Detail)
+                ? "Identity provider rejected the request"
+                : result.Detail),
+            429 => PayErrors.Status(429, "Too Many Requests", "Identity provider rate limited"),
             200 => PayErrors.Status(403, "Forbidden", "Not a member of this org"),
             _ => PayErrors.Status(503, "Service Unavailable", "Identity provider failed")
         };
+    }
+
+    static string? SuspendedDetail(string? detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail)
+            || detail.IndexOf("suspend", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            return null;
+        }
+
+        return detail.Trim();
     }
 
     public static async Task<IResult?> RequireWriterAsync(

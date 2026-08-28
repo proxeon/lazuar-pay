@@ -569,6 +569,36 @@ public class PaymentLinkTests
         Assert.That(extra.Status, Is.EqualTo("expired"));
     }
 
+    [Test]
+    public async Task List_over_admit_is_over_capacity_not_silent_full()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, linkId) = await PayTest.SeedPaymentLink(client, maxPayers: 1);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var first = OpenChild(linkId, "slot-over-a");
+            first.Status = "paid";
+            var extra = OpenChild(linkId, "slot-over-b");
+            extra.Status = "paid";
+            db.Checkouts.AddRange(first, extra);
+            await db.SaveChangesAsync();
+        }
+
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/payment-links");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var listed = await client.SendAsync(list);
+        Assert.That(listed.StatusCode, Is.EqualTo(HttpStatusCode.OK), await listed.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement[0].GetProperty("taken_count").GetInt32(), Is.EqualTo(2));
+        Assert.That(doc.RootElement[0].GetProperty("max_payers").GetInt32(), Is.EqualTo(1));
+        Assert.That(doc.RootElement[0].GetProperty("remaining").GetInt32(), Is.EqualTo(-1));
+        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("over_capacity"));
+    }
+
     static CheckoutRow OpenChild(string linkId, string slot) =>
         new()
         {

@@ -21,8 +21,25 @@ internal static class PaymentLinkOccupancy
     public static bool IsFull(int? maxPayers, int taken) =>
         maxPayers is int max && taken >= max;
 
+    public static bool IsOverCapacity(int? maxPayers, int taken) =>
+        maxPayers is int max && taken > max;
+
+    public static string MerchantStatus(int? maxPayers, int taken)
+    {
+        if (IsOverCapacity(maxPayers, taken))
+        {
+            return "over_capacity";
+        }
+
+        return IsFull(maxPayers, taken) ? "full" : "open";
+    }
+
+    /// <summary>Buyer remaining is clamped. Merchant list uses <see cref="RemainingUnclamped"/> so over-admit is visible.</summary>
     public static int? Remaining(int? maxPayers, int taken) =>
         maxPayers is int max ? Math.Max(0, max - taken) : null;
+
+    public static int? RemainingUnclamped(int? maxPayers, int taken) =>
+        maxPayers is int max ? max - taken : null;
 
     public static TimeSpan ReservationTtl(IConfiguration config)
     {

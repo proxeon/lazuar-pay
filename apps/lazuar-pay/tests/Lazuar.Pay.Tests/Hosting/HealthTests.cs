@@ -34,4 +34,16 @@ public class HealthTests
         Assert.That(v1.IsSuccessStatusCode);
         Assert.That(factory.One.SendCount, Is.EqualTo(0));
     }
+
+    [Test]
+    public async Task Unversioned_ready_returns_200_on_inmemory()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.ThrowOnSend = true;
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/ready");
+        Assert.That(response.IsSuccessStatusCode);
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ready"));
+        Assert.That(factory.One.SendCount, Is.EqualTo(0));
+    }
 }

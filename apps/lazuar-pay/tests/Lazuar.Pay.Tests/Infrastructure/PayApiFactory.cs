@@ -32,9 +32,12 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public int StartMaxPerMinute { get; init; } = 200;
 
+    /// <summary>When set, tests run against Npgsql. InMemory is not a transaction proof — see PostgresTxTests.</summary>
+    public string? PostgresConnection { get; init; }
+
     /// <summary>
-    /// InMemory BeginTransaction is a no-op. H25/G12 proof uses FulfillmentProbe,
-    /// which throws before Fulfillment.SaveChanges so the event row is not committed.
+    /// InMemory BeginTransaction is a no-op. ThrowNext proves the probe path only.
+    /// ThrowAfterSave + PostgresConnection is the TX rollback proof.
     /// </summary>
     public FulfillmentProbe Probe { get; } = new();
 
@@ -64,8 +67,23 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
             }
 
             services.AddSingleton<IHttpClientFactory>(new StaticHttpFactory(Psp));
-            services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
-                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+            foreach (var d in services.Where(s =>
+                         s.ServiceType == typeof(PayDbContext)
+                         || s.ServiceType == typeof(DbContextOptions<PayDbContext>)).ToList())
+            {
+                services.Remove(d);
+            }
+
+            if (!string.IsNullOrWhiteSpace(PostgresConnection))
+            {
+                var cs = PostgresConnection;
+                services.AddDbContext<PayDbContext>(o => o.UseNpgsql(cs));
+            }
+            else
+            {
+                services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
+                    .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+            }
             services.AddSingleton(Probe);
             services.AddScoped<IFulfillPaid>(sp =>
                 new ProbingFulfillment(sp.GetRequiredService<Fulfillment>(), Probe));
@@ -89,7 +107,16 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
     {
         var host = base.CreateHost(builder);
         using var scope = host.Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.EnsureCreated();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        if (!string.IsNullOrWhiteSpace(PostgresConnection))
+        {
+            db.Database.Migrate();
+        }
+        else
+        {
+            db.Database.EnsureCreated();
+        }
+
         return host;
     }
 }
