@@ -21,11 +21,11 @@
 
 ## U15.1
 
-- [ ] `CheckoutSession.pay_url?: string` (or required if host always sets it)
-- [ ] `PaymentLink.pay_url?: string`
-- [ ] `task pay:spec` + `node scripts/check-pay-openapi-honesty.mjs` exit 0
-- [ ] Do not add unversioned probes to tsp
+- [x] `CheckoutSession.pay_url?: string` (or required if host always sets it)
+- [x] `PaymentLink.pay_url?: string`
+- [x] `task pay:spec` + `node scripts/check-pay-openapi-honesty.mjs` exit 0
+- [x] Do not add unversioned probes to tsp
 
 ## U15.2 Exit
 
-- [ ] Track U complete
+- [x] Track U complete

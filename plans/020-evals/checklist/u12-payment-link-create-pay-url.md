@@ -21,14 +21,14 @@
 
 ## U12.1
 
-- [ ] `POST /v1/payment-links` 201 includes `pay_url` for the **link** token (`/c/{link.public_token}`)
-- [ ] List items may include `pay_url` (same builder) — if you skip list, say so here and do GET-only
-- [ ] Query `slot_key` is **not** baked into `pay_url` (buyer page generates/resumes)
+- [x] `POST /v1/payment-links` 201 includes `pay_url` for the **link** token (`/c/{link.public_token}`)
+- [x] List items may include `pay_url` (same builder) — if you skip list, say so here and do GET-only
+- [x] Query `slot_key` is **not** baked into `pay_url` (buyer page generates/resumes)
 
 ## U12.2 Tests
 
-- [ ] Create link asserts `pay_url`
+- [x] Create link asserts `pay_url`
 
 ## U12.3 Exit
 
-- [ ] Unblocked for U13
+- [x] Unblocked for U13

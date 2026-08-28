@@ -1,6 +1,7 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,7 @@ internal static class PaymentLinkEndpoints
         OneClient one,
         PayDbContext db,
         IHostEnvironment env,
+        IConfiguration config,
         CancellationToken cancellationToken)
     {
         var orgId = body?.OrgId?.Trim();
@@ -119,7 +121,7 @@ internal static class PaymentLinkEndpoints
         };
         db.PaymentLinks.Add(row);
         await db.SaveChangesAsync(cancellationToken);
-        return Results.Json(Map(row, taken: 0, paid: 0), OneClient.Json, statusCode: 201);
+        return Results.Json(Map(row, taken: 0, paid: 0, config: config, env: env), OneClient.Json, statusCode: 201);
     }
 
     static async Task<IResult> List(
@@ -127,6 +129,8 @@ internal static class PaymentLinkEndpoints
         HttpRequest request,
         OneClient one,
         PayDbContext db,
+        IHostEnvironment env,
+        IConfiguration config,
         CancellationToken cancellationToken)
     {
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, cancellationToken);
@@ -169,11 +173,17 @@ internal static class PaymentLinkEndpoints
         {
             var taken = takenBy.GetValueOrDefault(r.Id);
             var paid = paidBy.GetValueOrDefault(r.Id);
-            return Map(r, taken, paid, r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null);
+            return Map(r, taken, paid, config, env, r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null);
         }), OneClient.Json);
     }
 
-    static PaymentLinkView Map(PaymentLinkRow row, int taken, int paid, string? label = null)
+    static PaymentLinkView Map(
+        PaymentLinkRow row,
+        int taken,
+        int paid,
+        IConfiguration config,
+        IHostEnvironment env,
+        string? label = null)
     {
         return new PaymentLinkView
         {
@@ -184,6 +194,7 @@ internal static class PaymentLinkEndpoints
             Currency = row.Currency,
             Status = PaymentLinkOccupancy.MerchantStatus(row.MaxPayers, taken),
             PublicToken = row.PublicToken,
+            PayUrl = CheckoutUrls.Pay(row.PublicToken, config, env),
             CreatedAt = row.CreatedAt,
             MaxPayers = row.MaxPayers,
             Unlimited = row.MaxPayers is null,
@@ -204,6 +215,7 @@ public sealed class PaymentLinkView
     public required string Currency { get; init; }
     public required string Status { get; init; }
     public required string PublicToken { get; init; }
+    public string? PayUrl { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public int? MaxPayers { get; init; }
     public required bool Unlimited { get; init; }

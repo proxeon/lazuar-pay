@@ -20,11 +20,11 @@
 
 ## U14.1
 
-- [ ] Factory `CheckoutBaseUrl` is `http://pay-checkout.test.example` (already)
-- [ ] Assert no `localhost:5179` in mint JSON when factory origin is set
-- [ ] Payment-link + checkout both covered
-- [ ] Key mint (after M14) also returns `pay_url`
+- [x] Factory `CheckoutBaseUrl` is `http://pay-checkout.test.example` (already)
+- [x] Assert no `localhost:5179` in mint JSON when factory origin is set
+- [x] Payment-link + checkout both covered
+- [x] Key mint (after M14) also returns `pay_url`
 
 ## U14.2 Exit
 
-- [ ] Unblocked for U15, E13
+- [x] Unblocked for U15, E13

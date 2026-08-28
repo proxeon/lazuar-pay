@@ -12,6 +12,7 @@ public sealed class CheckoutSession
     public required string Currency { get; init; }
     public required string Status { get; init; }
     public string? PublicToken { get; init; }
+    public string? PayUrl { get; set; }
     public string? Interval { get; init; }
     public string? SuccessUrl { get; init; }
     public string? CancelUrl { get; init; }

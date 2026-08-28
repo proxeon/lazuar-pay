@@ -22,16 +22,16 @@
 
 ## U11.1
 
-- [ ] `POST /v1/checkouts` 201 JSON includes `pay_url`
-- [ ] Idempotent 200 replay includes the same `pay_url`
-- [ ] Field snake_case
-- [ ] Do not put hosted PSP URL here (that is start)
+- [x] `POST /v1/checkouts` 201 JSON includes `pay_url`
+- [x] Idempotent 200 replay includes the same `pay_url`
+- [x] Field snake_case
+- [x] Do not put hosted PSP URL here (that is start)
 
 ## U11.2 Tests
 
-- [ ] `SeedCheckout` / create test asserts `pay_url` ends with `/c/{public_token}`
-- [ ] Body does not include WrapKey / secrets
+- [x] `SeedCheckout` / create test asserts `pay_url` ends with `/c/{public_token}`
+- [x] Body does not include WrapKey / secrets
 
 ## U11.3 Exit
 
-- [ ] Unblocked for U12
+- [x] Unblocked for U12

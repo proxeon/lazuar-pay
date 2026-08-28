@@ -1,6 +1,7 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,7 @@ internal static class CheckoutEndpoints
         CheckoutStore store,
         PayDbContext db,
         IHostEnvironment env,
+        IConfiguration config,
         CancellationToken cancellationToken)
     {
         var orgId = body?.OrgId?.Trim();
@@ -106,6 +108,7 @@ internal static class CheckoutEndpoints
         }
 
         var created = session.Id == mintedId;
+        StampPayUrl(session, config, env);
         return Results.Json(session, OneClient.Json, statusCode: created ? 201 : 200);
     }
 
@@ -114,6 +117,8 @@ internal static class CheckoutEndpoints
         HttpRequest request,
         OneClient one,
         CheckoutStore store,
+        IHostEnvironment env,
+        IConfiguration config,
         CancellationToken cancellationToken)
     {
         if (!Bearer.TryGet(request, out _))
@@ -139,7 +144,16 @@ internal static class CheckoutEndpoints
             return denied;
         }
 
+        StampPayUrl(session, config, env);
         return Results.Json(session, OneClient.Json);
+    }
+
+    static void StampPayUrl(CheckoutSession session, IConfiguration config, IHostEnvironment env)
+    {
+        if (!string.IsNullOrWhiteSpace(session.PublicToken))
+        {
+            session.PayUrl = CheckoutUrls.Pay(session.PublicToken, config, env);
+        }
     }
 
     static async Task<IResult> List(

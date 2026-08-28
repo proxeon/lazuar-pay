@@ -23,16 +23,16 @@
 
 ## U10.1
 
-- [ ] Input: `Pay:CheckoutBaseUrl` (trim, no trailing slash) + `public_token`
-- [ ] Output: `{base}/c/{token}` matching checkout Vite route
-- [ ] Empty/missing `CheckoutBaseUrl` → mint still succeeds but `pay_url` null **or** 503 on mint — **pick one in this phase and test it**. Prefer: 201 with `pay_url` omitted only in tests that unset the setting; factory already sets a test origin
-- [ ] Do not bake `localhost:5179` in Production code paths
+- [x] Input: `Pay:CheckoutBaseUrl` (trim, no trailing slash) + `public_token`
+- [x] Output: `{base}/c/{token}` matching checkout Vite route
+- [x] Empty/missing `CheckoutBaseUrl` → mint still succeeds but `pay_url` null **or** 503 on mint — **pick one in this phase and test it**. Prefer: 201 with `pay_url` omitted only in tests that unset the setting; factory already sets a test origin
+- [x] Do not bake `localhost:5179` in Production code paths
 
 ## U10.2 Tests
 
-- [ ] Unit: `http://pay-checkout.test.example` + `tok_abc` → `http://pay-checkout.test.example/c/tok_abc`
-- [ ] Trailing slash on base stripped
+- [x] Unit: `http://pay-checkout.test.example` + `tok_abc` → `http://pay-checkout.test.example/c/tok_abc`
+- [x] Trailing slash on base stripped
 
 ## U10.3 Exit
 
-- [ ] Unblocked for U11
+- [x] Unblocked for U11

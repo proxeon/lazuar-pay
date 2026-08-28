@@ -15,6 +15,9 @@ internal static class CheckoutUrls
             ? Base(config, env) + "/c/" + checkout.PublicToken
             : checkout.CancelUrl;
 
+    public static string Pay(string? publicToken, IConfiguration config, IHostEnvironment env) =>
+        Base(config, env) + "/c/" + publicToken;
+
     public static string Base(IConfiguration config, IHostEnvironment env)
     {
         var raw = config["Pay:CheckoutBaseUrl"]?.Trim().TrimEnd('/');

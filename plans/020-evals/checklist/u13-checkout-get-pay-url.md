@@ -19,14 +19,14 @@
 
 ## U13.1
 
-- [ ] `GET /v1/checkouts/{id}` member JSON includes `pay_url`
-- [ ] Cross-org still 403 before lookup (062)
-- [ ] Public `GET /v1/pay/{token}` does **not** need `pay_url` (they already have the token)
+- [x] `GET /v1/checkouts/{id}` member JSON includes `pay_url`
+- [x] Cross-org still 403 before lookup (062)
+- [x] Public `GET /v1/pay/{token}` does **not** need `pay_url` (they already have the token)
 
 ## U13.2 Tests
 
-- [ ] Get-after-create matches create `pay_url`
+- [x] Get-after-create matches create `pay_url`
 
 ## U13.3 Exit
 
-- [ ] Unblocked for U14
+- [x] Unblocked for U14

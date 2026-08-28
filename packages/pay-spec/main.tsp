@@ -60,6 +60,7 @@ model CheckoutSession {
   currency: string;
   status: string;
   public_token?: string;
+  pay_url?: string;
   interval?: string;
   success_url?: string;
   cancel_url?: string;
@@ -198,6 +199,7 @@ model PaymentLink {
   currency: string;
   status: string;
   public_token: string;
+  pay_url?: string;
   created_at: utcDateTime;
   max_payers?: int32;
   unlimited: boolean;
