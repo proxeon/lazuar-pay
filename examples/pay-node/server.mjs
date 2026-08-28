@@ -51,7 +51,12 @@ const server = createServer(async (req, res) => {
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ org_id: orgId, amount: 10, currency: "MYR", provider: "test" }),
+      body: JSON.stringify({
+        org_id: orgId,
+        amount: 10,
+        currency: process.env.PAY_CURRENCY ?? (process.env.PAY_PROVIDER === "solana" ? "USDC" : "MYR"),
+        provider: process.env.PAY_PROVIDER ?? "test",
+      }),
     });
     const json = await created.json();
     res.writeHead(created.status, { "content-type": "application/json" }).end(JSON.stringify(json));

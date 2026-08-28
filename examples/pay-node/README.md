@@ -8,4 +8,6 @@ Second-app hatch against **focused Pay :8081**. Not Hub `hub-cashier-next`.
 4. `pnpm --filter @examples/pay-node start`
 5. `POST /mint` → use `pay_url`. Start pay (Test) or open checkout. `POST /hook` verifies One-dialect HMAC (full `whsec_`, `{unix}.{raw body}`). `GET /unlocked/:checkoutId` is the toy row.
 
+Solana dogfood: `PAY_PROVIDER=solana` and `PAY_CURRENCY=USDC`. This process still does not import `@solana/*` or talk to an RPC. Unlock stays `payment.completed` + `checkout_id`.
+
 Never put `lzr_sk_` in `VITE_*`. Pay does not POST One `/members`.
