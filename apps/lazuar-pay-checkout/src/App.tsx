@@ -1,11 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, CircleAlert, LoaderCircle } from 'lucide-react'
 import { Button } from './ui/components/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/components/card'
 import { Input } from './ui/components/input'
 import { Label } from './ui/components/label'
-
-const payApi = import.meta.env.VITE_PAY_API_URL ?? 'http://localhost:8081'
+import { payApi, payPath, slotKey, tokenFromPath, usableEmail, verifyingQuery } from './pay'
 
 type PayView = {
   token: string
@@ -14,34 +13,11 @@ type PayView = {
   status: string
   email_required?: boolean
   started?: boolean
+  mine?: boolean
   provider?: string | null
   redirect_url?: string | null
-}
-
-function slotKey(token: string): string {
-  const key = `lazuar-pay-slot:${token}`
-  try {
-    const existing = localStorage.getItem(key)
-    if (existing) return existing
-    const next = crypto.randomUUID()
-    localStorage.setItem(key, next)
-    return next
-  } catch {
-    return crypto.randomUUID()
-  }
-}
-
-function payPath(token: string): string {
-  return `${payApi}/v1/pay/${token}?slot_key=${encodeURIComponent(slotKey(token))}`
-}
-
-function tokenFromPath(): string | null {
-  const m = window.location.pathname.match(/^\/c\/([^/]+)/)
-  return m ? decodeURIComponent(m[1]) : null
-}
-
-function verifyingQuery(): boolean {
-  return new URLSearchParams(window.location.search).get('status') === 'verifying'
+  payer_name?: string | null
+  payer_email?: string | null
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -61,6 +37,23 @@ function Shell({ children }: { children: ReactNode }) {
   )
 }
 
+function Heading({ children, live, className }: { children: ReactNode; live?: boolean; className?: string }) {
+  const ref = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    ref.current?.focus()
+  }, [children])
+  return (
+    <CardTitle
+      ref={ref}
+      tabIndex={-1}
+      className={className ?? 'text-xl outline-none'}
+      aria-live={live ? 'polite' : undefined}
+    >
+      {children}
+    </CardTitle>
+  )
+}
+
 function App() {
   const token = tokenFromPath()
   const [pay, setPay] = useState<PayView | null>(null)
@@ -68,8 +61,10 @@ function App() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
-  const verifying = verifyingQuery()
+  const [verifying, setVerifying] = useState(() => verifyingQuery())
   const [verifyTimedOut, setVerifyTimedOut] = useState(false)
+  const [pollNonce, setPollNonce] = useState(0)
+  const payStatus = pay?.status
 
   useEffect(() => {
     if (!token) {
@@ -86,7 +81,13 @@ function App() {
     }
     void load()
       .then((body) => {
-        if (!stop) setPay(body)
+        if (stop) return
+        setPay(body)
+        setError(null)
+        setName((prev) => prev || body.payer_name?.trim() || '')
+        if (body.payer_email && usableEmail(body.payer_email)) {
+          setEmail((prev) => prev || body.payer_email!.trim())
+        }
       })
       .catch((err: unknown) => {
         if (!stop) setError(err instanceof Error ? err.message : 'error')
@@ -97,22 +98,46 @@ function App() {
   }, [token])
 
   useEffect(() => {
-    if (!token || !verifying || pay?.status === 'paid' || pay?.status === 'expired' || pay?.status === 'full') return
+    if (
+      !token ||
+      !verifying ||
+      !payStatus ||
+      error === 'missing' ||
+      payStatus === 'paid' ||
+      payStatus === 'expired' ||
+      payStatus === 'full' ||
+      payStatus === 'already_paid'
+    ) {
+      return
+    }
     let n = 0
+    let stopped = false
     const id = window.setInterval(() => {
       n += 1
       void fetch(payPath(token))
-        .then((r) => (r.ok ? r.json() : null))
+        .then(async (r) => {
+          if (r.status === 404) {
+            setError('missing')
+            window.clearInterval(id)
+            return null
+          }
+          if (!r.ok) return null
+          return (await r.json()) as PayView
+        })
         .then((body: PayView | null) => {
-          if (body) setPay(body)
+          if (stopped || !body) return
+          setPay(body)
         })
       if (n >= 15) {
         window.clearInterval(id)
         setVerifyTimedOut(true)
       }
     }, 2000)
-    return () => window.clearInterval(id)
-  }, [token, verifying, pay?.status])
+    return () => {
+      stopped = true
+      window.clearInterval(id)
+    }
+  }, [token, verifying, payStatus, error, pollNonce])
 
   async function startPay() {
     if (!token) return
@@ -153,10 +178,20 @@ function App() {
       const body = (await response.json()) as { redirect_url?: string }
       if (body.redirect_url) {
         window.location.assign(body.redirect_url)
+      } else {
+        setError('Processor did not return a pay URL')
       }
+    } catch {
+      setError("Can't reach Pay")
     } finally {
       setBusy(false)
     }
+  }
+
+  function returnToPay() {
+    window.history.replaceState(null, '', window.location.pathname)
+    setVerifying(false)
+    setVerifyTimedOut(false)
   }
 
   if (error === 'missing' || !token) {
@@ -167,7 +202,7 @@ function App() {
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
               <CircleAlert className="size-6" />
             </div>
-            <CardTitle className="text-xl">Link not found</CardTitle>
+            <Heading>Link not found</Heading>
             <CardDescription>This payment link is not valid. No sign-in.</CardDescription>
           </CardHeader>
         </Card>
@@ -179,7 +214,30 @@ function App() {
     return (
       <Shell>
         <Card>
-          <CardContent className="py-10 text-center text-sm text-slate-500">Loading…</CardContent>
+          <CardContent aria-live="polite" className="py-10 text-center text-sm text-slate-500">
+            Loading…
+          </CardContent>
+        </Card>
+      </Shell>
+    )
+  }
+
+  if (pay.status === 'already_paid' || (pay.status === 'paid' && pay.mine === false && !pay.started)) {
+    return (
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <CircleAlert className="size-6" />
+            </div>
+            <Heading>This link is already paid</Heading>
+            <p className="pt-2 text-2xl font-semibold tracking-tight text-slate-900">
+              {formatMoney(pay.amount, pay.currency)}
+            </p>
+            <CardDescription className="pt-1">
+              Someone else already paid this link. This page is not a receipt and not a membership login.
+            </CardDescription>
+          </CardHeader>
         </Card>
       </Shell>
     )
@@ -193,7 +251,7 @@ function App() {
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
               <Check className="size-6" />
             </div>
-            <CardTitle className="text-xl">Payment received</CardTitle>
+            <Heading>Payment received</Heading>
             <p className="pt-2 text-2xl font-semibold tracking-tight text-slate-900">
               {formatMoney(pay.amount, pay.currency)}
             </p>
@@ -215,7 +273,7 @@ function App() {
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
               <CircleAlert className="size-6" />
             </div>
-            <CardTitle className="text-xl">Link expired</CardTitle>
+            <Heading>Link expired</Heading>
             <CardDescription>This payment link is no longer open.</CardDescription>
           </CardHeader>
         </Card>
@@ -231,7 +289,7 @@ function App() {
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
               <CircleAlert className="size-6" />
             </div>
-            <CardTitle className="text-xl">Link is full</CardTitle>
+            <Heading>Link is full</Heading>
             <CardDescription>This pay link has no remaining seats.</CardDescription>
           </CardHeader>
         </Card>
@@ -242,12 +300,12 @@ function App() {
   if (verifying && pay.status !== 'paid') {
     return (
       <Shell>
-        <Card>
+        <Card aria-live="polite">
           <CardHeader className="text-center">
             <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-              <LoaderCircle className="size-6 animate-spin" />
+              <LoaderCircle className="size-6 animate-spin" aria-hidden="true" />
             </div>
-            <CardTitle className="text-xl">Confirming payment</CardTitle>
+            <Heading live>Confirming payment</Heading>
             <CardDescription>
               The processor success URL is not paid. Waiting for the webhook.
             </CardDescription>
@@ -261,15 +319,16 @@ function App() {
                 className="w-full"
                 onClick={() => {
                   setVerifyTimedOut(false)
-                  void fetch(payPath(token))
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then((body: PayView | null) => {
-                      if (body) setPay(body)
-                    })
+                  setPollNonce((n) => n + 1)
                 }}
               >
                 Refresh status
               </Button>
+              {pay.status === 'open' ? (
+                <Button type="button" variant="ghost" className="w-full" onClick={returnToPay}>
+                  Return to pay
+                </Button>
+              ) : null}
             </CardFooter>
           ) : null}
         </Card>
@@ -279,13 +338,14 @@ function App() {
 
   const emailBlocked = Boolean(pay.email_required && !usableEmail(email))
   const started = Boolean(pay.started)
+  const placeholderEmail = email.trim().toLowerCase() === 'customer@example.com'
 
   return (
     <Shell>
       <Card>
         <CardHeader>
           <CardDescription>Amount due</CardDescription>
-          <CardTitle className="text-3xl tracking-tight">{formatMoney(pay.amount, pay.currency)}</CardTitle>
+          <Heading className="text-3xl tracking-tight outline-none">{formatMoney(pay.amount, pay.currency)}</Heading>
           <p className="text-sm text-slate-500">
             Buyers have no One account.
             {pay.provider === 'test'
@@ -309,14 +369,26 @@ function App() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="payer_email">Email</Label>
+            <Label htmlFor="payer_email">{pay.email_required ? 'Email *' : 'Email'}</Label>
             <Input
               id="payer_email"
               type="email"
               value={email}
               autoComplete="email"
+              required={Boolean(pay.email_required)}
+              aria-required={pay.email_required ? true : undefined}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {pay.email_required ? (
+              <p className="text-xs text-slate-500">
+                This processor needs an email (not customer@example.com).
+              </p>
+            ) : null}
+            {pay.email_required && placeholderEmail ? (
+              <p role="alert" className="text-sm text-red-600">
+                Use your real email.
+              </p>
+            ) : null}
           </div>
           {started ? <p className="text-sm text-slate-500">You already started this payment.</p> : null}
         </CardContent>
@@ -334,11 +406,6 @@ function App() {
       </Card>
     </Shell>
   )
-}
-
-function usableEmail(value: string): boolean {
-  const trimmed = value.trim()
-  return trimmed.length > 0 && trimmed.toLowerCase() !== 'customer@example.com'
 }
 
 async function readDetail(response: Response): Promise<string | null> {
