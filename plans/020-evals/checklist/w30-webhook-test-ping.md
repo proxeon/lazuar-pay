@@ -20,16 +20,16 @@
 
 ## W30.1
 
-- [ ] Writer `POST /v1/orgs/{orgId}/webhooks/test` enqueues `webhook.test` with tiny `{ ok: true }`
-- [ ] Same worker path
-- [ ] 404 if no endpoint
-- [ ] Spec only if mapped
-- [ ] Tests: ProcessBatch POSTs type `webhook.test`
+- [x] Writer `POST /v1/orgs/{orgId}/webhooks/test` enqueues `webhook.test` with tiny `{ ok: true }`
+- [x] Same worker path
+- [x] 404 if no endpoint
+- [x] Spec only if mapped
+- [x] Tests: ProcessBatch POSTs type `webhook.test`
 
 ## W30.2 Must not
 
-- [ ] Do not require ping for fulfill
+- [x] Do not require ping for fulfill
 
 ## W30.3 Exit
 
-- [ ] Track W complete with or without W30; K99a does not require ping
+- [x] Track W complete with or without W30; K99a does not require ping

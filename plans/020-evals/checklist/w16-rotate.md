@@ -19,17 +19,17 @@
 
 ## W16.1
 
-- [ ] `POST /v1/orgs/{orgId}/webhooks/rotate` **or** PUT with `{ "rotate": true }` — **pick POST rotate**
-- [ ] Writer
-- [ ] No endpoint → 404
-- [ ] New wrap; 200 includes new `webhook_secret` once
-- [ ] URL unchanged
+- [x] `POST /v1/orgs/{orgId}/webhooks/rotate` **or** PUT with `{ "rotate": true }` — **pick POST rotate**
+- [x] Writer
+- [x] No endpoint → 404
+- [x] New wrap; 200 includes new `webhook_secret` once
+- [x] URL unchanged
 
 ## W16.2 Tests
 
-- [ ] After rotate, worker signatures verify only with new secret (can wait for W21)
-- [ ] GET never shows new full secret
+- [x] After rotate, worker signatures verify only with new secret (can wait for W21)
+- [x] GET never shows new full secret
 
 ## W16.3 Exit
 
-- [ ] Unblocked for W17
+- [x] Unblocked for W17

@@ -364,6 +364,80 @@ namespace Lazuar.Pay.Data.Migrations
                     b.ToTable("one_webhook_events", "public");
                 });
 
+            modelBuilder.Entity("Lazuar.Pay.Data.OrgWebhookDeliveryRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("LastHttpStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrgId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("org_webhook_deliveries", "public");
+                });
+
+            modelBuilder.Entity("Lazuar.Pay.Data.OrgWebhookEndpointRow", b =>
+                {
+                    b.Property<string>("OrgId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SecretCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SecretPrefix")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("OrgId");
+
+                    b.ToTable("org_webhook_endpoints", "public");
+                });
+
             modelBuilder.Entity("Lazuar.Pay.Data.OrgSettingsRow", b =>
                 {
                     b.Property<string>("OrgId")

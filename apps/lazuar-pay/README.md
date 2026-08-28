@@ -79,6 +79,8 @@ curl -sS -H "Authorization: Bearer $PAY_API_KEY" \
 
 Pay does not mint keys and does not hold the merchant’s `lzr_sk_` in process env.
 
+Writer `PUT /v1/orgs/{orgId}/webhooks` registers the URL Pay POSTs after a paid fulfill (`payment.completed`). That `whsec_` is **Pay signing for your app** (One dialect: `X-Lazuar-Signature: v1=` + `X-Lazuar-Timestamp`). It is not Stripe’s vault secret and not One inbound `PUT …/one-webhook`. GET never echoes the secret. Testing allows loopback URLs.
+
 Checkouts persist in Postgres `lazuar_pay` on **5435**. `owner`/`admin` paste keys **per rail** (stripe, chip, billplz, xendit, razorpay). Saving a vault does not pick a default. Mint a pay link with an explicit `provider` that already has keys. Capability is `hosted_link`. A verified PSP webhook writes an Official Receipt `RCPT-…` and a two-line journal. Pay does not compute SST or file e-invoices. Buyers have no One account (`:5179/c/{token}`).
 
 Per-org `webhook_secret` (Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay HMAC). Process `Pay__StripeWebhookSecret` is a **Testing-only** fallback. Billplz needs `Pay__PublicBaseUrl` as public **https** (localhost callbacks 400). Buyer return URLs use `Pay__CheckoutBaseUrl` (not the Billplz callback). `Pay__WrapKey` is required outside Testing. A second `POST /v1/pay/{token}/start` on an open checkout returns the stored hosted URL (no second processor session). Success URL is not paid; `:5179` polls `?status=verifying`.

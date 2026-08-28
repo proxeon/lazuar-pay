@@ -39,10 +39,15 @@ internal static class OneWebhookSignature
             }
         }
 
-        var signedPayload = $"{timestamp}.{body}";
-        var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(signedPayload));
-        var expectedHex = Convert.ToHexString(hash).ToLowerInvariant();
+        var expectedHex = Compute(secret, body, timestamp);
         return FixedTimeEqualsHex(v1Hex, expectedHex);
+    }
+
+    public static string Compute(string secret, string body, long unixSeconds)
+    {
+        var signedPayload = $"{unixSeconds}.{body}";
+        var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(signedPayload));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     internal static bool TryParseHeader(string headerValue, out long timestamp, out string v1Hex) =>

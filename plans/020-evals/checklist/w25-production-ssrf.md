@@ -19,15 +19,15 @@
 
 ## W25.1
 
-- [ ] Factory `EnvironmentName = Production` + WrapKey set as tests already do for other Production tests
-- [ ] PUT `http://127.0.0.1/hook` → 400
-- [ ] PUT `http://169.254.169.254/` → 400
-- [ ] PUT `https://app.example/hook` → allowed (no DNS in unit test — validate host parser, not live resolve, **or** allow https hostnames without resolving in this phase)
+- [x] Factory `EnvironmentName = Production` + WrapKey set as tests already do for other Production tests
+- [x] PUT `http://127.0.0.1/hook` → 400
+- [x] PUT `http://169.254.169.254/` → 400
+- [x] PUT `https://app.example/hook` → allowed (no DNS in unit test — validate host parser, not live resolve, **or** allow https hostnames without resolving in this phase)
 
 ## W25.2 Must not
 
-- [ ] Do not DNS-resolve in a way that TOCTOU-binds to 169.254 after validation without a follow-up; hatch: parse IP literals strictly; hostname allow https
+- [x] Do not DNS-resolve in a way that TOCTOU-binds to 169.254 after validation without a follow-up; hatch: parse IP literals strictly; hostname allow https
 
 ## W25.3 Exit
 
-- [ ] Unblocked for W26
+- [x] Unblocked for W26

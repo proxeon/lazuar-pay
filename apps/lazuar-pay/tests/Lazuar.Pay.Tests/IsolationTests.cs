@@ -15,7 +15,11 @@ public class IsolationTests
         "namespace Lazuar.Pay.Gateways",
         "namespace Lazuar.Pay.One;",
         "GenerateApiCredential",
-        "ApiKeys:Pepper"
+        "ApiKeys:Pepper",
+        "OutboundWebhookDispatcherJob",
+        "WebhookDeliveryOutbox",
+        "IEventBus",
+        "OutboundWebhookRequested"
     ];
 
     [Test]

@@ -20,18 +20,18 @@
 
 ## W20.1
 
-- [ ] Hosted service runs outside Testing (or when `Pay:OutboundWebhooks:Worker` true)
-- [ ] `PayApiFactory` does **not** start the loop
-- [ ] `ProcessBatch(ct)` is public/internal on a small type, injectable
-- [ ] Named HttpClient `pay-webhooks`: 10s timeout, **no auto redirect**, User-Agent `Lazuar-Pay-Webhooks/1.0`
-- [ ] Unprotect secret per row; sign; POST raw `PayloadJson`
-- [ ] Do not log Authorization / `whsec_` / body
+- [x] Hosted service runs outside Testing (or when `Pay:OutboundWebhooks:Worker` true)
+- [x] `PayApiFactory` does **not** start the loop
+- [x] `ProcessBatch(ct)` is public/internal on a small type, injectable
+- [x] Named HttpClient `pay-webhooks`: 10s timeout, **no auto redirect**, User-Agent `Lazuar-Pay-Webhooks/1.0`
+- [x] Unprotect secret per row; sign; POST raw `PayloadJson`
+- [x] Do not log Authorization / `whsec_` / body
 
 ## W20.2 Must not
 
-- [ ] Do not use Hub job names
-- [ ] Do not call One dispatcher
+- [x] Do not use Hub job names
+- [x] Do not call One dispatcher
 
 ## W20.3 Exit
 
-- [ ] Unblocked for W21
+- [x] Unblocked for W21

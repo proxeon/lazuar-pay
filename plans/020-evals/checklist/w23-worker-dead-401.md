@@ -19,14 +19,14 @@
 
 ## W23.1
 
-- [ ] 401 or 403 → `Status = dead` (or `disabled` endpoint — **pick dead row, keep endpoint**)
-- [ ] Do not mark the org’s endpoint disabled automatically (rotate is human)
-- [ ] 410 may also dead
+- [x] 401 or 403 → `Status = dead` (or `disabled` endpoint — **pick dead row, keep endpoint**)
+- [x] Do not mark the org’s endpoint disabled automatically (rotate is human)
+- [x] 410 may also dead
 
 ## W23.2 Tests
 
-- [ ] Handler 401 → dead, second ProcessBatch does not POST again
+- [x] Handler 401 → dead, second ProcessBatch does not POST again
 
 ## W23.3 Exit
 
-- [ ] Unblocked for W24
+- [x] Unblocked for W24

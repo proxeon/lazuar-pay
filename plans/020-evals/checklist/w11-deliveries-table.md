@@ -20,17 +20,17 @@
 
 ## W11.1 Schema
 
-- [ ] Table `webhook_deliveries`
-- [ ] Columns: `Id`, `OrgId`, `EndpointId`, `EventId`, `EventType`, `PayloadJson` (exact signed body), `Status` (`pending`/`succeeded`/`dead`), `AttemptCount`, `NextAttemptAt`, `LeaseUntil` (nullable), `LastHttpStatus` (nullable), `LastError` (short, no secret), `CreatedAt`
-- [ ] Unique `(EndpointId, EventId)`
-- [ ] Index `(Status, NextAttemptAt)` for the worker
-- [ ] Migration + snapshot
+- [x] Table `webhook_deliveries`
+- [x] Columns: `Id`, `OrgId`, `EndpointId`, `EventId`, `EventType`, `PayloadJson` (exact signed body), `Status` (`pending`/`succeeded`/`dead`), `AttemptCount`, `NextAttemptAt`, `LeaseUntil` (nullable), `LastHttpStatus` (nullable), `LastError` (short, no secret), `CreatedAt`
+- [x] Unique `(EndpointId, EventId)`
+- [x] Index `(Status, NextAttemptAt)` for the worker
+- [x] Migration + snapshot
 
 ## W11.2 Must not
 
-- [ ] Do not store the `whsec_` in this table
-- [ ] Do not name types `WebhookDeliveryOutbox` / `OutboundWebhookRequested`
+- [x] Do not store the `whsec_` in this table
+- [x] Do not name types `WebhookDeliveryOutbox` / `OutboundWebhookRequested`
 
 ## W11.3 Exit
 
-- [ ] Unblocked for W12
+- [x] Unblocked for W12

@@ -19,9 +19,9 @@
 
 ## W27.1 Tests
 
-- [ ] Test start without register → charge + `RCPT-` exist, `webhook_deliveries` count 0
-- [ ] First-party `:5179` poll still works (no worker required)
+- [x] Test start without register → charge + `RCPT-` exist, `webhook_deliveries` count 0
+- [x] First-party `:5179` poll still works (no worker required)
 
 ## W27.2 Exit
 
-- [ ] Unblocked for W28
+- [x] Unblocked for W28

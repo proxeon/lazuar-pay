@@ -20,16 +20,16 @@
 
 ## W21.1
 
-- [ ] HTTP 2xx → `Status = succeeded`
-- [ ] Captured request: raw body equals `PayloadJson`
-- [ ] `OneWebhookSignature.TryVerify` succeeds with stored secret, body, headers
+- [x] HTTP 2xx → `Status = succeeded`
+- [x] Captured request: raw body equals `PayloadJson`
+- [x] `OneWebhookSignature.TryVerify` succeeds with stored secret, body, headers
 
 ## W21.2 Tests
 
-- [ ] Test HttpMessageHandler 200
-- [ ] Fulfill Test rail → ProcessBatch → 1 POST
-- [ ] Money rows unchanged besides delivery status
+- [x] Test HttpMessageHandler 200
+- [x] Fulfill Test rail → ProcessBatch → 1 POST
+- [x] Money rows unchanged besides delivery status
 
 ## W21.3 Exit
 
-- [ ] Unblocked for W22, E14
+- [x] Unblocked for W22, E14

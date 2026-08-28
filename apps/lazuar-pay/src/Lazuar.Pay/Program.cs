@@ -19,6 +19,7 @@ using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Lazuar.Pay.Secrets;
 using Lazuar.Pay.Webhooks;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,13 @@ builder.Services.AddHttpClient("chip");
 builder.Services.AddHttpClient("billplz");
 builder.Services.AddHttpClient("xendit");
 builder.Services.AddHttpClient("razorpay");
+builder.Services.AddHttpClient("pay-webhooks", c => c.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookWorker>();
+}
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddScoped<CheckoutStore>();
@@ -88,6 +96,7 @@ app.MapGateways();
 app.MapWebhooks();
 app.MapPaymentQueries();
 app.MapOneWebhooks();
+app.MapOrgWebhooks();
 
 app.Run();
 

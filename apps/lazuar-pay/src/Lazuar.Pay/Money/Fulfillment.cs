@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.PaymentLinks;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Money;
@@ -70,9 +71,10 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
         }
 
         checkout.Status = "paid";
+        var chargeId = Guid.NewGuid().ToString("N");
         db.Charges.Add(new ChargeRow
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = chargeId,
             OrgId = checkout.OrgId,
             CheckoutId = checkout.Id,
             Provider = provider,
@@ -160,6 +162,35 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             Action = "checkout.paid",
             At = DateTimeOffset.UtcNow
         });
+
+        if (await db.OrgWebhookEndpoints.FindAsync([checkout.OrgId], ct) is not null)
+        {
+            var payload = PayWebhookEnvelope.Serialize(
+                PayWebhookEnvelope.Completed,
+                chargeId,
+                checkout.OrgId,
+                new
+                {
+                    checkout_id = checkout.Id,
+                    charge_id = chargeId,
+                    amount = checkout.Amount,
+                    currency = checkout.Currency,
+                    provider,
+                    number,
+                    payer_name = checkout.PayerName
+                });
+            db.OrgWebhookDeliveries.Add(new OrgWebhookDeliveryRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = checkout.OrgId,
+                EventId = chargeId,
+                EventType = PayWebhookEnvelope.Completed,
+                PayloadJson = payload,
+                Status = "pending",
+                NextAttemptAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         try
         {

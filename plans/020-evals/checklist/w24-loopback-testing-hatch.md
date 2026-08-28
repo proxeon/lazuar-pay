@@ -19,13 +19,13 @@
 
 ## W24.1
 
-- [ ] Environment Testing or Development: register `http://127.0.0.1:{port}/hook` **allowed**
-- [ ] Production-shaped factory (`EnvironmentName = Production`) still 400s loopback (W25)
+- [x] Environment Testing or Development: register `http://127.0.0.1:{port}/hook` **allowed**
+- [x] Production-shaped factory (`EnvironmentName = Production`) still 400s loopback (W25)
 
 ## W24.2 Tests
 
-- [ ] Testing PUT `http://127.0.0.1:9/x` is 200 if other fields ok (or 400 only for empty host — **allow**)
+- [x] Testing PUT `http://127.0.0.1:9/x` is 200 if other fields ok (or 400 only for empty host — **allow**)
 
 ## W24.3 Exit
 
-- [ ] Unblocked for W25
+- [x] Unblocked for W25

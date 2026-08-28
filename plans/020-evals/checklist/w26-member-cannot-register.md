@@ -19,11 +19,11 @@
 
 ## W26.1 Tests
 
-- [ ] JWT member PUT `/v1/orgs/t1/webhooks` → 403
-- [ ] JWT owner → 200
-- [ ] After M14: bound key → 200
-- [ ] GET allowed for member
+- [x] JWT member PUT `/v1/orgs/t1/webhooks` → 403
+- [x] JWT owner → 200
+- [x] After M14: bound key → 200
+- [x] GET allowed for member
 
 ## W26.2 Exit
 
-- [ ] Unblocked for W27
+- [x] Unblocked for W27

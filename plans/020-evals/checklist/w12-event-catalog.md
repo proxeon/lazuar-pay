@@ -20,18 +20,18 @@
 
 ## W12.1
 
-- [ ] `PayWebhookEventCatalog` (name may vary) contains `payment.completed`
-- [ ] Optional same program: `webhook.test`
-- [ ] Register door 400s unknown `enabled_events` strings
-- [ ] Empty `enabled_events` means the closed default list (completed ± test)
+- [x] `PayWebhookEventCatalog` (name may vary) contains `payment.completed`
+- [x] Optional same program: `webhook.test`
+- [x] Register door 400s unknown `enabled_events` strings
+- [x] Empty `enabled_events` means the closed default list (completed ± test)
 
 ## W12.2 Must not
 
-- [ ] No `payment.failed` until P15 (rails do not write failed)
-- [ ] No `refund.created` until P10
-- [ ] No `subscription.activated` because a stub table exists
-- [ ] No Hub `GatewayPaymentCompletedIntegrationEvent`
+- [x] No `payment.failed` until P15 (rails do not write failed)
+- [x] No `refund.created` until P10
+- [x] No `subscription.activated` because a stub table exists
+- [x] No Hub `GatewayPaymentCompletedIntegrationEvent`
 
 ## W12.3 Exit
 
-- [ ] Unblocked for W14
+- [x] Unblocked for W14

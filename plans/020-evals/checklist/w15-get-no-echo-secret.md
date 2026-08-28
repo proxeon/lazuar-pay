@@ -19,17 +19,17 @@
 
 ## W15.1
 
-- [ ] `GET /v1/orgs/{orgId}/webhooks`
-- [ ] Member gate
-- [ ] JSON: `org_id`, `url` or null, `webhook_configured`, `secret_prefix` or null
-- [ ] Never `webhook_secret`
-- [ ] No row → `webhook_configured: false`
+- [x] `GET /v1/orgs/{orgId}/webhooks`
+- [x] Member gate
+- [x] JSON: `org_id`, `url` or null, `webhook_configured`, `secret_prefix` or null
+- [x] Never `webhook_secret`
+- [x] No row → `webhook_configured: false`
 
 ## W15.2 Tests
 
-- [ ] After PUT, GET has prefix, not full secret
-- [ ] 401 without Bearer
+- [x] After PUT, GET has prefix, not full secret
+- [x] 401 without Bearer
 
 ## W15.3 Exit
 
-- [ ] Unblocked for W16
+- [x] Unblocked for W16

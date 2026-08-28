@@ -22,18 +22,18 @@
 
 ## W10.1 Schema
 
-- [ ] Table `webhook_endpoints` public schema
-- [ ] Columns: `Id`, `OrgId`, `Url`, `SecretCiphertext`, `SecretPrefix` (e.g. last 4), `Status` (`active`/`disabled`), `EnabledEvents` (empty = catalog default), `CreatedAt`, `UpdatedAt`
-- [ ] Unique: one **active** row per `OrgId` (filter unique or replace-in-place singular)
-- [ ] EF migration + snapshot
-- [ ] `DbSet` on `PayDbContext`
+- [x] Table `webhook_endpoints` public schema
+- [x] Columns: `Id`, `OrgId`, `Url`, `SecretCiphertext`, `SecretPrefix` (e.g. last 4), `Status` (`active`/`disabled`), `EnabledEvents` (empty = catalog default), `CreatedAt`, `UpdatedAt`
+- [x] Unique: one **active** row per `OrgId` (filter unique or replace-in-place singular)
+- [x] EF migration + snapshot
+- [x] `DbSet` on `PayDbContext`
 
 ## W10.2 Must not
 
-- [ ] Do not reuse `one_webhook_events` or `psp_webhook_events`
-- [ ] Do not reuse `mail_outbox`
-- [ ] Do not store plaintext secret
+- [x] Do not reuse `one_webhook_events` or `psp_webhook_events`
+- [x] Do not reuse `mail_outbox`
+- [x] Do not store plaintext secret
 
 ## W10.3 Exit
 
-- [ ] Unblocked for W11
+- [x] Unblocked for W11

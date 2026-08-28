@@ -22,29 +22,29 @@
 
 ## W14.1 Door
 
-- [ ] `PUT /v1/orgs/{orgId}/webhooks` (singular; replace active) **or** `POST` create + 409 if exists — **pick PUT replace**
-- [ ] Body: `{ "url": "https://app.example/pay-hook" }`
-- [ ] Writer gate (`RequireWriterAsync`)
-- [ ] SSRF validate URL
-- [ ] Mint `whsec_` + random; wrap with SecretBox
-- [ ] 200/201 JSON: `org_id`, `url`, `webhook_secret` (once), `webhook_configured: true`, `secret_prefix`
-- [ ] Audit `webhook_endpoint.upsert`
-- [ ] Empty URL → 400
+- [x] `PUT /v1/orgs/{orgId}/webhooks` (singular; replace active) **or** `POST` create + 409 if exists — **pick PUT replace**
+- [x] Body: `{ "url": "https://app.example/pay-hook" }`
+- [x] Writer gate (`RequireWriterAsync`)
+- [x] SSRF validate URL
+- [x] Mint `whsec_` + random; wrap with SecretBox
+- [x] 200/201 JSON: `org_id`, `url`, `webhook_secret` (once), `webhook_configured: true`, `secret_prefix`
+- [x] Audit `webhook_endpoint.upsert`
+- [x] Empty URL → 400
 
 ## W14.2 Labels (honesty)
 
-- [ ] README: this `whsec_` is **Pay signing for your app**, not Stripe, not One inbound
+- [x] README: this `whsec_` is **Pay signing for your app**, not Stripe, not One inbound
 
 ## W14.3 Must not
 
-- [ ] Do not POST One `/tenants/{id}/webhooks`
-- [ ] Do not share route with `/v1/one/webhooks`
+- [x] Do not POST One `/tenants/{id}/webhooks`
+- [x] Do not share route with `/v1/one/webhooks`
 
 ## W14.4 Tests
 
-- [ ] Writer PUT 200 and body contains `whsec_`
-- [ ] GET later (W15) does not contain that secret
+- [x] Writer PUT 200 and body contains `whsec_`
+- [x] GET later (W15) does not contain that secret
 
 ## W14.5 Exit
 
-- [ ] Unblocked for W15
+- [x] Unblocked for W15

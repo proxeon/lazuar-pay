@@ -22,23 +22,23 @@
 
 ## W18.1
 
-- [ ] After charge/journal/document/audit are added, if org has active endpoint and catalog allows `payment.completed`, add a `pending` delivery
-- [ ] `EventId` stable: charge id (or document id) — **one id per paid checkout**
-- [ ] `PayloadJson` is the **exact** string that will be signed/sent
-- [ ] No active endpoint → skip (W27)
-- [ ] Unique conflict on `(endpoint, event_id)` → do not insert a second row (W19)
-- [ ] Test rail fulfill **does** enqueue (do not skip Test)
+- [x] After charge/journal/document/audit are added, if org has active endpoint and catalog allows `payment.completed`, add a `pending` delivery
+- [x] `EventId` stable: charge id (or document id) — **one id per paid checkout**
+- [x] `PayloadJson` is the **exact** string that will be signed/sent
+- [x] No active endpoint → skip (W27)
+- [x] Unique conflict on `(endpoint, event_id)` → do not insert a second row (W19)
+- [x] Test rail fulfill **does** enqueue (do not skip Test)
 
 ## W18.2 Must not
 
-- [ ] `HttpClient.PostAsync` inside `Fulfillment`
-- [ ] Enqueue on `{ ignored }` Plane B
-- [ ] Enqueue on Occupancy expire (P16)
+- [x] `HttpClient.PostAsync` inside `Fulfillment`
+- [x] Enqueue on `{ ignored }` Plane B
+- [x] Enqueue on Occupancy expire (P16)
 
 ## W18.3 Tests
 
-- [ ] Can wait for W27/W19; at least: Test start-to-paid with endpoint → 1 pending row in same DB
+- [x] Can wait for W27/W19; at least: Test start-to-paid with endpoint → 1 pending row in same DB
 
 ## W18.4 Exit
 
-- [ ] Unblocked for W19, W20
+- [x] Unblocked for W19, W20

@@ -145,6 +145,25 @@ model OneWebhookView {
   webhook_configured: boolean;
 }
 
+model PutOrgWebhook {
+  url: string;
+}
+
+model OrgWebhookView {
+  org_id: string;
+  url?: string;
+  webhook_configured: boolean;
+  secret_prefix?: string;
+}
+
+model OrgWebhookCreated {
+  org_id: string;
+  url: string;
+  webhook_configured: boolean;
+  secret_prefix?: string;
+  webhook_secret: string;
+}
+
 model CreateProductRequest {
   name: string;
   description?: string;
@@ -429,4 +448,21 @@ interface Webhooks {
   @get
   @route("/orgs/{orgId}/one-webhook")
   getOne(@path orgId: string): OneWebhookView;
+
+  /** Writer stores the URL Pay POSTs after fulfill. Secret is Pay signing for the app, not Stripe, not One inbound. Lazuar HMAC (One dialect), not Standard Webhooks. */
+  @put
+  @route("/orgs/{orgId}/webhooks")
+  putOrg(@path orgId: string, @body body: PutOrgWebhook): OrgWebhookCreated;
+
+  @get
+  @route("/orgs/{orgId}/webhooks")
+  getOrg(@path orgId: string): OrgWebhookView;
+
+  @post
+  @route("/orgs/{orgId}/webhooks/rotate")
+  rotateOrg(@path orgId: string): OrgWebhookCreated;
+
+  @post
+  @route("/orgs/{orgId}/webhooks/test")
+  testOrg(@path orgId: string): WebhookOk;
 }

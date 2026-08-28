@@ -20,22 +20,22 @@
 
 ## W13.1
 
-- [ ] Require `http` or `https` URL
-- [ ] Reject `169.254.169.254`, `10.0.0.0/8`, `192.168.0.0/16`, `172.16.0.0/12` in **all** environments (or document RFC1918 allow — **default reject private**)
-- [ ] Reject loopback in Production/Staging
-- [ ] Testing/Development: allow `127.0.0.1` / `localhost` (W24)
-- [ ] No redirects later on the worker (W20)
+- [x] Require `http` or `https` URL
+- [x] Reject `169.254.169.254`, `10.0.0.0/8`, `192.168.0.0/16`, `172.16.0.0/12` in **all** environments (or document RFC1918 allow — **default reject private**)
+- [x] Reject loopback in Production/Staging
+- [x] Testing/Development: allow `127.0.0.1` / `localhost` (W24)
+- [x] No redirects later on the worker (W20)
 
 ## W13.2 Tests (can land with W25)
 
-- [ ] `http://169.254.169.254/` → 400 even in Testing
-- [ ] Unit tests on the validator; register door uses it in W14
+- [x] `http://169.254.169.254/` → 400 even in Testing
+- [x] Unit tests on the validator; register door uses it in W14
 
 ## W13.3 Must not
 
-- [ ] Do not copy One encryption key
-- [ ] Do not call One `WebhookUrlValidator` type
+- [x] Do not copy One encryption key
+- [x] Do not call One `WebhookUrlValidator` type
 
 ## W13.4 Exit
 
-- [ ] Unblocked for W14
+- [x] Unblocked for W14

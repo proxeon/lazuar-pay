@@ -20,15 +20,15 @@
 
 ## W19.1
 
-- [ ] Unique `(EndpointId, EventId)`
-- [ ] Second fulfill of same checkout (unique charge already) never reaches a second completed; if enqueue called twice, catch unique and continue
-- [ ] Worker sending twice is the **app’s** idempotency (document); Pay still only has one row
+- [x] Unique `(EndpointId, EventId)`
+- [x] Second fulfill of same checkout (unique charge already) never reaches a second completed; if enqueue called twice, catch unique and continue
+- [x] Worker sending twice is the **app’s** idempotency (document); Pay still only has one row
 
 ## W19.2 Tests
 
-- [ ] Two fulfill attempts → one delivery row
-- [ ] Postgres unique if you have Testcontainers; InMemory unique index if configured
+- [x] Two fulfill attempts → one delivery row
+- [x] Postgres unique if you have Testcontainers; InMemory unique index if configured
 
 ## W19.3 Exit
 
-- [ ] Unblocked for W20
+- [x] Unblocked for W20

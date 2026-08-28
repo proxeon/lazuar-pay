@@ -19,13 +19,13 @@
 
 ## W28.1
 
-- [ ] Add `BannedSrc` tokens: `OutboundWebhookDispatcherJob`, `WebhookDeliveryOutbox`, `IEventBus`, `OutboundWebhookRequested`, `GatewayPaymentCompletedIntegrationEvent` (already present)
-- [ ] Still ban `Modules.One`, `MediatR`
+- [x] Add `BannedSrc` tokens: `OutboundWebhookDispatcherJob`, `WebhookDeliveryOutbox`, `IEventBus`, `OutboundWebhookRequested`, `GatewayPaymentCompletedIntegrationEvent` (already present)
+- [x] Still ban `Modules.One`, `MediatR`
 
 ## W28.2 Must not
 
-- [ ] Do not ban the word `webhook` (Plane A/B live)
+- [x] Do not ban the word `webhook` (Plane A/B live)
 
 ## W28.3 Exit
 
-- [ ] Unblocked for W29
+- [x] Unblocked for W29

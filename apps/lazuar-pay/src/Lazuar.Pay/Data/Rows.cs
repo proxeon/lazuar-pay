@@ -185,3 +185,27 @@ public sealed class OneWebhookEventRow
     public required string EventType { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
 }
+
+public sealed class OrgWebhookEndpointRow
+{
+    public required string OrgId { get; set; }
+    public required string Url { get; set; }
+    public required string SecretCiphertext { get; set; }
+    public string? SecretPrefix { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class OrgWebhookDeliveryRow
+{
+    public required string Id { get; set; }
+    public required string OrgId { get; set; }
+    public required string EventId { get; set; }
+    public required string EventType { get; set; }
+    public required string PayloadJson { get; set; }
+    public required string Status { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTimeOffset NextAttemptAt { get; set; }
+    public int? LastHttpStatus { get; set; }
+    public string? LastError { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}

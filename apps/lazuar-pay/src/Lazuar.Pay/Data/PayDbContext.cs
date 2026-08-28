@@ -23,6 +23,8 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
     public DbSet<AuditEventRow> AuditEvents => Set<AuditEventRow>();
     public DbSet<MailOutboxRow> MailOutbox => Set<MailOutboxRow>();
     public DbSet<OneWebhookEventRow> OneWebhookEvents => Set<OneWebhookEventRow>();
+    public DbSet<OrgWebhookEndpointRow> OrgWebhookEndpoints => Set<OrgWebhookEndpointRow>();
+    public DbSet<OrgWebhookDeliveryRow> OrgWebhookDeliveries => Set<OrgWebhookDeliveryRow>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -138,6 +140,18 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
             e.ToTable("one_webhook_events");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DeliveryId).IsUnique();
+        });
+        model.Entity<OrgWebhookEndpointRow>(e =>
+        {
+            e.ToTable("org_webhook_endpoints");
+            e.HasKey(x => x.OrgId);
+        });
+        model.Entity<OrgWebhookDeliveryRow>(e =>
+        {
+            e.ToTable("org_webhook_deliveries");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.EventId).IsUnique();
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
         });
     }
 }
