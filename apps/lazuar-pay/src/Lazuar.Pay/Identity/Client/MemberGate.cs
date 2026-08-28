@@ -62,8 +62,19 @@ internal static class MemberGate
             return PayErrors.Status(503, "Service Unavailable", "Identity provider failed");
         }
 
-        var role = who.Value.Tenants.FirstOrDefault(t => t.Id == orgId)?.Role;
-        if (role is not ("owner" or "admin"))
+        var tenant = who.Value.Tenants.FirstOrDefault(t => t.Id == orgId);
+        if (tenant is null)
+        {
+            return PayErrors.Status(403, "Forbidden", "Not a member of this org");
+        }
+
+        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(tenant.Status))
+        {
+            return PayErrors.Status(403, "Forbidden", "Tenant is suspended.");
+        }
+
+        if (tenant.Role is not ("owner" or "admin"))
         {
             return PayErrors.Status(403, "Forbidden", "Writer role required");
         }

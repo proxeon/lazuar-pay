@@ -132,4 +132,39 @@ public class BillplzRailTests
         };
         Assert.That((await client.SendAsync(req)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
+
+    [Test]
+    public async Task Billplz_amount_mismatch_does_not_consume_event()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"bill_1","url":"https://www.billplz-sandbox.com/bills/bill_1"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"billplz","secret":"bp_sk","webhook_secret":"xsig","public_merchant_id":"col_1","environment":"test"}""");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "billplz");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).IsSuccessStatusCode);
+
+        // Lived Billplz paid_amount is sen: RM10 → 1000.
+        var fields = BillplzWebhook.ParseForm("id=bill_1&paid=true&state=paid&paid_amount=10&currency=MYR&x_signature=pending&checkout_id=" + checkoutId);
+        var mac = BillplzWebhook.ComputeHmac(fields, "xsig", excludeExtra: false);
+        var form = "id=bill_1&paid=true&state=paid&paid_amount=10&currency=MYR&x_signature=" + mac + "&checkout_id=" + checkoutId;
+        using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/billplz/t1?checkout_id=" + checkoutId)
+        {
+            Content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded")
+        };
+        var response = await client.SendAsync(wh);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
+    }
 }

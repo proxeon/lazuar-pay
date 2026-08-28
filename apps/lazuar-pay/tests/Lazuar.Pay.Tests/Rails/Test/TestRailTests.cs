@@ -101,6 +101,22 @@ public class TestRailTests
     }
 
     [Test]
+    public async Task Test_webhook_wrong_amount_does_not_consume_event()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "test");
+        using var req = SignedTestWebhook($$"""{"id":"evt_mm","checkout_id":"{{checkoutId}}","amount_total":10,"currency":"myr"}""");
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task Test_webhook_without_id_is_400()
     {
         await using var factory = new PayApiFactory();

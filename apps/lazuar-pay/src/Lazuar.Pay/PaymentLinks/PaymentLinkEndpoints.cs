@@ -85,12 +85,32 @@ internal static class PaymentLinkEndpoints
         }
 
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
+        var productId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim();
+        if (productId is not null)
+        {
+            var product = await db.Products.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == productId && p.OrgId == orgId, cancellationToken);
+            if (product is null)
+            {
+                return PayErrors.Status(404, "Not Found", "product not found");
+            }
+
+            var price = await db.Prices.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProductId == productId, cancellationToken);
+            if (price is not null
+                && (price.Amount != body.Amount.Value
+                    || !string.Equals(price.Currency, currency, StringComparison.OrdinalIgnoreCase)))
+            {
+                return PayErrors.Status(400, "Bad Request", "amount must match the catalog price");
+            }
+        }
+
         var row = new PaymentLinkRow
         {
             Id = Guid.NewGuid().ToString("N"),
             OrgId = orgId!,
             Provider = provider,
-            ProductId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim(),
+            ProductId = productId,
             PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
             Amount = body.Amount.Value,
             Currency = currency,
@@ -142,7 +162,7 @@ internal static class PaymentLinkEndpoints
         var names = productIds.Count == 0
             ? new Dictionary<string, string>()
             : await db.Products.AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
+                .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
         return Results.Json(rows.Select(r =>

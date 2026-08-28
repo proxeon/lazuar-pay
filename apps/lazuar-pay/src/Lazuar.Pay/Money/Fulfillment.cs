@@ -175,7 +175,7 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
     }
 }
 
-public sealed class ChargesPausedException() : InvalidOperationException("Org charges are paused");
+public sealed class ChargesPausedException() : Exception("Org charges are paused");
 
 public static class MalaysiaTime
 {

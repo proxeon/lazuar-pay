@@ -158,7 +158,7 @@ public class PaymentLinkTests
             Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
         };
         var client = factory.CreateClient();
-        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        await PayTest.PutChip(client);
         var (token, _) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 2);
 
         var first = await PayTest.StartPay(client, token, "slot-same-1", """{"name":"Ada","email":"ada@acme.test"}""");
@@ -252,6 +252,70 @@ public class PaymentLinkTests
     }
 
     [Test]
+    public async Task Member_cannot_create_payment_link()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"member","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/payment-links", """{"org_id":"t1","amount":10,"provider":"test"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Admin_can_create_payment_link()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"admin","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/payment-links", """{"org_id":"t1","amount":10,"provider":"test"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+    }
+
+    [Test]
+    public async Task Suspended_writer_cannot_create_payment_link()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"owner","status":"suspended"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/payment-links", """{"org_id":"t1","amount":10,"provider":"test"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("suspended"));
+    }
+
+    [Test]
     public async Task Concurrent_start_on_one_person_link_admits_one_psp()
     {
         await using var factory = new PayApiFactory();
@@ -266,7 +330,7 @@ public class PaymentLinkTests
         };
         var clientA = factory.CreateClient();
         var clientB = factory.CreateClient();
-        await PayTest.Put(clientA, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        await PayTest.PutChip(clientA);
         var (token, _) = await PayTest.SeedPaymentLink(clientA, "chip", maxPayers: 1);
 
         var email = """{"name":"Ada","email":"ada@acme.test"}""";
@@ -316,7 +380,7 @@ public class PaymentLinkTests
             Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
         };
         var client = factory.CreateClient();
-        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        await PayTest.PutChip(client);
         var (token, _) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 1);
 
         var missing = await PayTest.StartPay(client, token, "slot-ghost-1");
@@ -364,7 +428,7 @@ public class PaymentLinkTests
             Content = new StringContent("""{"id":"purch_old","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
         };
         var client = factory.CreateClient();
-        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""");
+        await PayTest.PutChip(client);
         var (token, linkId) = await PayTest.SeedPaymentLink(client, "chip", maxPayers: 1);
 
         var start = await PayTest.StartPay(client, token, "slot-stale-1", """{"name":"Ada","email":"ada@acme.test"}""");

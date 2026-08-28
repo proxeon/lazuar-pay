@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
@@ -73,20 +74,29 @@ internal static class GatewayEndpoints
             return PayErrors.Status(400, "Bad Request", "public_merchant_id is not used for this provider");
         }
 
-        var environment = string.IsNullOrWhiteSpace(body?.Environment) ? "test" : body.Environment.Trim().ToLowerInvariant();
-        if (environment is not ("test" or "live"))
-        {
-            return PayErrors.Status(400, "Bad Request", "environment must be test or live");
-        }
-
         if (provider == PayProviders.Billplz && string.IsNullOrWhiteSpace(body?.Environment))
         {
             return PayErrors.Status(400, "Bad Request", "environment is required");
         }
 
+        string? environment = null;
+        if (!string.IsNullOrWhiteSpace(body?.Environment))
+        {
+            environment = body.Environment.Trim().ToLowerInvariant();
+            if (environment is not ("test" or "live"))
+            {
+                return PayErrors.Status(400, "Bad Request", "environment must be test or live");
+            }
+        }
+
         if (provider == PayProviders.Razorpay && !RazorpayHosted.TrySplit(secret, out _, out _))
         {
             return PayErrors.Status(400, "Bad Request", "secret must be key_id:key_secret");
+        }
+
+        if (provider == PayProviders.Chip && !TryChipPem(webhookSecret))
+        {
+            return PayErrors.Status(400, "Bad Request", "webhook_secret must be a CHIP PEM");
         }
 
         var last4 = secret.Length >= 4 ? secret[^4..] : secret;
@@ -116,7 +126,7 @@ internal static class GatewayEndpoints
                 Ciphertext = wrapped,
                 WebhookCiphertext = wrappedWh,
                 PublicMerchantId = publicId,
-                Environment = environment,
+                Environment = environment ?? "test",
                 Last4 = last4,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -127,7 +137,11 @@ internal static class GatewayEndpoints
             row.Ciphertext = wrapped;
             row.WebhookCiphertext = wrappedWh;
             row.PublicMerchantId = publicId;
-            row.Environment = environment;
+            if (environment is not null)
+            {
+                row.Environment = environment;
+            }
+
             row.Last4 = last4;
             row.UpdatedAt = DateTimeOffset.UtcNow;
         }
@@ -245,6 +259,20 @@ internal static class GatewayEndpoints
         environment = row.Environment,
         webhook_configured = !string.IsNullOrWhiteSpace(row.WebhookCiphertext)
     };
+
+    static bool TryChipPem(string pem)
+    {
+        try
+        {
+            using var rsa = RSA.Create();
+            rsa.ImportFromPem(pem);
+            return rsa.KeySize >= 2048;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     static object TestGatewayJson(string orgId) => new
     {

@@ -131,7 +131,7 @@ public class ChipRailTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
+        await PayTest.PutChip(client);
         var (token, _) = await PayTest.SeedCheckout(client, "chip");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
@@ -147,7 +147,7 @@ public class ChipRailTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
+        await PayTest.PutChip(client);
         using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/chip/t1")
         {
             Content = new StringContent("  ", Encoding.UTF8, "application/json")
@@ -161,7 +161,7 @@ public class ChipRailTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
+        await PayTest.PutChip(client);
         var (token, _) = await PayTest.SeedCheckout(client, "chip");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
@@ -170,5 +170,42 @@ public class ChipRailTests
         var response = await client.SendAsync(start);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(factory.Psp.LastUri, Is.Null);
+    }
+
+    [Test]
+    public async Task Chip_amount_mismatch_does_not_consume_event()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        using var rsa = RSA.Create(2048);
+        var pem = rsa.ExportSubjectPublicKeyInfoPem();
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = pem, public_merchant_id = "brand_1" }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "chip");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"name":"Ada","email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        // Lived CHIP total is sen: RM10 → 1000. A major-unit 10 must not pay.
+        var payload = "{\"event_type\":\"purchase.paid\",\"id\":\"purch_1\",\"purchase\":{\"id\":\"purch_1\",\"total\":10,\"currency\":\"MYR\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\"}}}";
+        var sig = Convert.ToBase64String(rsa.SignData(Encoding.UTF8.GetBytes(payload), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+        using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/chip/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        wh.Headers.TryAddWithoutValidation("X-Signature", sig);
+        var response = await client.SendAsync(wh);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.PspWebhookEvents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
     }
 }

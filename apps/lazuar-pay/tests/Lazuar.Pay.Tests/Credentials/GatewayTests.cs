@@ -143,7 +143,7 @@ public class GatewayTests
         factory.One.Responder = req => Role("owner", req);
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
-        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"pem","public_merchant_id":"brand_1"}""");
+        await PayTest.PutChip(client);
 
         using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateways");
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
@@ -226,5 +226,46 @@ public class GatewayTests
         };
         keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         Assert.That((await client.SendAsync(keys)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Chip_put_rejects_non_pem_webhook_secret()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
+        {
+            Content = new StringContent("""{"provider":"chip","secret":"chip_sk","webhook_secret":"nope","public_merchant_id":"brand_1"}""", Encoding.UTF8, "application/json")
+        };
+        keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(keys);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("PEM"));
+    }
+
+    [Test]
+    public async Task Stripe_put_without_environment_keeps_previous()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        using var first = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
+        {
+            Content = new StringContent("""{"provider":"stripe","secret":"sk_live_dummy","webhook_secret":"whsec_abc","environment":"live"}""", Encoding.UTF8, "application/json")
+        };
+        first.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        Assert.That((await client.SendAsync(first)).IsSuccessStatusCode);
+        using var second = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
+        {
+            Content = new StringContent("""{"provider":"stripe","secret":"sk_live_dummy2","webhook_secret":"whsec_abc"}""", Encoding.UTF8, "application/json")
+        };
+        second.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var put = await client.SendAsync(second);
+        Assert.That(put.IsSuccessStatusCode, await put.Content.ReadAsStringAsync());
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway?provider=stripe");
+        get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        using var doc = JsonDocument.Parse(await (await client.SendAsync(get)).Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("environment").GetString(), Is.EqualTo("live"));
     }
 }

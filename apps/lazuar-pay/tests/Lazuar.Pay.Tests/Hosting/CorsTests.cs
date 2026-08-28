@@ -1,6 +1,5 @@
 using System.Net;
 using Lazuar.Pay.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Tests;
@@ -10,7 +9,7 @@ public class CorsTests
     [Test]
     public async Task Health_allows_merchant_origin()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new PayApiFactory();
         var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation("Origin", "http://localhost:5178");
@@ -22,7 +21,7 @@ public class CorsTests
     [Test]
     public async Task Health_allows_checkout_origin()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new PayApiFactory();
         var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation("Origin", "http://localhost:5179");
@@ -34,7 +33,7 @@ public class CorsTests
     [Test]
     public async Task Health_allows_preview_checkout_origin()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new PayApiFactory();
         var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation("Origin", "http://localhost:4179");
@@ -46,7 +45,7 @@ public class CorsTests
     [Test]
     public async Task Health_does_not_allow_ops_origin()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new PayApiFactory();
         var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation("Origin", "http://localhost:3003");
@@ -58,7 +57,7 @@ public class CorsTests
     [Test]
     public async Task Health_does_not_allow_portal_origin()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new PayApiFactory();
         var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation("Origin", "http://localhost:3004");

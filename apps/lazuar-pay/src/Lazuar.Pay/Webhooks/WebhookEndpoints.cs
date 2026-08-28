@@ -160,6 +160,7 @@ internal static class WebhookEndpoints
         }
         catch (ChargesPausedException)
         {
+            // Dedicated type so this cannot be shadowed by InvalidOperationException → 500.
             await tx.RollbackAsync(ct);
             return PayErrors.Status(409, "Conflict", "Org charges are paused");
         }

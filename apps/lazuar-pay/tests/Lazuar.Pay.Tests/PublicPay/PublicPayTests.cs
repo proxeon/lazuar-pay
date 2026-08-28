@@ -45,14 +45,7 @@ public class PublicPayTests
             Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
         };
         var client = factory.CreateClient();
-        using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
-        {
-            Content = new StringContent(
-                """{"provider":"chip","secret":"chip_sk","webhook_secret":"-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL0=\n-----END PUBLIC KEY-----","public_merchant_id":"brand_1"}""",
-                Encoding.UTF8, "application/json")
-        };
-        keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode, Is.True);
+        await PayTest.PutChip(client);
 
         var (token, checkoutId) = await PayTest.SeedCheckout(client, "chip");
 
@@ -94,14 +87,7 @@ public class PublicPayTests
             Content = new StringContent("""{"id":"purch_1","checkout_url":"https://gate.chip-in.asia/p/x"}""", Encoding.UTF8, "application/json")
         };
         var client = factory.CreateClient();
-        using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
-        {
-            Content = new StringContent(
-                """{"provider":"chip","secret":"chip_sk","webhook_secret":"k","public_merchant_id":"brand_1"}""",
-                Encoding.UTF8, "application/json")
-        };
-        keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode, Is.True);
+        await PayTest.PutChip(client);
 
         var (token, _) = await PayTest.SeedCheckout(client, "chip");
 
@@ -178,7 +164,7 @@ public class PublicPayTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
+        await PayTest.PutChip(client);
         var (token, _) = await PayTest.SeedCheckout(client, "chip");
         var get = await client.GetAsync($"/v1/pay/{token}");
         using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());

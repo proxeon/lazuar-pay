@@ -58,8 +58,15 @@ PayCors.Add(builder);
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.MigrateAsync();
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "pay-db schema mismatch; run task pay:db:migrate");
+    }
 }
 
 app.UseCors();

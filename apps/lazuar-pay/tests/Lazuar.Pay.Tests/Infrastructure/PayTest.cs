@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -27,6 +28,21 @@ internal static class PayTest
         var response = await client.SendAsync(keys);
         Assert.That(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
+
+    public static string ChipPem()
+    {
+        using var rsa = RSA.Create(2048);
+        return rsa.ExportSubjectPublicKeyInfoPem();
+    }
+
+    public static Task PutChip(HttpClient client) =>
+        Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "chip",
+            secret = "chip_sk",
+            webhook_secret = ChipPem(),
+            public_merchant_id = "brand_1"
+        }));
 
     public static async Task<(string Token, string CheckoutId)> SeedCheckout(HttpClient client, string provider = "stripe")
     {
