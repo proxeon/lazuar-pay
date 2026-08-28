@@ -16,6 +16,6 @@ public sealed class SolanaHosted(PayDbContext db) : IHostedRail
             throw new InvalidOperationException("rail not configured");
         }
 
-        throw new InvalidOperationException("rail not configured");
+        return SolanaPayUri.Create(checkout, cred);
     }
 }

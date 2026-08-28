@@ -25,6 +25,7 @@ public sealed class CheckoutRow
     public string? SuccessUrl { get; set; }
     public string? CancelUrl { get; set; }
     public string? PspRedirectUrl { get; set; }
+    public string? SolanaPayUrl { get; set; }
     public string? PayerName { get; set; }
     public string? PayerEmail { get; set; }
     public string? ProductId { get; set; }

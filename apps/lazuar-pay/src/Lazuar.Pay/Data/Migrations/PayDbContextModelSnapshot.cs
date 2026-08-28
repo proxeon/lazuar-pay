@@ -132,6 +132,9 @@ namespace Lazuar.Pay.Data.Migrations
                     b.Property<string>("PspRedirectUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("SolanaPayUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("PublicToken")
                         .IsRequired()
                         .HasColumnType("text");

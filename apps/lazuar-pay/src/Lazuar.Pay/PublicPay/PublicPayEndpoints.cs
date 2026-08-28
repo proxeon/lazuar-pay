@@ -193,9 +193,16 @@ internal static class PublicPayEndpoints
             return PayErrors.Status(400, "Bad Request", "email is required");
         }
 
-        if (!string.IsNullOrWhiteSpace(row.PspRedirectUrl)
+        if (!string.IsNullOrWhiteSpace(row.SolanaPayUrl)
+            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
             || !string.IsNullOrWhiteSpace(row.ProviderSessionId))
         {
+            if (!string.IsNullOrWhiteSpace(row.SolanaPayUrl))
+            {
+                await db.SaveChangesAsync(ct);
+                return Results.Json(new { solana_pay_url = row.SolanaPayUrl }, OneClient.Json);
+            }
+
             if (string.IsNullOrWhiteSpace(row.PspRedirectUrl))
             {
                 return PayErrors.Status(409, "Conflict", "Checkout is not open");
@@ -223,8 +230,16 @@ internal static class PublicPayEndpoints
             // already created a session may mint a second session on retry.
             var hosted = await rail.CreateHostedUrlAsync(row, ct);
             row.Provider = name;
-            row.PspRedirectUrl = hosted.RedirectUrl;
             row.ProviderSessionId = hosted.ProviderSessionId;
+            if (PayProviders.IsSolana(name))
+            {
+                row.SolanaPayUrl = hosted.SolanaPayUrl;
+                row.PspRedirectUrl = null;
+                await db.SaveChangesAsync(ct);
+                return Results.Json(new { solana_pay_url = hosted.SolanaPayUrl }, OneClient.Json);
+            }
+
+            row.PspRedirectUrl = hosted.RedirectUrl;
             if (PayProviders.IsTest(name))
             {
                 db.PspWebhookEvents.Add(new PspWebhookEventRow
@@ -385,7 +400,8 @@ internal static class PublicPayEndpoints
     {
         if (row.PaymentLinkId is null
             || row.Status != "open"
-            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl))
+            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
+            || !string.IsNullOrWhiteSpace(row.SolanaPayUrl))
         {
             return;
         }
@@ -421,7 +437,9 @@ internal static class PublicPayEndpoints
     {
         var provider = row.Provider;
         var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
-        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
+        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
+            || !string.IsNullOrWhiteSpace(row.SolanaPayUrl);
+        var isSolana = PayProviders.TryNormalize(provider, out var rail) && PayProviders.IsSolana(rail);
         return Results.Json(new
         {
             token,
@@ -434,7 +452,8 @@ internal static class PublicPayEndpoints
             started,
             mine,
             provider,
-            redirect_url = started && row.Status == "open" ? row.PspRedirectUrl : null,
+            redirect_url = started && row.Status == "open" && !isSolana ? row.PspRedirectUrl : null,
+            solana_pay_url = started && row.Status == "open" && isSolana ? row.SolanaPayUrl : null,
             remaining,
             max_payers = maxPayers,
             paid_count = paidCount,
@@ -463,6 +482,7 @@ internal static class PublicPayEndpoints
             mine = false,
             provider = link.Provider,
             redirect_url = redirectUrl,
+            solana_pay_url = (string?)null,
             remaining,
             max_payers = link.MaxPayers,
             paid_count = paid,
