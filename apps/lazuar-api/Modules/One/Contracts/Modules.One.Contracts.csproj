@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
-    <ProjectReference Include="..\..\..\..\..\packages\api-types-dotnet\Lazuar.ApiContracts.csproj" />
-  </ItemGroup>
-</Project>

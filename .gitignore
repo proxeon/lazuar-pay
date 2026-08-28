@@ -80,6 +80,25 @@ docs/chip-asia/
 docs/payment/
 
 # ----------------------------------------------------------------------
+# Hub museum — stay on disk, not in public clones of this branch
+# ----------------------------------------------------------------------
+/docs/
+/issues/
+/plans/
+/apps/lazuar-admin/
+/apps/lazuar-api/
+/apps/lazuar-developers/
+/apps/lazuar-docs/
+/apps/lazuar-ops/
+/apps/lazuar-portal/
+/examples/hub-cashier-next/
+/packages/api-spec/
+/packages/api-types-dotnet/
+/packages/api-types-ts/
+/packages/lhdn-sdk-dotnet/
+/packages/lhdn-sdk-ts/
+
+# ----------------------------------------------------------------------
 # Local sandbox secrets (recreated by scripts/lhdn_sandbox)
 # ----------------------------------------------------------------------
 scripts/lhdn_sandbox/cookies.txt

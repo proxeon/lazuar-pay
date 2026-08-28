@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-  <!-- Dependency-light: agent extension points (AgentToolAttribute, IAgentPromptProvider) are BCL-only. -->
-</Project>
