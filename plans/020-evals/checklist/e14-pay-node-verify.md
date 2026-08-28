@@ -21,17 +21,17 @@
 
 ## E14.1
 
-- [ ] HTTP listener reads **raw** body
-- [ ] Verify with HMAC-SHA256 hex of `{timestamp}.{body}` using full `PAY_WEBHOOK_SECRET`
-- [ ] Headers: `X-Lazuar-Signature`, `X-Lazuar-Timestamp`
-- [ ] 401 on fail; 200 `{ ok: true }` on pass
-- [ ] Ignore unknown `type` except `payment.completed` (and `webhook.test` if W30)
+- [x] HTTP listener reads **raw** body
+- [x] Verify with HMAC-SHA256 hex of `{timestamp}.{body}` using full `PAY_WEBHOOK_SECRET`
+- [x] Headers: `X-Lazuar-Signature`, `X-Lazuar-Timestamp`
+- [x] 401 on fail; 200 `{ ok: true }` on pass
+- [x] Ignore unknown `type` except `payment.completed` (and `webhook.test` if W30)
 
 ## E14.2 Must not
 
-- [ ] Do not `JSON.parse` before HMAC
-- [ ] Do not use Hub combined-only as the only parser unless you also accept split
+- [x] Do not `JSON.parse` before HMAC
+- [x] Do not use Hub combined-only as the only parser unless you also accept split
 
 ## E14.3 Exit
 
-- [ ] Unblocked for E15
+- [x] Unblocked for E15

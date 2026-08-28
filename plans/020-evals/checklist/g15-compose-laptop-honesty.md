@@ -22,15 +22,15 @@
 
 ## G15.1
 
-- [ ] Compose comments: profile `apps` = laptop containers
-- [ ] Either a separate `docker-compose.pay.prod.yml` **or** fail boot when Production + empty WrapKey (H12)
-- [ ] Document Production CORS / VITE HTTPS origins
-- [ ] Do not set `ASPNETCORE_ENVIRONMENT=Production` in profile apps **with** laptop CORS unless H12/H14 catch it
+- [x] Compose comments: profile `apps` = laptop containers
+- [x] Either a separate `docker-compose.pay.prod.yml` **or** fail boot when Production + empty WrapKey (H12)
+- [x] Document Production CORS / VITE HTTPS origins
+- [x] Do not set `ASPNETCORE_ENVIRONMENT=Production` in profile apps **with** laptop CORS unless H12/H14 catch it
 
 ## G15.2 Must not
 
-- [ ] Do not retarget root Hub compose onto 8081
+- [x] Do not retarget root Hub compose onto 8081
 
 ## G15.3 Exit
 
-- [ ] Unblocked for G16
+- [x] Unblocked for G16

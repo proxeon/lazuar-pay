@@ -21,17 +21,17 @@
 
 ## G17.1
 
-- [ ] Pay README: public **https** URL `POST {origin}/v1/one/webhooks`
-- [ ] One UI or curl: create endpoint, copy `whsec_` once
-- [ ] Pay writer `PUT /v1/orgs/{orgId}/one-webhook`
-- [ ] One SSRF blocks loopback — laptop needs a tunnel
-- [ ] Process `Pay__OneWebhookSecret` is one-shop fallback, not multi-shop design
+- [x] Pay README: public **https** URL `POST {origin}/v1/one/webhooks`
+- [x] One UI or curl: create endpoint, copy `whsec_` once
+- [x] Pay writer `PUT /v1/orgs/{orgId}/one-webhook`
+- [x] One SSRF blocks loopback — laptop needs a tunnel
+- [x] Process `Pay__OneWebhookSecret` is one-shop fallback, not multi-shop design
 
 ## G17.2 Must not
 
-- [ ] Do not add a Pay Zitadel PAT to register automatically
-- [ ] Do not mix this `whsec_` with Plane C (W14) or Stripe vault
+- [x] Do not add a Pay Zitadel PAT to register automatically
+- [x] Do not mix this `whsec_` with Plane C (W14) or Stripe vault
 
 ## G17.3 Exit
 
-- [ ] Unblocked for G18
+- [x] Unblocked for G18

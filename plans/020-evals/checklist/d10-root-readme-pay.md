@@ -21,16 +21,16 @@
 
 ## D10.1
 
-- [ ] Root README: Pay host 8081, merchant 5178, checkout 5179, One 8080
-- [ ] Hub museum called museum; do not set `VITE_API_URL` of ops to Pay
-- [ ] Link `apps/lazuar-pay/README.md`
-- [ ] Do not present `examples/hub-cashier-next` as Pay (E10)
+- [x] Root README: Pay host 8081, merchant 5178, checkout 5179, One 8080
+- [x] Hub museum called museum; do not set `VITE_API_URL` of ops to Pay
+- [x] Link `apps/lazuar-pay/README.md`
+- [x] Do not present `examples/hub-cashier-next` as Pay (E10)
 
 ## D10.2 Must not
 
-- [ ] Do not say production-ready
-- [ ] Do not say we have merchant webhooks until W21
+- [x] Do not say production-ready
+- [x] Do not say we have merchant webhooks until W21
 
 ## D10.3 Exit
 
-- [ ] Unblocked for D11
+- [x] Unblocked for D11

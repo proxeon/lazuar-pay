@@ -21,10 +21,10 @@
 
 ## G12.1
 
-- [ ] Xendit idempotency header (`Idempotency-key` is their usual) keyed on `checkout.Id` **or** persist-before-HTTP
-- [ ] FakePsp retry test
-- [ ] Do not change SETTLED mapping in this phase
+- [x] Xendit idempotency header (`Idempotency-key` is their usual) keyed on `checkout.Id` **or** persist-before-HTTP
+- [x] FakePsp retry test
+- [x] Do not change SETTLED mapping in this phase
 
 ## G12.2 Exit
 
-- [ ] Unblocked for G13
+- [x] Unblocked for G13

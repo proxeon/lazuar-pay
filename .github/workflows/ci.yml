@@ -110,6 +110,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Test focused Pay host
         run: dotnet test apps/lazuar-pay/Lazuar.Pay.slnx --nologo --verbosity minimal
+      - name: Test merchant and checkout
+        run: |
+          pnpm --filter lazuar-pay-merchant test
+          pnpm --filter lazuar-pay-checkout test
       - name: Build merchant and checkout
         run: |
           pnpm --filter lazuar-pay-merchant build

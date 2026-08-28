@@ -21,15 +21,15 @@
 
 ## G11.1
 
-- [ ] Idempotency header/body Billplz accepts **or** persist-before-HTTP
-- [ ] FakePsp: first 201, SaveChanges fail, retry does not create a second bill
-- [ ] Do not weaken localhost callback 400
+- [x] Idempotency header/body Billplz accepts **or** persist-before-HTTP
+- [x] FakePsp: first 201, SaveChanges fail, retry does not create a second bill
+- [x] Do not weaken localhost callback 400
 
 ## G11.2 Must not
 
-- [ ] Do not copy Hub Billplz module
-- [ ] Do not skip because “G10 CHIP is the dogfood rail” without saying so in K99b
+- [x] Do not copy Hub Billplz module
+- [x] Do not skip because “G10 CHIP is the dogfood rail” without saying so in K99b
 
 ## G11.3 Exit
 
-- [ ] Unblocked for G12
+- [x] Unblocked for G12

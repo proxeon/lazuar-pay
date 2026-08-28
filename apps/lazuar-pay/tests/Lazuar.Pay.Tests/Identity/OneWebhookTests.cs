@@ -403,4 +403,15 @@ public class OneWebhookTests
         using var scope = factory.Services.CreateScope();
         Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
     }
+
+    [Test]
+    public async Task Nested_data_tenant_id_suspends()
+    {
+        await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
+        var client = factory.CreateClient();
+        var body = """{"id":"del_nested","type":"tenant.suspended","data":{"tenant_id":"t1"}}""";
+        Assert.That((await PostOne(client, body, Secret)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
+    }
 }

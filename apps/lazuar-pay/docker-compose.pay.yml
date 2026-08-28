@@ -2,7 +2,9 @@
 #   docker compose -f apps/lazuar-pay/docker-compose.pay.yml up -d            # Postgres 5435
 #   docker compose -f apps/lazuar-pay/docker-compose.pay.yml --profile apps up -d --build
 #
+# --profile apps is laptop containers (Development, localhost CORS/VITE). Not production.
 # Production CORS and VITE_* must be real HTTPS origins, not laptop :5178/:5179.
+# Live cards need real Postgres + backup; the named volume is dogfood durability only.
 # Do not add ops :3003 or portal :3004. Do not retarget Hub compose to 8081.
 services:
   pay-db:
@@ -13,6 +15,8 @@ services:
       POSTGRES_DB: lazuar_pay
     ports:
       - "5435:5432"
+    volumes:
+      - pay-db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d lazuar_pay"]
       interval: 5s
@@ -71,3 +75,6 @@ services:
       - "5179:5179"
     depends_on:
       - pay
+
+volumes:
+  pay-db:

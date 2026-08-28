@@ -62,6 +62,7 @@ public sealed class RazorpayHosted(PayDbContext db, SecretBox box, IHttpClientFa
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + "payment_links");
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(keyId + ":" + keySecret)));
+        request.Headers.TryAddWithoutValidation("X-Razorpay-Idempotency", "lazuar-checkout:" + checkout.Id);
         request.Content = JsonContent.Create(payload);
         using var response = await client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);

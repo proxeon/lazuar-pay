@@ -22,10 +22,10 @@
 
 ## G18.1
 
-- [ ] `ci.yml` job `pay` (or sibling) runs `pnpm --filter lazuar-pay-merchant test` and checkout test
-- [ ] Checkout `vite build` with explicit `VITE_PAY_API_URL` dummy https if Dockerfile requires it
-- [ ] Do not skip on “unit is grep”
+- [x] `ci.yml` job `pay` (or sibling) runs `pnpm --filter lazuar-pay-merchant test` and checkout test
+- [x] Checkout `vite build` with explicit `VITE_PAY_API_URL` dummy https if Dockerfile requires it
+- [x] Do not skip on “unit is grep”
 
 ## G18.2 Exit
 
-- [ ] Unblocked for G19
+- [x] Unblocked for G19

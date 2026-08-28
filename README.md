@@ -1,6 +1,8 @@
 
 # Lazuar Platform (Checkout-as-a-Service)
 
+**Focused Pay (this repo’s new cashier)** lives on **8081** — `apps/lazuar-pay`, merchant `:5178`, checkout `:5179`. Identity is sibling **lazuar-one** on **8080**. Hub `lazuar-api` / ops `:3003` / portal `:3004` in this tree is **museum**. Integrators: [`apps/lazuar-pay/README.md`](apps/lazuar-pay/README.md) and [`examples/pay-node`](examples/pay-node). Hub sample `examples/hub-cashier-next` is **not** Pay.
+
 > **A Sovereign Checkout, Billing, and Compliance Engine for Asian Creators and B2B SaaS Founders.**
 
 Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide checkout, subscriptions, a double-entry ledger, email recovery, and Malaysia MyInvois (LHDN) e-invoicing for tenants who configure it.

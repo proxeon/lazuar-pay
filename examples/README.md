@@ -6,6 +6,7 @@ They are workspace members (`examples/*` in `pnpm-workspace.yaml`) so a single r
 
 | Package | Path | Port | Start |
 |---------|------|------|-------|
-| `@examples/hub-cashier-next` | [`hub-cashier-next`](./hub-cashier-next) | **3020** | `pnpm example:cashier` or `pnpm --filter @examples/hub-cashier-next dev` |
+| `@examples/pay-node` | [`pay-node`](./pay-node) | **3021** | `pnpm --filter @examples/pay-node start` — **focused Pay 8081** |
+| `@examples/hub-cashier-next` | [`hub-cashier-next`](./hub-cashier-next) | **3020** | `pnpm example:cashier` — **museum Hub 8080**, `sk_`, not Pay |
 
 No Dockerfile, no GHCR matrix entry, and no required CI job for samples. Copy-out friendly: samples intentionally avoid `@repo/*` packages and payment-gateway SDKs.

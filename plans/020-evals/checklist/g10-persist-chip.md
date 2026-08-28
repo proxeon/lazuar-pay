@@ -23,17 +23,17 @@
 
 ## G10.1 Hatch (pick one and test it)
 
-- [ ] **Either** persist a “starting” row / session id before HTTP (harder with current schema)
-- [ ] **Or** send a CHIP-supported idempotency header keyed on `checkout.Id` (steal Stripe judgment)
-- [ ] Retry after FakePsp 201 + SaveChanges throw: second CHIP POST is 0 **or** CHIP treats it as the same purchase
-- [ ] Occupancy: still one `open` child
+- [x] **Either** persist a “starting” row / session id before HTTP (harder with current schema)
+- [x] **Or** send a CHIP-supported idempotency header keyed on `checkout.Id` (steal Stripe judgment)
+- [x] Retry after FakePsp 201 + SaveChanges throw: second CHIP POST is 0 **or** CHIP treats it as the same purchase
+- [x] Occupancy: still one `open` child
 
 ## G10.2 Must not
 
-- [ ] Do not mark 014 done in YAML without this source change
-- [ ] Do not import Hub CHIP registrar
-- [ ] Do not “fix” all rails in one fat PR if you only dogfood CHIP — but do not claim G11–G13 done
+- [x] Do not mark 014 done in YAML without this source change
+- [x] Do not import Hub CHIP registrar
+- [x] Do not “fix” all rails in one fat PR if you only dogfood CHIP — but do not claim G11–G13 done
 
 ## G10.3 Exit
 
-- [ ] Unblocked for G11 (same pattern, different HTTP)
+- [x] Unblocked for G11 (same pattern, different HTTP)

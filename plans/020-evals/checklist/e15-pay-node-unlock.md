@@ -19,11 +19,11 @@
 
 ## E15.1
 
-- [ ] In-memory map `checkout_id → unlocked`
-- [ ] On verified `payment.completed`, set unlocked
-- [ ] GET `/unlocked/:checkoutId` for demo
-- [ ] Do not call One `POST /members`
+- [x] In-memory map `checkout_id → unlocked`
+- [x] On verified `payment.completed`, set unlocked
+- [x] GET `/unlocked/:checkoutId` for demo
+- [x] Do not call One `POST /members`
 
 ## E15.2 Exit
 
-- [ ] Unblocked for E16
+- [x] Unblocked for E16

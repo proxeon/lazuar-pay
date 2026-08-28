@@ -82,6 +82,7 @@ group "default" {
 }
 
 # Focused Pay. Not Hub. Bake separately: `docker buildx bake pay`
+# Do not add these targets to the Hub ghcr.yml SSH deploy job.
 group "pay" {
   targets = ["lazuar-pay", "lazuar-pay-merchant", "lazuar-pay-checkout"]
 }

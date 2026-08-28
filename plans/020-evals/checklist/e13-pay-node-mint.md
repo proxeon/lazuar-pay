@@ -20,17 +20,17 @@
 
 ## E13.1
 
-- [ ] POST JSON snake_case: `org_id`, `amount`, `currency` MYR, `provider: test` (laptop) or a real rail
-- [ ] Header `Authorization: Bearer $PAY_API_KEY`
-- [ ] Read `pay_url` + `public_token` + `id`
-- [ ] Do not clone merchant Vite
-- [ ] Idempotency-Key optional header documented
+- [x] POST JSON snake_case: `org_id`, `amount`, `currency` MYR, `provider: test` (laptop) or a real rail
+- [x] Header `Authorization: Bearer $PAY_API_KEY`
+- [x] Read `pay_url` + `public_token` + `id`
+- [x] Do not clone merchant Vite
+- [x] Idempotency-Key optional header documented
 
 ## E13.2 Must not
 
-- [ ] Do not treat success_url as paid
-- [ ] Do not call Hub `/api/v1`
+- [x] Do not treat success_url as paid
+- [x] Do not call Hub `/api/v1`
 
 ## E13.3 Exit
 
-- [ ] Unblocked for E14
+- [x] Unblocked for E14

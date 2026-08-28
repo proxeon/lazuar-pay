@@ -22,19 +22,19 @@
 
 ## E11.1
 
-- [ ] Path `examples/pay-node`
-- [ ] Package name `@examples/pay-node` (or unscoped)
-- [ ] Port **3021** (not 3002–3005, not Hub 3020 unless documented)
-- [ ] pnpm workspace include `examples/*` if not already; turbo **exclude** from product build
-- [ ] No Dockerfile
-- [ ] No `@repo/api-types-ts`, no `@lazuar/one-client` as a **required** runtime dep
-- [ ] Plain `fetch`
+- [x] Path `examples/pay-node`
+- [x] Package name `@examples/pay-node` (or unscoped)
+- [x] Port **3021** (not 3002–3005, not Hub 3020 unless documented)
+- [x] pnpm workspace include `examples/*` if not already; turbo **exclude** from product build
+- [x] No Dockerfile
+- [x] No `@repo/api-types-ts`, no `@lazuar/one-client` as a **required** runtime dep
+- [x] Plain `fetch`
 
 ## E11.2 Must not
 
-- [ ] Do not wait on npm publish
-- [ ] Do not import Pay C#
+- [x] Do not wait on npm publish
+- [x] Do not import Pay C#
 
 ## E11.3 Exit
 
-- [ ] Unblocked for E12
+- [x] Unblocked for E12

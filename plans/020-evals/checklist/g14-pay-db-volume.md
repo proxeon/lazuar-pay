@@ -20,14 +20,14 @@
 
 ## G14.1
 
-- [ ] `docker-compose.pay.yml` `pay-db` has a named volume
-- [ ] Do not claim this is production backup
-- [ ] Comment: live cards need real Postgres + backup
+- [x] `docker-compose.pay.yml` `pay-db` has a named volume
+- [x] Do not claim this is production backup
+- [x] Comment: live cards need real Postgres + backup
 
 ## G14.2 Must not
 
-- [ ] Do not retarget Hub compose volumes onto 5435 as the Pay story
+- [x] Do not retarget Hub compose volumes onto 5435 as the Pay story
 
 ## G14.3 Exit
 
-- [ ] Unblocked for G15
+- [x] Unblocked for G15

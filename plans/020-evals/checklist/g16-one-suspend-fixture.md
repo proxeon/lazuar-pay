@@ -21,16 +21,16 @@
 
 ## G16.1
 
-- [ ] Capture (sanitize) a real dispatcher POST from sibling One against a tunnel, **or** copy One’s documented envelope from **live** One source (`type` vs `event_type`, `tenant_id` location)
-- [ ] Fixture file in Pay tests (no secrets)
-- [ ] Test: that JSON + product headers → `ChargesPaused` true
-- [ ] If envelope differs from `PeekOrgId`, **fix mapping** — do not import `Modules.One`
+- [x] Capture (sanitize) a real dispatcher POST from sibling One against a tunnel, **or** copy One’s documented envelope from **live** One source (`type` vs `event_type`, `tenant_id` location)
+- [x] Fixture file in Pay tests (no secrets)
+- [x] Test: that JSON + product headers → `ChargesPaused` true
+- [x] If envelope differs from `PeekOrgId`, **fix mapping** — do not import `Modules.One`
 
 ## G16.2 Must not
 
-- [ ] Do not call this “production-proven” without the fixture
-- [ ] Do not flip 011/11 from this phase
+- [x] Do not call this “production-proven” without the fixture
+- [x] Do not flip 011/11 from this phase
 
 ## G16.3 Exit
 
-- [ ] Unblocked for G17
+- [x] Unblocked for G17

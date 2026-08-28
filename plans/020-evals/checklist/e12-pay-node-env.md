@@ -20,11 +20,11 @@
 
 ## E12.1
 
-- [ ] `.env.example`: `PAY_API_URL=http://localhost:8081`, `PAY_ORG_ID=`, `PAY_API_KEY=lzr_sk_…`, `PAY_WEBHOOK_SECRET=whsec_…`
-- [ ] Never `VITE_` for the key
-- [ ] Document One mint curl (or “paste from lazuar-app”)
-- [ ] Document PUT Pay `/v1/orgs/{orgId}/webhooks` with sample’s public URL (Testing loopback)
+- [x] `.env.example`: `PAY_API_URL=http://localhost:8081`, `PAY_ORG_ID=`, `PAY_API_KEY=lzr_sk_…`, `PAY_WEBHOOK_SECRET=whsec_…`
+- [x] Never `VITE_` for the key
+- [x] Document One mint curl (or “paste from lazuar-app”)
+- [x] Document PUT Pay `/v1/orgs/{orgId}/webhooks` with sample’s public URL (Testing loopback)
 
 ## E12.2 Exit
 
-- [ ] Unblocked for E13
+- [x] Unblocked for E13

@@ -252,6 +252,11 @@ internal static class OneWebhookEndpoints
             }
         }
 
+        if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
+        {
+            return ReadOrgId(data);
+        }
+
         return null;
     }
 }

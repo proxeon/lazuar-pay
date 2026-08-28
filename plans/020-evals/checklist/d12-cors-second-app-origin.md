@@ -21,14 +21,14 @@
 
 ## D12.1
 
-- [ ] README: set `Pay__CorsOrigins` to a **replace** CSV including merchant, checkout, **and** the second-app origin
-- [ ] Warning: setting the CSV replaces Development laptop defaults
-- [ ] Never AllowAnyOrigin; never ops :3003 / portal :3004
+- [x] README: set `Pay__CorsOrigins` to a **replace** CSV including merchant, checkout, **and** the second-app origin
+- [x] Warning: setting the CSV replaces Development laptop defaults
+- [x] Never AllowAnyOrigin; never ops :3003 / portal :3004
 
 ## D12.2 Must not
 
-- [ ] Do not add a wildcard in code to “help” samples
+- [x] Do not add a wildcard in code to “help” samples
 
 ## D12.3 Exit
 
-- [ ] Track D complete
+- [x] Track D complete

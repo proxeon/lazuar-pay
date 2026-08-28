@@ -22,15 +22,15 @@
 
 ## G19.1
 
-- [ ] Workflow or matrix that `docker buildx bake pay` **without** Hub deploy job
-- [ ] Image names `lazuar-pay`, `lazuar-pay-merchant`, `lazuar-pay-checkout`
-- [ ] Labels not “Lazuar Hub CaaS”
-- [ ] Do not add Pay to Hub `ghcr.yml` SSH path
+- [x] Workflow or matrix that `docker buildx bake pay` **without** Hub deploy job
+- [x] Image names `lazuar-pay`, `lazuar-pay-merchant`, `lazuar-pay-checkout`
+- [x] Labels not “Lazuar Hub CaaS”
+- [x] Do not add Pay to Hub `ghcr.yml` SSH path
 
 ## G19.2 Must not
 
-- [ ] Do not retarget Hub compose
+- [x] Do not retarget Hub compose
 
 ## G19.3 Exit
 
-- [ ] Track G can close without deploy/Caddy (P18/parked kit)
+- [x] Track G can close without deploy/Caddy (P18/parked kit)

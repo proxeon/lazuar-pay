@@ -61,6 +61,7 @@ public sealed class ChipHosted(PayDbContext db, SecretBox box, IHttpClientFactor
         var client = http.CreateClient("chip");
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + "purchases/");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", box.Unprotect(cred.Ciphertext));
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", "lazuar-checkout:" + checkout.Id);
         request.Content = JsonContent.Create(payload);
         using var response = await client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);

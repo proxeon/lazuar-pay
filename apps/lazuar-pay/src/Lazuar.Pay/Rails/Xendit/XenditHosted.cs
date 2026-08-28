@@ -59,6 +59,7 @@ public sealed class XenditHosted(PayDbContext db, SecretBox box, IHttpClientFact
         var secret = box.Unprotect(cred.Ciphertext);
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(secret + ":")));
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", "lazuar-checkout:" + checkout.Id);
         request.Content = JsonContent.Create(payload);
         using var response = await client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);

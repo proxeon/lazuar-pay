@@ -21,14 +21,14 @@
 
 ## G13.1
 
-- [ ] Razorpay idempotency **or** persist-before-HTTP
-- [ ] Test FakePsp retry
-- [ ] Stripe test: same checkout id still sends the same Stripe idempotency key
+- [x] Razorpay idempotency **or** persist-before-HTTP
+- [x] Test FakePsp retry
+- [x] Stripe test: same checkout id still sends the same Stripe idempotency key
 
 ## G13.2 Must not
 
-- [ ] Do not remove Stripe `RequestOptions.IdempotencyKey`
+- [x] Do not remove Stripe `RequestOptions.IdempotencyKey`
 
 ## G13.3 Exit
 
-- [ ] 014 source comment on PublicPay can be deleted only when **all** non-Test rails are covered **or** the comment lists remaining rails
+- [x] 014 source comment on PublicPay can be deleted only when **all** non-Test rails are covered **or** the comment lists remaining rails

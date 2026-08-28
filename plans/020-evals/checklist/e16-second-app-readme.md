@@ -19,12 +19,12 @@
 
 ## E16.1
 
-- [ ] `apps/lazuar-pay/README.md` section **Second app**
-- [ ] Links `examples/pay-node`
-- [ ] Three webhook planes named so Stripe `whsec_` is not pasted into Plane C
-- [ ] Testing loopback hatch mentioned
-- [ ] Honesty: first-party SPA not required to take money
+- [x] `apps/lazuar-pay/README.md` section **Second app**
+- [x] Links `examples/pay-node`
+- [x] Three webhook planes named so Stripe `whsec_` is not pasted into Plane C
+- [x] Testing loopback hatch mentioned
+- [x] Honesty: first-party SPA not required to take money
 
 ## E16.2 Exit
 
-- [ ] Track E complete; K99a can close
+- [x] Track E complete; K99a can close

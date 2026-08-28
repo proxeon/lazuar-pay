@@ -23,10 +23,10 @@
 
 ## E10.1
 
-- [ ] README at `examples/hub-cashier-next` (or package README): **museum**, Hub 8080, `sk_`, not 8081
-- [ ] Root README / Pay README that mention `examples/` point at Pay sample **or** say museum
-- [ ] Do not change Hub sample base URL to 8081
+- [x] README at `examples/hub-cashier-next` (or package README): **museum**, Hub 8080, `sk_`, not 8081
+- [x] Root README / Pay README that mention `examples/` point at Pay sample **or** say museum
+- [x] Do not change Hub sample base URL to 8081
 
 ## E10.2 Exit
 
-- [ ] Unblocked for E11
+- [x] Unblocked for E11

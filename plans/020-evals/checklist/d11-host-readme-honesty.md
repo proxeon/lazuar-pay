@@ -20,17 +20,17 @@
 
 ## D11.1 May
 
-- [ ] Hosted cashier for One workspaces
-- [ ] Staff via One OIDC; buyers have no One account
-- [ ] `/v1` is the door; Official Receipt is not a tax invoice
+- [x] Hosted cashier for One workspaces
+- [x] Staff via One OIDC; buyers have no One account
+- [x] `/v1` is the door; Official Receipt is not a tax invoice
 
 ## D11.2 Must not (until the matching phase is done)
 
-- [ ] “Production-ready”
-- [ ] “API keys” / M2M until M14+M22
-- [ ] “We send `payment.completed`” until W21
-- [ ] “Test is always available” (only when host lists Test)
+- [x] “Production-ready”
+- [x] “API keys” / M2M until M14+M22
+- [x] “We send `payment.completed`” until W21
+- [x] “Test is always available” (only when host lists Test)
 
 ## D11.3 Exit
 
-- [ ] Revisit after M22 and W29 to add the true sentences
+- [x] Revisit after M22 and W29 to add the true sentences
