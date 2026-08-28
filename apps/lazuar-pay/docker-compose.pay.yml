@@ -1,5 +1,9 @@
-# Greenfield Pay Postgres only. Not Hub lazuar_mvp. Not One lazuar.
-# Publish 5435 so it does not fight One's default 5432.
+# Greenfield Pay stack. Not Hub (repo-root docker-compose.yml stays museum).
+#   docker compose -f apps/lazuar-pay/docker-compose.pay.yml up -d            # Postgres 5435
+#   docker compose -f apps/lazuar-pay/docker-compose.pay.yml --profile apps up -d --build
+#
+# Production CORS and VITE_* must be real HTTPS origins, not laptop :5178/:5179.
+# Do not add ops :3003 or portal :3004. Do not retarget Hub compose to 8081.
 services:
   pay-db:
     image: postgres:16-alpine
@@ -14,3 +18,56 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  pay:
+    profiles: ["apps"]
+    build:
+      context: ../..
+      dockerfile: apps/lazuar-pay/Dockerfile
+    image: ghcr.io/proxeon/lazuar-pay:local
+    ports:
+      - "8081:8081"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Pay: Host=pay-db;Port=5432;Database=lazuar_pay;Username=postgres;Password=postgres
+      One__BaseUrl: ${One__BaseUrl:-http://host.docker.internal:8080/api/v1}
+      Pay__CorsOrigins: ${Pay__CorsOrigins:-http://localhost:5178,http://127.0.0.1:5178,http://localhost:5179,http://127.0.0.1:5179}
+      Pay__CheckoutBaseUrl: ${Pay__CheckoutBaseUrl:-http://localhost:5179}
+      Pay__PublicBaseUrl: ${Pay__PublicBaseUrl:-http://localhost:8081}
+      Pay__WrapKey: ${Pay__WrapKey:-}
+      Pay__OneWebhookSecret: ${Pay__OneWebhookSecret:-}
+    depends_on:
+      pay-db:
+        condition: service_healthy
+
+  pay-merchant:
+    profiles: ["apps"]
+    build:
+      context: ../..
+      dockerfile: apps/lazuar-pay-merchant/Dockerfile
+      args:
+        VITE_PAY_API_URL: ${VITE_PAY_API_URL:-http://localhost:8081}
+        VITE_CHECKOUT_ORIGIN: ${VITE_CHECKOUT_ORIGIN:-http://localhost:5179}
+        VITE_ONE_API_URL: ${VITE_ONE_API_URL:-http://localhost:8080/api/v1}
+        VITE_ZITADEL_AUTHORITY: ${VITE_ZITADEL_AUTHORITY:-http://localhost:8085}
+        VITE_ZITADEL_CLIENT_ID: ${VITE_ZITADEL_CLIENT_ID:-}
+        VITE_ZITADEL_REDIRECT_URI: ${VITE_ZITADEL_REDIRECT_URI:-http://localhost:5178/callback}
+        VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI: ${VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI:-http://localhost:5178/}
+    image: ghcr.io/proxeon/lazuar-pay-merchant:local
+    ports:
+      - "5178:5178"
+    depends_on:
+      - pay
+
+  pay-checkout:
+    profiles: ["apps"]
+    build:
+      context: ../..
+      dockerfile: apps/lazuar-pay-checkout/Dockerfile
+      args:
+        VITE_PAY_API_URL: ${VITE_PAY_API_URL:-http://localhost:8081}
+    image: ghcr.io/proxeon/lazuar-pay-checkout:local
+    ports:
+      - "5179:5179"
+    depends_on:
+      - pay

@@ -47,6 +47,8 @@ No password form. No `POST /one/auth/login`. No Hub cookie. Do not set `lazuar-o
 
 Do not depend on `@repo/api-types-ts` (Hub).
 
+Production image (`apps/lazuar-pay-merchant/Dockerfile`) bakes `VITE_PAY_API_URL` and `VITE_CHECKOUT_ORIGIN`. Empty fails the build. CORS on Pay must list that merchant origin (`Pay__CorsOrigins`). Not Hub compose.
+
 ```bash
 task pay:merchant
 # or

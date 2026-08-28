@@ -7,7 +7,7 @@ Hosted buyer pay page for focused Pay. Not `lazuar-portal` (`:3004`).
 | Origin | `http://localhost:5179` (`strictPort`) |
 | API | focused Pay `VITE_PAY_API_URL` |
 
-`VITE_PAY_API_URL` is the public Pay origin (8081 locally). It is **not** a secret. Dev falls back to `http://localhost:8081` when the env is unset. Production `pnpm build` **fails** if it is missing — do not default a shipped pixel to localhost.
+`VITE_PAY_API_URL` is the public Pay origin (8081 locally). It is **not** a secret. Dev falls back to `http://localhost:8081` when the env is unset. Production `pnpm build` and the checkout Dockerfile **fail** if it is missing — do not default a shipped pixel to localhost. Pay CORS must list this origin.
 
 Copy `.env.example` for laptop dogfood. Strip trailing slashes; a trailing `/` would double-slash `/v1/pay`.
 

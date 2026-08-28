@@ -49,8 +49,41 @@ variable "PLATFORMS" {
   default = "linux/amd64"
 }
 
+variable "VITE_PAY_API_URL" {
+  default = ""
+}
+
+variable "VITE_CHECKOUT_ORIGIN" {
+  default = ""
+}
+
+variable "VITE_ONE_API_URL" {
+  default = ""
+}
+
+variable "VITE_ZITADEL_AUTHORITY" {
+  default = ""
+}
+
+variable "VITE_ZITADEL_CLIENT_ID" {
+  default = ""
+}
+
+variable "VITE_ZITADEL_REDIRECT_URI" {
+  default = ""
+}
+
+variable "VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI" {
+  default = ""
+}
+
 group "default" {
   targets = ["api", "lazuar-portal", "lazuar-ops", "lazuar-admin", "lazuar-developers"]
+}
+
+# Focused Pay. Not Hub. Bake separately: `docker buildx bake pay`
+group "pay" {
+  targets = ["lazuar-pay", "lazuar-pay-merchant", "lazuar-pay-checkout"]
 }
 
 target "docker-metadata-action" {}
@@ -143,5 +176,56 @@ target "lazuar-developers" {
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub-developers"
+  }
+}
+
+target "lazuar-pay" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "apps/lazuar-pay/Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-pay:${TAG}",
+    "${REGISTRY}/lazuar-pay:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-pay"
+  }
+}
+
+target "lazuar-pay-merchant" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "apps/lazuar-pay-merchant/Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-pay-merchant:${TAG}",
+    "${REGISTRY}/lazuar-pay-merchant:latest",
+  ]
+  args = {
+    VITE_PAY_API_URL                     = VITE_PAY_API_URL
+    VITE_CHECKOUT_ORIGIN                 = VITE_CHECKOUT_ORIGIN
+    VITE_ONE_API_URL                     = VITE_ONE_API_URL
+    VITE_ZITADEL_AUTHORITY               = VITE_ZITADEL_AUTHORITY
+    VITE_ZITADEL_CLIENT_ID               = VITE_ZITADEL_CLIENT_ID
+    VITE_ZITADEL_REDIRECT_URI            = VITE_ZITADEL_REDIRECT_URI
+    VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI = VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI
+  }
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-pay-merchant"
+  }
+}
+
+target "lazuar-pay-checkout" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "apps/lazuar-pay-checkout/Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-pay-checkout:${TAG}",
+    "${REGISTRY}/lazuar-pay-checkout:latest",
+  ]
+  args = {
+    VITE_PAY_API_URL = VITE_PAY_API_URL
+  }
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-pay-checkout"
   }
 }

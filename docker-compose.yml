@@ -1,6 +1,8 @@
-# Local runtime stack. Host Caddy (on the server later) reverse_proxies these ports.
-#   docker compose up -d --build                 # db + api
-#   docker compose --profile full up -d --build  # + all frontends
+# Hub museum. 8080 is lazuar-api, not Pay. Do not retarget this file to 8081.
+# Focused Pay is apps/lazuar-pay/docker-compose.pay.yml (Postgres 5435, profile apps → 8081/5178/5179).
+# Do not set ops :3003 or portal :3004 VITE_API_URL to Pay.
+#   docker compose up -d --build                 # db + Hub api
+#   docker compose --profile full up -d --build  # + Hub frontends
 #   docker compose -f docker-compose.ghcr.yml up -d
 services:
   db:
