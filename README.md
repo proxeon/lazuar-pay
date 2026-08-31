@@ -1,10 +1,12 @@
 # Lazuar Pay
 
-Checkout-as-a-service for **other apps**. Your frontend stays yours. Pay mints a hosted link, takes the money, books an Official Receipt, and POSTs a signed webhook. Identity is sibling **lazuar-one**.
+Checkout-as-a-service for **other apps**. Your frontend stays yours. Pay mints a hosted link, takes the money, books an Official Receipt, and POSTs a signed webhook. Identity is sibling **lazuar-one** (private).
 
-**Focused Pay** (this repo’s cashier) is `apps/lazuar-pay` on **8081**, merchant **:5178**, checkout **:5179**. One API is **8080**. Hub `lazuar-api` / ops `:3003` / portal `:3004` in this tree is **museum** — not the integrator path.
+Built by [Akmal Firdaus](https://x.com/akmalfirdxus) — solo, Malaysia.
 
-Integrators: [`apps/lazuar-pay/README.md`](apps/lazuar-pay/README.md) and [`examples/pay-node`](examples/pay-node). Hub sample `examples/hub-cashier-next` is **not** Pay.
+**Focused Pay** (this repo’s cashier) is `apps/lazuar-pay` on **8081**, merchant **:5178**, checkout **:5179**. One API is **8080**.
+
+Integrators: [`apps/lazuar-pay/README.md`](apps/lazuar-pay/README.md) and [`examples/pay-node`](examples/pay-node).
 
 ## For app developers
 
@@ -47,8 +49,6 @@ Saving a vault does **not** pick a default rail. Mint with an explicit `provider
 | `examples/pay-node` | 3021 | Second-app hatch |
 | Pay Postgres | 5435 | `lazuar_pay` |
 
-Leave Hub `task dev` / compose `lazuar-api` **off** while dogfooding Pay (both want 8080).
-
 ```bash
 task pay:test
 task pay:dev          # :8081
@@ -56,7 +56,7 @@ task pay:merchant     # :5178
 task pay:checkout     # :5179
 ```
 
-TypeSpec: [`packages/pay-spec`](packages/pay-spec/) (`task pay:spec`). Generated TS: `packages/pay-types-ts`. Not Hub `packages/api-spec`.
+TypeSpec: [`packages/pay-spec`](packages/pay-spec/) (`task pay:spec`). Generated TS: `packages/pay-types-ts`.
 
 Pay images: `docker-compose.pay.yml`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS.
 
@@ -71,8 +71,6 @@ packages/pay-spec/            Pay TypeSpec
 packages/pay-types-ts/        generated from pay-spec
 ```
 
-Hub `apps/lazuar-api`, `lazuar-ops`, `lazuar-portal`, `lazuar-admin` remain in the tree as museum. Root `docker-compose.yml` is Hub (8080). Do not set ops/portal `VITE_API_URL` to 8081.
+## Solana Pay (USDC)
 
-## Hub museum (not the integrator path)
-
-Old modular monolith, ADR 021/023, `task infra:up` / `task dev` / `task fe`, Caddy `:9080`, and Hub demo passwords live under `apps/lazuar-api` and [`docs/`](docs/). Dual-run next to Aura on `:8090` is a Hub hop. Integrators do not use `lazuar-ops` `:3003` or `examples/hub-cashier-next`.
+`provider=solana` mints a Solana Pay transfer-request QR on the hosted checkout. Receive-only: funds land on the merchant receive address; Pay cannot claw back. Confirm is a reference-key + memo match at `finalized` commitment, then Official Receipt + the same Plane C `payment.completed` HMAC as every other rail. Devnet dogfood and proof signatures: [`apps/lazuar-pay/README.md`](apps/lazuar-pay/README.md).

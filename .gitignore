@@ -97,6 +97,11 @@ docs/payment/
 /packages/api-types-ts/
 /packages/lhdn-sdk-dotnet/
 /packages/lhdn-sdk-ts/
+/docker-compose.yml
+/docker-compose.ghcr.yml
+/deploy/
+/scripts/remote-deploy.sh
+/scripts/check-openapi-minimal-honesty.mjs
 
 # ----------------------------------------------------------------------
 # Local sandbox secrets (recreated by scripts/lhdn_sandbox)
@@ -106,5 +111,8 @@ scripts/lhdn_sandbox/**/cookies.txt
 
 # Sample app local demo stores
 .data/
+
+# Local tooling captures
+mitm_mcp_traffic.db
 
 *.tsbuildinfo

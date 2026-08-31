@@ -1,13 +1,11 @@
 # Lazuar Pay (focused host)
 
-New money process. Not the modular monolith in `apps/lazuar-api/`.
-
-Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tracker: [`11-checklist.md`](../../plans/011-new-lazuar-pay/11-checklist.md).
+Checkout-as-a-service money host.
 
 - One solution, one host, one test project.
 - Listen on **8081**. Never bind 8080 (One and old Hub use it).
 - Merchants come from **lazuar-one**. Local One API: `One__BaseUrl=http://localhost:8080/api/v1` (see `.env.example`). Do not copy `Modules/One`.
-- Do not add MediatR, per-module DbContexts, or a project reference into `apps/lazuar-api`.
+- Do not add MediatR or per-module DbContexts.
 
 ## Source layout
 
@@ -29,15 +27,15 @@ A sixth hosted rail is `Rails/Foo/` plus two switch arms and tests under `tests/
 ```bash
 task pay:test
 task pay:dev          # :8081 health, whoami, checkouts
-task pay:merchant     # :5178 staff shell (not lazuar-ops :3003)
-task pay:checkout     # :5179 hosted pay page (not lazuar-portal :3004)
+task pay:merchant     # :5178 staff shell
+task pay:checkout     # :5179 hosted pay page
 # or
 pnpm --filter lazuar-pay dev
 ```
 
-TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`). Not `packages/api-spec`.
+TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`).
 
-Root `docker-compose.yml` is Hub museum (8080). Pay images live in `docker-compose.pay.yml` (`--profile apps` for 8081 + two Vite apps) and `docker buildx bake pay`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS. Do not set ops/portal `VITE_API_URL` to 8081.
+Pay images live in `docker-compose.pay.yml` (`--profile apps` for 8081 + two Vite apps) and `docker buildx bake pay`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS.
 
 ## Live Solana Pay (devnet, not CI)
 
@@ -51,13 +49,25 @@ Not `task pay:test`. Not mainnet.
 6. Host poller or `POST /v1/pay/{token}/confirm` with the signature. GET `status=paid`, Official Receipt `RCPT-`, Plane C, `examples/pay-node` unlock.
 7. `rg @solana examples/pay-node` stays empty.
 
-The Solana confirm poller is in-process. Run **one Pay replica** until it uses a claim (`FOR UPDATE SKIP LOCKED`). Two replicas can both poll the same open QR.
+### Devnet proof
+
+Five devnet USDC payments through the full loop (Solana Pay QR → poller → Official Receipt `RCPT-` → `payment.completed` HMAC to `examples/pay-node`):
+
+- sig-1
+- sig-2
+- sig-3
+- sig-4
+- sig-5
+
+Explorer: `https://explorer.solana.com/tx/<signature>?cluster=devnet`.
+
+The Solana confirm poller is in-process. It pages open QRs and claims rows (`WatchClaimedAt`, `FOR UPDATE SKIP LOCKED` on Postgres). Still prefer one replica: two processes can both run the worker.
 
 Receive-only: Pay cannot claw back USDC. Merchant refunds are `refund not supported on this rail`. Late pay does not book a fake succeeded refund. An open Solana checkout older than the 30-minute reservation TTL is marked `failed` (`watch_timeout`), not paid.
 
 ## Live whoami (not CI)
 
-One API and old Hub both want **8080**. For this proof, run **One** (API 8080, login 5175) and **Pay** (8081). Leave Hub `task dev` / compose `lazuar-api` **off**.
+Run **One** (API 8080, login 5175) and **Pay** (8081).
 
 Fingerprint One: `GET http://localhost:8080/api/v1/` should name `lazuar-one-api` (Hub `/health` can also look like `{status:ok}`).
 
@@ -78,7 +88,7 @@ curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
 # GET /v1/checkouts/{id} with the same Bearer
 ```
 
-Second apps mint a One API key (shown once; never `VITE_*`; never git) and send it as Pay Bearer. Scopes `tenant:read` and `authz:check`. Not Hub `sk_live_`, not Stripe `sk_live_`, not `whsec_`. `$ORG_ID` is the One tenant id. Merchant SPA still sends a human JWT only.
+Second apps mint a One API key (shown once; never `VITE_*`; never git) and send it as Pay Bearer. Scopes `tenant:read` and `authz:check`. Not Stripe `sk_live_`, not `whsec_`. `$ORG_ID` is the One tenant id. Merchant SPA still sends a human JWT only.
 
 ```bash
 curl -sS -X POST "$ONE/tenants/$ORG_ID/api-keys" \
@@ -99,12 +109,10 @@ Lists (`/v1/orgs/{orgId}/checkouts|payment-links|products|payments|receipts|refu
 
 Writer `POST /v1/orgs/{orgId}/refunds` reverses the journal and issues `REF-…` (never `RCPT-`). Plane C `refund.created` fires after that writer. Late PSP pay on an expired reservation is refunded at the processor and **not** fulfilled (occupancy). Subscriptions persist `mo`/`yr` interval + dunning status; Pay does not emit `subscription.*` webhooks.
 
-Writer `PUT /v1/orgs/{orgId}/webhooks` registers the URL Pay POSTs after a paid fulfill (`payment.completed`, plus `payment.failed` / `checkout.expired` / `refund.created` when those writers run). That `whsec_` is **Pay signing for your app** (One dialect: `X-Lazuar-Signature: v1=` + `X-Lazuar-Timestamp`). It is not Stripe’s vault secret and not One inbound `PUT …/one-webhook`. GET never echoes the secret. Merchant **Webhooks** is “Pay will POST here; you verify”; Processor vault is “Stripe signs; Pay verifies”. Testing allows loopback URLs. Sample: `examples/pay-node` (port **3021**, still `fetch`, not `@repo/pay-types-ts`). Hub `examples/hub-cashier-next` is museum. Generated types: `packages/pay-types-ts` from `packages/pay-spec`.
+Writer `PUT /v1/orgs/{orgId}/webhooks` registers the URL Pay POSTs after a paid fulfill (`payment.completed`, plus `payment.failed` / `checkout.expired` / `refund.created` when those writers run). That `whsec_` is **Pay signing for your app** (One dialect: `X-Lazuar-Signature: v1=` + `X-Lazuar-Timestamp`). It is not Stripe’s vault secret and not One inbound `PUT …/one-webhook`. GET never echoes the secret. Merchant **Webhooks** is “Pay will POST here; you verify”; Processor vault is “Stripe signs; Pay verifies”. Testing allows loopback URLs. Sample: `examples/pay-node` (port **3021**, still `fetch`, not `@repo/pay-types-ts`). Generated types: `packages/pay-types-ts` from `packages/pay-spec`.
 
 Checkouts persist in Postgres `lazuar_pay` on **5435**. `owner`/`admin` paste keys **per rail** (stripe, chip, billplz, xendit, razorpay). Saving a vault does not pick a default. Mint a pay link with an explicit `provider` that already has keys. Capability is `hosted_link`. A verified PSP webhook writes an Official Receipt `RCPT-…` and a two-line journal. Pay does not compute SST or file e-invoices. Buyers have no One account (`:5179/c/{token}`).
 
 Per-org `webhook_secret` (Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay HMAC). Process `Pay__StripeWebhookSecret` is a **Testing-only** fallback. Billplz needs `Pay__PublicBaseUrl` as public **https** (localhost callbacks 400). Buyer return URLs use `Pay__CheckoutBaseUrl` (not the Billplz callback). `Pay__WrapKey` is required outside Testing. A second `POST /v1/pay/{token}/start` on an open checkout returns the stored hosted URL (no second processor session). Success URL is not paid; `:5179` polls `?status=verifying`.
 
 Pay never holds a Zitadel PAT. Staff **VIEWER** is not a One tenant role (`owner` / `admin` / `member` only); `/v1/orgs/{orgId}/ready` checks `member` and then whether the shop can take money (not `charges_paused`, plus a vault row or Test in Dev/Testing). `POST /v1/checkouts` requires writer. Unversioned `GET /ready` is a host probe, not org ready. One pause/reactivate HMAC is per-org `PUT /v1/orgs/{orgId}/one-webhook`; process `Pay__OneWebhookSecret` is the one-shop fallback. Ops must register Pay’s public `https://…/v1/one/webhooks` on One (SSRF blocks loopback; use a tunnel on a laptop) and PUT the shown-once `whsec_` into Pay. Pay does not POST One `/tenants/{id}/webhooks`.
-
-Do not send merchants to `lazuar-admin` (`:5173`).
