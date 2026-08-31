@@ -29,6 +29,10 @@ jobs:
           pnpm --filter lazuar-pay-merchant test
           pnpm --filter lazuar-pay-checkout test
       - name: Build merchant and checkout
+        env:
+          # Build-time sanity check only — the CI artifact is never deployed.
+          # Public origin, not a secret (checkout vite.config refuses without it).
+          VITE_PAY_API_URL: https://pay.example.test
         run: |
           pnpm --filter lazuar-pay-merchant build
           pnpm --filter lazuar-pay-checkout build
