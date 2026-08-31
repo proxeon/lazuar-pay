@@ -32,6 +32,13 @@ public static class PayProviders
 
     public static bool IsSolana(string provider) => provider == Solana;
 
+    public static bool UsesReceiveAddress(string provider) => provider == Solana;
+
+    public static bool UsesCatalogProduct(string provider) => provider != Solana;
+
+    public static bool IsOnPageUrl(string? url) =>
+        !string.IsNullOrWhiteSpace(url) && url.StartsWith("solana:", StringComparison.Ordinal);
+
     public static bool RequiresPublicMerchantId(string provider) =>
         provider is Chip or Billplz or Solana;
 

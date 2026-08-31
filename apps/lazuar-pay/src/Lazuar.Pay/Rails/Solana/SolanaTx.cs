@@ -39,24 +39,15 @@ public static class SolanaTx
         }
 
         var mint = SolanaCluster.Mint(cluster);
-        if (!TryTransfer(message, out var foundMint, out var atomic, out var programId))
-        {
-            return "transfer missing";
-        }
-
-        if (programId == SolanaUsdc.Token2022Program)
-        {
-            return "token program mismatch";
-        }
-
-        if (!string.Equals(foundMint, mint, StringComparison.Ordinal))
-        {
-            return "mint mismatch";
-        }
-
-        if (!SolanaMoney.TryToAtomic(checkout.Amount, out var expected) || atomic != expected)
+        if (!SolanaMoney.TryToAtomic(checkout.Amount, out var expected))
         {
             return "amount mismatch";
+        }
+
+        var transfer = TransferMismatch(message, result, cred.PublicMerchantId, mint, expected);
+        if (transfer is not null)
+        {
+            return transfer;
         }
 
         if (!HasReference(message, checkout.ProviderSessionId))
@@ -67,11 +58,6 @@ public static class SolanaTx
         if (!HasMemo(message, checkout.Id))
         {
             return "memo mismatch";
-        }
-
-        if (!OwnerMatches(result, cred.PublicMerchantId, mint))
-        {
-            return "destination mismatch";
         }
 
         if (tx.TryGetProperty("signatures", out var sigs) && sigs.ValueKind == JsonValueKind.Array)
@@ -86,19 +72,39 @@ public static class SolanaTx
         return null;
     }
 
-    static bool TryTransfer(JsonElement message, out string mint, out long atomic, out string programId)
+    static string? TransferMismatch(
+        JsonElement message,
+        JsonElement result,
+        string? merchant,
+        string mint,
+        long expected)
     {
-        mint = "";
-        atomic = 0;
-        programId = "";
+        if (string.IsNullOrWhiteSpace(merchant))
+        {
+            return "destination mismatch";
+        }
+
         if (!message.TryGetProperty("instructions", out var ixs) || ixs.ValueKind != JsonValueKind.Array)
         {
-            return false;
+            return "transfer missing";
         }
+
+        if (!result.TryGetProperty("meta", out var meta) || meta.ValueKind != JsonValueKind.Object)
+        {
+            return "destination mismatch";
+        }
+
+        var keys = AccountPubkeys(message);
+        var pre = TokenBalances(meta, "preTokenBalances");
+        var post = TokenBalances(meta, "postTokenBalances");
+        var anyTransfer = false;
+        var token2022ToMerchant = false;
+        var boundWrongMint = false;
+        var boundWrongAmount = false;
 
         foreach (var ix in ixs.EnumerateArray())
         {
-            programId = ix.TryGetProperty("programId", out var pid) ? pid.GetString() ?? "" : "";
+            var programId = ix.TryGetProperty("programId", out var pid) ? pid.GetString() ?? "" : "";
             if (!ix.TryGetProperty("parsed", out var parsed) || parsed.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -110,23 +116,140 @@ public static class SolanaTx
                 continue;
             }
 
+            anyTransfer = true;
             if (!parsed.TryGetProperty("info", out var info))
             {
                 continue;
             }
 
-            mint = info.TryGetProperty("mint", out var m) ? m.GetString() ?? "" : "";
-            if (!info.TryGetProperty("tokenAmount", out var ta)
-                || !ta.TryGetProperty("amount", out var amt)
-                || !long.TryParse(amt.GetString(), out atomic))
+            var dest = info.TryGetProperty("destination", out var d) ? d.GetString() ?? "" : "";
+            var foundMint = info.TryGetProperty("mint", out var m) ? m.GetString() ?? "" : "";
+            if (!info.TryGetProperty("tokenAmount", out var ta) || !TryAtomic(ta, out var atomic))
             {
-                return false;
+                continue;
             }
 
-            return !string.IsNullOrWhiteSpace(mint);
+            var destIndex = keys.FindIndex(k => string.Equals(k, dest, StringComparison.Ordinal));
+            if (destIndex < 0 || !post.TryGetValue(destIndex, out var postRow))
+            {
+                continue;
+            }
+
+            if (!string.Equals(postRow.Owner, merchant, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (programId == SolanaUsdc.Token2022Program)
+            {
+                token2022ToMerchant = true;
+                continue;
+            }
+
+            if (programId != SolanaUsdc.TokenProgram)
+            {
+                continue;
+            }
+
+            if (!string.Equals(foundMint, mint, StringComparison.Ordinal)
+                || !string.Equals(postRow.Mint, mint, StringComparison.Ordinal))
+            {
+                boundWrongMint = true;
+                continue;
+            }
+
+            var preAmt = pre.TryGetValue(destIndex, out var preRow) ? preRow.Amount : 0;
+            if (atomic != expected || postRow.Amount - preAmt != expected)
+            {
+                boundWrongAmount = true;
+                continue;
+            }
+
+            return null;
         }
 
-        return false;
+        if (token2022ToMerchant)
+        {
+            return "token program mismatch";
+        }
+
+        if (boundWrongMint)
+        {
+            return "mint mismatch";
+        }
+
+        if (boundWrongAmount)
+        {
+            return "amount mismatch";
+        }
+
+        return anyTransfer ? "destination mismatch" : "transfer missing";
+    }
+
+    static List<string> AccountPubkeys(JsonElement message)
+    {
+        var keys = new List<string>();
+        if (!message.TryGetProperty("accountKeys", out var arr) || arr.ValueKind != JsonValueKind.Array)
+        {
+            return keys;
+        }
+
+        foreach (var key in arr.EnumerateArray())
+        {
+            var pk = key.ValueKind == JsonValueKind.String
+                ? key.GetString()
+                : key.TryGetProperty("pubkey", out var p) ? p.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(pk))
+            {
+                keys.Add(pk);
+            }
+        }
+
+        return keys;
+    }
+
+    static Dictionary<int, (string Owner, string Mint, long Amount)> TokenBalances(JsonElement meta, string name)
+    {
+        var map = new Dictionary<int, (string Owner, string Mint, long Amount)>();
+        if (!meta.TryGetProperty(name, out var bals) || bals.ValueKind != JsonValueKind.Array)
+        {
+            return map;
+        }
+
+        foreach (var b in bals.EnumerateArray())
+        {
+            if (!b.TryGetProperty("accountIndex", out var idxEl) || !idxEl.TryGetInt32(out var idx))
+            {
+                continue;
+            }
+
+            var owner = b.TryGetProperty("owner", out var o) ? o.GetString() ?? "" : "";
+            var bMint = b.TryGetProperty("mint", out var m) ? m.GetString() ?? "" : "";
+            if (!b.TryGetProperty("uiTokenAmount", out var ui) || !TryAtomic(ui, out var amount))
+            {
+                continue;
+            }
+
+            map[idx] = (owner, bMint, amount);
+        }
+
+        return map;
+    }
+
+    static bool TryAtomic(JsonElement tokenAmount, out long atomic)
+    {
+        atomic = 0;
+        if (!tokenAmount.TryGetProperty("amount", out var amt))
+        {
+            return false;
+        }
+
+        if (amt.ValueKind == JsonValueKind.String)
+        {
+            return long.TryParse(amt.GetString(), out atomic);
+        }
+
+        return amt.ValueKind == JsonValueKind.Number && amt.TryGetInt64(out atomic);
     }
 
     static bool HasReference(JsonElement message, string? reference)
@@ -180,30 +303,6 @@ public static class SolanaTx
                         ? m.GetString()
                         : null;
             if (string.Equals(text, checkoutId, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static bool OwnerMatches(JsonElement result, string? merchant, string mint)
-    {
-        if (string.IsNullOrWhiteSpace(merchant)
-            || !result.TryGetProperty("meta", out var meta)
-            || !meta.TryGetProperty("postTokenBalances", out var bals)
-            || bals.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
-
-        foreach (var b in bals.EnumerateArray())
-        {
-            var owner = b.TryGetProperty("owner", out var o) ? o.GetString() : null;
-            var bMint = b.TryGetProperty("mint", out var m) ? m.GetString() : null;
-            if (string.Equals(owner, merchant, StringComparison.Ordinal)
-                && string.Equals(bMint, mint, StringComparison.Ordinal))
             {
                 return true;
             }

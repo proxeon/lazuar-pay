@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payFetch, payJson } from '../../lib/payApi'
-import { railBlurb, railCopy, railLabel, visibleRails, type Processor, type Rail } from '../../lib/processors'
+import {
+  railBlurb,
+  railCopy,
+  railLabel,
+  usesReceiveAddress,
+  visibleRails,
+  type Processor,
+  type Rail,
+} from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
@@ -80,7 +88,7 @@ export function GatewayPage() {
     if (row?.environment === 'test' || row?.environment === 'live' || row?.environment === 'devnet' || row?.environment === 'mainnet') {
       setEnvironment(row.environment)
     } else {
-      setEnvironment(next === 'solana' ? 'devnet' : 'test')
+      setEnvironment(usesReceiveAddress(next) ? 'devnet' : 'test')
     }
     setPublicMerchantId(row?.public_merchant_id ?? '')
     setEditing(next)
@@ -91,7 +99,7 @@ export function GatewayPage() {
     setSaving(true)
     setError(null)
     const payload: Record<string, string> = { provider: editing }
-    if (editing === 'solana') {
+    if (usesReceiveAddress(editing)) {
       const address = publicMerchantId.trim()
       if (
         /BEGIN|END|-----|sk_|rk_|whsec_|lzr_sk_|:/.test(address) ||
@@ -181,11 +189,8 @@ export function GatewayPage() {
               <CardContent className="px-4 text-xs text-slate-500">
                 {isTest ? (
                   <p>No keys. Use this on Pay links.</p>
-                ) : r === 'solana' ? (
-                  <p>
-                    {on && row?.last4 ? `…${row.last4}` : 'No address on file'}
-                    {on ? '' : ''}
-                  </p>
+                ) : usesReceiveAddress(r) ? (
+                  <p>{on && row?.last4 ? `…${row.last4}` : 'No address on file'}</p>
                 ) : (
                   <p>
                     {on && row?.last4 ? `…${row.last4}` : 'No key on file'}
@@ -233,7 +238,7 @@ export function GatewayPage() {
                 </p>
               ) : null}
               <div className="space-y-4">
-                {editing === 'solana' ? (
+                {usesReceiveAddress(editing) ? (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="receive_address">Receive address</Label>
@@ -295,7 +300,7 @@ export function GatewayPage() {
                   </div>
                 )}
 
-                {editing === 'solana' ? null : <div className="space-y-2">
+                {usesReceiveAddress(editing) ? null : <div className="space-y-2">
                   <Label htmlFor="webhook_secret">Webhook secret (Stripe signs; Pay verifies)</Label>
                   {editing === 'chip' ? (
                     <Textarea
@@ -360,7 +365,7 @@ export function GatewayPage() {
                   </div>
                 )}
 
-                {editing === 'solana' ? null : (
+                {usesReceiveAddress(editing) ? null : (
                 <>
                 <p className="text-xs leading-relaxed text-slate-500">
                   Webhook path:{' '}
@@ -380,7 +385,7 @@ export function GatewayPage() {
                   Cancel
                 </Button>
                 <Button type="button" onClick={() => void pasteKey()} disabled={saving}>
-                  {editing === 'solana' ? 'Save address' : 'Save key'}
+                  {usesReceiveAddress(editing) ? 'Save address' : 'Save key'}
                 </Button>
               </DialogFooter>
             </>

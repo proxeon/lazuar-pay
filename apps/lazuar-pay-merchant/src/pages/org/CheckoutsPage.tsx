@@ -4,7 +4,16 @@ import { problemDetail } from '../../lib/http'
 import { listItems, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
-import { defaultMintRail, isRail, railLabel, readyMintRails, type Processor, type Rail } from '../../lib/processors'
+import {
+  defaultCurrency,
+  defaultMintRail,
+  isRail,
+  railLabel,
+  readyMintRails,
+  usesCatalogProduct,
+  type Processor,
+  type Rail,
+} from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
@@ -156,10 +165,10 @@ export function CheckoutsPage() {
     setBusy(true)
     setError(null)
     let productCreated = false
-    const currency = provider === 'solana' ? 'USDC' : 'MYR'
+    const currency = defaultCurrency(provider)
     try {
       let productId: string | undefined
-      if (provider !== 'solana') {
+      if (usesCatalogProduct(provider)) {
         const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
           method: 'POST',
           orgHint: orgId,
@@ -190,7 +199,7 @@ export function CheckoutsPage() {
       })
       if (!checkout.ok) {
         const detail = await problemDetail(checkout, `pay link ${checkout.status}`)
-        setError(`A product was created. Pay link failed: ${detail}`)
+        setError(productCreated ? `A product was created. Pay link failed: ${detail}` : detail)
         return
       }
       closeCreate()
@@ -349,7 +358,7 @@ export function CheckoutsPage() {
           <DialogHeader>
             <DialogTitle>Create pay link</DialogTitle>
             <DialogDescription>
-              {provider === 'solana' ? 'USDC' : 'MYR'}. Success URL defaults to checkout ?status=verifying (not paid).
+              {defaultCurrency(provider)}. Success URL defaults to checkout ?status=verifying (not paid).
             </DialogDescription>
           </DialogHeader>
           {error ? (
@@ -368,7 +377,7 @@ export function CheckoutsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ({provider === 'solana' ? 'USDC' : 'MYR'})</Label>
+                <Label htmlFor="amount">Amount ({defaultCurrency(provider)})</Label>
                 <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
             </div>

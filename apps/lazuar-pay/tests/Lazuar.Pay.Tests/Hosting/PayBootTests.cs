@@ -53,6 +53,20 @@ public class PayBootTests
     }
 
     [Test]
+    public void Production_without_solana_rpc_does_not_require_cluster()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Pay:WrapKey"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ["ConnectionStrings:Pay"] = "Host=db",
+            ["One:BaseUrl"] = "https://one.example/api/v1",
+            ["Pay:CheckoutBaseUrl"] = "https://checkout.example",
+            ["Pay:CorsOrigins"] = "https://checkout.example"
+        }).Build();
+        Assert.DoesNotThrow(() => PayBoot.ThrowIfMisconfigured(config, new NamedEnv("Production")));
+    }
+
+    [Test]
     public void Production_devnet_cluster_throws()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

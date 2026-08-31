@@ -69,6 +69,7 @@ function App() {
   const [pollNonce, setPollNonce] = useState(0)
   const [reload, setReload] = useState(0)
   const payStatus = pay?.status
+  const onPage = Boolean(pay?.solana_pay_url)
 
   useEffect(() => {
     if (!token) {
@@ -118,6 +119,7 @@ function App() {
       error === 'missing' ||
       payStatus === 'paid' ||
       payStatus === 'expired' ||
+      payStatus === 'failed' ||
       payStatus === 'full' ||
       payStatus === 'already_paid'
     ) {
@@ -141,7 +143,7 @@ function App() {
           if (stopped || !body) return
           setPay(body)
         })
-      if (n >= 15) {
+      if (n >= 15 && !onPage) {
         window.clearInterval(id)
         setVerifyTimedOut(true)
       }
@@ -150,13 +152,13 @@ function App() {
       stopped = true
       window.clearInterval(id)
     }
-  }, [token, verifying, payStatus, error, pollNonce])
+  }, [token, verifying, payStatus, onPage, error, pollNonce])
 
   useEffect(() => {
-    if (pay?.provider === 'solana' && pay.solana_pay_url && pay.status === 'open') {
+    if (pay?.solana_pay_url && pay.status === 'open') {
       setVerifying(true)
     }
-  }, [pay?.provider, pay?.solana_pay_url, pay?.status])
+  }, [pay?.solana_pay_url, pay?.status])
 
   async function startPay() {
     if (!token) return
@@ -164,7 +166,7 @@ function App() {
       setError('email is required')
       return
     }
-    if (pay?.provider !== 'solana' && pay?.started && pay.redirect_url) {
+    if (pay?.started && pay.redirect_url) {
       window.location.assign(pay.redirect_url)
       return
     }
@@ -339,6 +341,24 @@ function App() {
     )
   }
 
+  if (pay.status === 'failed') {
+    return (
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <CircleAlert className="size-6" />
+            </div>
+            <Heading>Payment not confirmed</Heading>
+            <CardDescription>
+              Pay did not see the USDC transfer in time. This page is not a receipt. Do not send again.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </Shell>
+    )
+  }
+
   if (pay.status === 'full') {
     return (
       <Shell>
@@ -355,7 +375,7 @@ function App() {
     )
   }
 
-  if (verifying && pay.status !== 'paid' && pay.provider !== 'solana') {
+  if (verifying && pay.status !== 'paid' && !pay.solana_pay_url) {
     return (
       <Shell>
         <Card aria-live="polite">
@@ -452,7 +472,7 @@ function App() {
               </p>
             ) : null}
           </div>
-          {pay.provider === 'solana' && pay.solana_pay_url ? (
+          {pay.solana_pay_url ? (
             <div className="space-y-3">
               <SolanaQr url={pay.solana_pay_url} />
               <a className="block text-center text-sm text-sky-700 underline-offset-2 hover:underline" href={pay.solana_pay_url}>
@@ -461,11 +481,11 @@ function App() {
               <p className="text-center text-xs text-slate-500">Waiting for USDC on Solana. Not a card.</p>
             </div>
           ) : null}
-          {started && pay.provider !== 'solana' ? (
+          {started && !pay.solana_pay_url ? (
             <p className="text-sm text-slate-500">You already started this payment.</p>
           ) : null}
         </CardContent>
-        {pay.provider === 'solana' && pay.solana_pay_url ? null : (
+        {pay.solana_pay_url ? null : (
         <CardFooter>
           <Button
             type="button"

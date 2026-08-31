@@ -95,7 +95,7 @@ model PublicPay {
   mine?: boolean;
   provider?: string;
   redirect_url?: string;
-  /** solana: URI for QR. Present when provider is solana and start has run. redirect_url is null. */
+  /** Hosted URL when the scheme is solana: (QR, not a browser redirect). redirect_url is null. */
   solana_pay_url?: string;
   /** Process cluster. `devnet` or `mainnet-beta`. Present when provider is solana. */
   solana_cluster?: string;

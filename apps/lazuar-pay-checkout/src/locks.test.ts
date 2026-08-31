@@ -52,7 +52,6 @@ describe('checkout honesty', () => {
   })
 
   it('solana stays on-page with a QR and does not assign', () => {
-    expect(src()).toContain("pay.provider !== 'solana'")
     expect(src()).toContain('solana_pay_url')
     expect(src()).toContain('SolanaQr')
     expect(src()).toContain('Open in wallet')
@@ -70,10 +69,16 @@ describe('checkout honesty', () => {
     expect(src()).toContain('Card')
     expect(src()).toContain('Payment received')
     expect(src()).toContain('Link expired')
+    expect(src()).toContain('Payment not confirmed')
     expect(src()).toContain('Link is full')
     expect(src()).toContain('no remaining seats')
     expect(src()).not.toContain('no remaining payments')
     expect(src()).not.toContain('lazuar-portal')
+  })
+
+  it('solana QR keeps polling until a terminal status', () => {
+    expect(src()).toContain("pay.status === 'failed'")
+    expect(src()).toContain('n >= 15 && !onPage')
   })
 
   it('sends a local slot_key so one browser is one payer on a shared link', () => {

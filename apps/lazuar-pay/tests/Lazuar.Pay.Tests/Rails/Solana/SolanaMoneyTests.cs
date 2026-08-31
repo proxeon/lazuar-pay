@@ -55,6 +55,10 @@ public class SolanaMoneyTests
 
         var linkOk = await CreateLink(client, """{"org_id":"t1","amount":10,"provider":"solana","currency":"USDC"}""");
         Assert.That(linkOk.StatusCode, Is.EqualTo(HttpStatusCode.Created), await linkOk.Content.ReadAsStringAsync());
+
+        var tooManyDecimals = await CreateCheckout(client, """{"org_id":"t1","amount":10.1234567,"provider":"solana","currency":"USDC"}""");
+        Assert.That(tooManyDecimals.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await tooManyDecimals.Content.ReadAsStringAsync(), Does.Contain("USDC amount"));
     }
 
     [Test]

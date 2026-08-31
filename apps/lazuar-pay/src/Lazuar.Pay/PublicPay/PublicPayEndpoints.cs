@@ -159,7 +159,7 @@ internal static class PublicPayEndpoints
                 return PayErrors.Status(404, "Not Found", "Checkout not found");
             }
 
-            if (session.Status is "paid" or "expired")
+            if (session.Status is "paid" or "expired" or "failed")
             {
                 return PayErrors.Status(409, "Conflict", "Checkout is not open");
             }
@@ -194,23 +194,16 @@ internal static class PublicPayEndpoints
             return PayErrors.Status(400, "Bad Request", "email is required");
         }
 
-        if (!string.IsNullOrWhiteSpace(row.SolanaPayUrl)
-            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
+        if (!string.IsNullOrWhiteSpace(row.PspRedirectUrl)
             || !string.IsNullOrWhiteSpace(row.ProviderSessionId))
         {
-            if (!string.IsNullOrWhiteSpace(row.SolanaPayUrl))
-            {
-                await db.SaveChangesAsync(ct);
-                return Results.Json(new { solana_pay_url = row.SolanaPayUrl }, OneClient.Json);
-            }
-
             if (string.IsNullOrWhiteSpace(row.PspRedirectUrl))
             {
                 return PayErrors.Status(409, "Conflict", "Checkout is not open");
             }
 
             await db.SaveChangesAsync(ct);
-            return Results.Json(new { redirect_url = row.PspRedirectUrl }, OneClient.Json);
+            return StartedPay(row.PspRedirectUrl);
         }
 
         IHostedRail rail = name switch
@@ -232,15 +225,7 @@ internal static class PublicPayEndpoints
             var hosted = await rail.CreateHostedUrlAsync(row, ct);
             row.Provider = name;
             row.ProviderSessionId = hosted.ProviderSessionId;
-            if (PayProviders.IsSolana(name))
-            {
-                row.SolanaPayUrl = hosted.SolanaPayUrl;
-                row.PspRedirectUrl = null;
-                await db.SaveChangesAsync(ct);
-                return Results.Json(new { solana_pay_url = hosted.SolanaPayUrl }, OneClient.Json);
-            }
-
-            row.PspRedirectUrl = hosted.RedirectUrl;
+            row.PspRedirectUrl = hosted.Url;
             if (PayProviders.IsTest(name))
             {
                 db.PspWebhookEvents.Add(new PspWebhookEventRow
@@ -257,7 +242,7 @@ internal static class PublicPayEndpoints
                 await db.SaveChangesAsync(ct);
             }
 
-            return Results.Json(new { redirect_url = hosted.RedirectUrl }, OneClient.Json);
+            return StartedPay(hosted.Url);
         }
         catch (InvalidOperationException ex)
         {
@@ -368,7 +353,7 @@ internal static class PublicPayEndpoints
                     x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
                 if (existing is not null)
                 {
-                    if (existing.Status is "paid" or "expired")
+                    if (existing.Status is "paid" or "expired" or "failed")
                     {
                         return ((CheckoutRow?)null, PayErrors.Status(409, "Conflict", "Checkout is not open"));
                     }
@@ -427,7 +412,7 @@ internal static class PublicPayEndpoints
 
                 var raced = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(
                     x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
-                if (raced is not null && raced.Status is not "paid" and not "expired")
+                if (raced is not null && raced.Status is not "paid" and not "expired" and not "failed")
                 {
                     return (await db.Checkouts.FirstAsync(x => x.Id == raced.Id, ct), (IResult?)null);
                 }
@@ -441,8 +426,7 @@ internal static class PublicPayEndpoints
     {
         if (row.PaymentLinkId is null
             || row.Status != "open"
-            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
-            || !string.IsNullOrWhiteSpace(row.SolanaPayUrl))
+            || !string.IsNullOrWhiteSpace(row.PspRedirectUrl))
         {
             return;
         }
@@ -479,8 +463,9 @@ internal static class PublicPayEndpoints
     {
         var provider = row.Provider;
         var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
-        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl)
-            || !string.IsNullOrWhiteSpace(row.SolanaPayUrl);
+        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
+        var liveUrl = started && row.Status == "open" ? row.PspRedirectUrl : null;
+        var onPage = PayProviders.IsOnPageUrl(liveUrl);
         var isSolana = PayProviders.TryNormalize(provider, out var rail) && PayProviders.IsSolana(rail);
         return Results.Json(new
         {
@@ -494,8 +479,8 @@ internal static class PublicPayEndpoints
             started,
             mine,
             provider,
-            redirect_url = started && row.Status == "open" && !isSolana ? row.PspRedirectUrl : null,
-            solana_pay_url = started && row.Status == "open" && isSolana ? row.SolanaPayUrl : null,
+            redirect_url = onPage ? null : liveUrl,
+            solana_pay_url = onPage ? liveUrl : null,
             solana_cluster = isSolana ? SolanaCluster.FromConfig(config) : null,
             remaining,
             max_payers = maxPayers,
@@ -535,6 +520,11 @@ internal static class PublicPayEndpoints
             taken_count = taken
         }, OneClient.Json);
     }
+
+    static IResult StartedPay(string url) =>
+        PayProviders.IsOnPageUrl(url)
+            ? Results.Json(new { solana_pay_url = url }, OneClient.Json)
+            : Results.Json(new { redirect_url = url }, OneClient.Json);
 
     static string? NormalizeSlotKey(string? raw)
     {

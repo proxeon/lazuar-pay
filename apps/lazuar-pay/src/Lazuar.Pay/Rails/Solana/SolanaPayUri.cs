@@ -29,6 +29,6 @@ public static class SolanaPayUri
             + "&reference=" + reference
             + "&label=" + label
             + "&memo=" + memo;
-        return new HostedSession("", reference, url);
+        return new HostedSession(url, reference);
     }
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  defaultCurrency,
   defaultMintRail,
   hostListsTest,
   readyMintRails,
+  usesCatalogProduct,
+  usesReceiveAddress,
   vaultedNonTest,
   visibleRails,
   type Processor,
@@ -58,5 +61,11 @@ describe('visibleRails', () => {
     expect(defaultMintRail([solana])).toBe('solana')
     expect(visibleRails([])).toContain('solana')
     expect(vaultedNonTest([solana, test])).toEqual([solana])
+    expect(usesReceiveAddress('solana')).toBe(true)
+    expect(usesCatalogProduct('solana')).toBe(false)
+    expect(defaultCurrency('solana')).toBe('USDC')
+    expect(usesReceiveAddress('stripe')).toBe(false)
+    expect(usesCatalogProduct('stripe')).toBe(true)
+    expect(defaultCurrency('stripe')).toBe('MYR')
   })
 })

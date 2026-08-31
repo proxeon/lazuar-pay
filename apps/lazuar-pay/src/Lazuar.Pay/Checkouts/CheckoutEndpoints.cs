@@ -81,7 +81,7 @@ internal static class CheckoutEndpoints
             return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
         }
 
-        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval, body.ProductId);
+        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval, body.ProductId, body.Amount);
         if (mintErr is not null)
         {
             return mintErr;

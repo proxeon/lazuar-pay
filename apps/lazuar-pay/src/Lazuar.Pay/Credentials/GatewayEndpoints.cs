@@ -46,83 +46,99 @@ internal static class GatewayEndpoints
             return PayErrors.Status(400, "Bad Request", "test processor does not take secrets");
         }
 
-        if (PayProviders.IsSolana(provider))
+        string wrapped;
+        string? wrappedWh;
+        string last4;
+        string? publicId;
+        string? environment;
+        if (PayProviders.UsesReceiveAddress(provider))
         {
-            return await PutSolana(orgId, body, db, config, ct);
-        }
-
-        var secret = body?.Secret?.Trim();
-        if (string.IsNullOrWhiteSpace(secret)
-            && !string.IsNullOrWhiteSpace(body?.KeyId)
-            && !string.IsNullOrWhiteSpace(body?.KeySecret))
-        {
-            secret = body.KeyId.Trim() + ":" + body.KeySecret.Trim();
-        }
-
-        var webhookSecret = body?.WebhookSecret?.Trim();
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            return PayErrors.Status(400, "Bad Request", "secret is required");
-        }
-
-        if (string.IsNullOrWhiteSpace(webhookSecret))
-        {
-            return PayErrors.Status(400, "Bad Request", "webhook_secret is required");
-        }
-
-        var publicId = body?.PublicMerchantId?.Trim();
-        if (PayProviders.RequiresPublicMerchantId(provider) && string.IsNullOrWhiteSpace(publicId))
-        {
-            return PayErrors.Status(400, "Bad Request", "public_merchant_id is required");
-        }
-
-        if (!PayProviders.AllowsPublicMerchantId(provider) && !string.IsNullOrWhiteSpace(publicId))
-        {
-            return PayErrors.Status(400, "Bad Request", "public_merchant_id is not used for this provider");
-        }
-
-        if (provider == PayProviders.Billplz && string.IsNullOrWhiteSpace(body?.Environment))
-        {
-            return PayErrors.Status(400, "Bad Request", "environment is required");
-        }
-
-        string? environment = null;
-        if (!string.IsNullOrWhiteSpace(body?.Environment))
-        {
-            environment = body.Environment.Trim().ToLowerInvariant();
-            if (environment is not ("test" or "live"))
+            var receive = ReceiveAddressVault(body, config);
+            if (receive.Error is not null)
             {
-                return PayErrors.Status(400, "Bad Request", "environment must be test or live");
+                return receive.Error;
+            }
+
+            wrapped = "";
+            wrappedWh = null;
+            last4 = receive.Last4!;
+            publicId = receive.PublicId;
+            environment = receive.Environment;
+        }
+        else
+        {
+            var secret = body?.Secret?.Trim();
+            if (string.IsNullOrWhiteSpace(secret)
+                && !string.IsNullOrWhiteSpace(body?.KeyId)
+                && !string.IsNullOrWhiteSpace(body?.KeySecret))
+            {
+                secret = body.KeyId.Trim() + ":" + body.KeySecret.Trim();
+            }
+
+            var webhookSecret = body?.WebhookSecret?.Trim();
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                return PayErrors.Status(400, "Bad Request", "secret is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(webhookSecret))
+            {
+                return PayErrors.Status(400, "Bad Request", "webhook_secret is required");
+            }
+
+            publicId = body?.PublicMerchantId?.Trim();
+            if (PayProviders.RequiresPublicMerchantId(provider) && string.IsNullOrWhiteSpace(publicId))
+            {
+                return PayErrors.Status(400, "Bad Request", "public_merchant_id is required");
+            }
+
+            if (!PayProviders.AllowsPublicMerchantId(provider) && !string.IsNullOrWhiteSpace(publicId))
+            {
+                return PayErrors.Status(400, "Bad Request", "public_merchant_id is not used for this provider");
+            }
+
+            if (provider == PayProviders.Billplz && string.IsNullOrWhiteSpace(body?.Environment))
+            {
+                return PayErrors.Status(400, "Bad Request", "environment is required");
+            }
+
+            environment = null;
+            if (!string.IsNullOrWhiteSpace(body?.Environment))
+            {
+                environment = body.Environment.Trim().ToLowerInvariant();
+                if (environment is not ("test" or "live"))
+                {
+                    return PayErrors.Status(400, "Bad Request", "environment must be test or live");
+                }
+            }
+
+            if (provider == PayProviders.Razorpay && !RazorpayHosted.TrySplit(secret, out _, out _))
+            {
+                return PayErrors.Status(400, "Bad Request", "secret must be key_id:key_secret");
+            }
+
+            if (provider == PayProviders.Chip && !TryChipPem(webhookSecret))
+            {
+                return PayErrors.Status(400, "Bad Request", "webhook_secret must be a CHIP PEM");
+            }
+
+            last4 = secret.Length >= 4 ? secret[^4..] : secret;
+            if (provider == PayProviders.Razorpay && RazorpayHosted.TrySplit(secret, out var keyId, out _))
+            {
+                last4 = keyId.Length >= 4 ? keyId[^4..] : keyId;
+            }
+
+            try
+            {
+                wrapped = box.Protect(secret);
+                wrappedWh = box.Protect(webhookSecret);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("WrapKey", StringComparison.Ordinal))
+            {
+                return PayErrors.Status(503, "Service Unavailable", ex.Message);
             }
         }
 
-        if (provider == PayProviders.Razorpay && !RazorpayHosted.TrySplit(secret, out _, out _))
-        {
-            return PayErrors.Status(400, "Bad Request", "secret must be key_id:key_secret");
-        }
-
-        if (provider == PayProviders.Chip && !TryChipPem(webhookSecret))
-        {
-            return PayErrors.Status(400, "Bad Request", "webhook_secret must be a CHIP PEM");
-        }
-
-        var last4 = secret.Length >= 4 ? secret[^4..] : secret;
-        if (provider == PayProviders.Razorpay && RazorpayHosted.TrySplit(secret, out var keyId, out _))
-        {
-            last4 = keyId.Length >= 4 ? keyId[^4..] : keyId;
-        }
-
-        string wrapped;
-        string wrappedWh;
-        try
-        {
-            wrapped = box.Protect(secret);
-            wrappedWh = box.Protect(webhookSecret);
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("WrapKey", StringComparison.Ordinal))
-        {
-            return PayErrors.Status(503, "Service Unavailable", ex.Message);
-        }
         var row = await db.GatewayCredentials.FindAsync([orgId, provider], ct);
         if (row is null)
         {
@@ -206,9 +222,7 @@ internal static class GatewayEndpoints
             return Results.Json(new { org_id = orgId, provider = name, configured = false }, OneClient.Json);
         }
 
-        var configured = !PayProviders.IsSolana(name)
-            || SolanaAddress.TryNormalize(row.PublicMerchantId, out _);
-        return Results.Json(GatewayJson(orgId, row, configured), OneClient.Json);
+        return Results.Json(GatewayJson(orgId, row, CredentialConfigured(name, row)), OneClient.Json);
     }
 
     static async Task<IResult> List(
@@ -251,87 +265,48 @@ internal static class GatewayEndpoints
                 };
             }
 
-            var configured = !PayProviders.IsSolana(name)
-                || SolanaAddress.TryNormalize(row.PublicMerchantId, out _);
-            return GatewayJson(orgId, row, configured);
+            return GatewayJson(orgId, row, CredentialConfigured(name, row));
         });
 
         return Results.Json(new { org_id = orgId, processors }, OneClient.Json);
     }
 
-    static async Task<IResult> PutSolana(string orgId, PutGatewayRequest? body, PayDbContext db, IConfiguration config, CancellationToken ct)
+    static (IResult? Error, string? PublicId, string? Last4, string? Environment) ReceiveAddressVault(
+        PutGatewayRequest? body,
+        IConfiguration config)
     {
         if (!string.IsNullOrWhiteSpace(body?.Secret)
             || !string.IsNullOrWhiteSpace(body?.KeyId)
             || !string.IsNullOrWhiteSpace(body?.KeySecret))
         {
-            return PayErrors.Status(400, "Bad Request", "solana does not take an API secret");
+            return (PayErrors.Status(400, "Bad Request", "solana does not take an API secret"), null, null, null);
         }
 
         if (!string.IsNullOrWhiteSpace(body?.WebhookSecret))
         {
-            return PayErrors.Status(400, "Bad Request", "solana does not take a webhook secret");
+            return (PayErrors.Status(400, "Bad Request", "solana does not take a webhook secret"), null, null, null);
         }
 
         if (!SolanaAddress.TryNormalize(body?.PublicMerchantId, out var address))
         {
-            return PayErrors.Status(400, "Bad Request", "public_merchant_id must be a Solana wallet address");
+            return (PayErrors.Status(400, "Bad Request", "public_merchant_id must be a Solana wallet address"), null, null, null);
         }
 
         if (!PayProviders.TryNormalizeSolanaEnvironment(body?.Environment, out var environment))
         {
-            return PayErrors.Status(400, "Bad Request", "environment must be devnet or mainnet");
+            return (PayErrors.Status(400, "Bad Request", "environment must be devnet or mainnet"), null, null, null);
         }
 
-        var cluster = SolanaCluster.FromConfig(config);
-        if (!SolanaCluster.MatchesVault(cluster, environment))
+        if (!SolanaCluster.MatchesVault(SolanaCluster.FromConfig(config), environment))
         {
-            return PayErrors.Status(400, "Bad Request", "solana cluster mismatch");
+            return (PayErrors.Status(400, "Bad Request", "solana cluster mismatch"), null, null, null);
         }
 
-        var last4 = SolanaAddress.Last4(address);
-        var row = await db.GatewayCredentials.FindAsync([orgId, PayProviders.Solana], ct);
-        if (row is null)
-        {
-            row = new GatewayCredentialRow
-            {
-                OrgId = orgId,
-                Provider = PayProviders.Solana,
-                Ciphertext = "",
-                WebhookCiphertext = null,
-                PublicMerchantId = address,
-                Environment = environment,
-                Last4 = last4,
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
-            db.GatewayCredentials.Add(row);
-        }
-        else
-        {
-            row.Ciphertext = "";
-            row.WebhookCiphertext = null;
-            row.PublicMerchantId = address;
-            row.Environment = environment;
-            row.Last4 = last4;
-            row.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
-        if (await db.OrgSettings.FindAsync([orgId], ct) is null)
-        {
-            db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId });
-        }
-
-        db.AuditEvents.Add(new AuditEventRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "gateway.credentials.upsert",
-            At = DateTimeOffset.UtcNow
-        });
-
-        await db.SaveChangesAsync(ct);
-        return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
+        return (null, address, SolanaAddress.Last4(address), environment);
     }
+
+    static bool CredentialConfigured(string name, GatewayCredentialRow row) =>
+        !PayProviders.UsesReceiveAddress(name) || SolanaAddress.TryNormalize(row.PublicMerchantId, out _);
 
     static object GatewayJson(string orgId, GatewayCredentialRow row, bool configured) => new
     {

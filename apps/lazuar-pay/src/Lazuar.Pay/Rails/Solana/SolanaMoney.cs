@@ -5,7 +5,7 @@ namespace Lazuar.Pay.Rails.Solana;
 
 public static class SolanaMoney
 {
-    public static IResult? MintError(string provider, string? currency, string? interval, string? productId)
+    public static IResult? MintError(string provider, string? currency, string? interval, string? productId, decimal? amount)
     {
         if (!PayProviders.IsSolana(provider))
         {
@@ -17,7 +17,7 @@ public static class SolanaMoney
             return PayErrors.Status(400, "Bad Request", "solana does not support subscriptions");
         }
 
-        if (!string.IsNullOrWhiteSpace(productId))
+        if (!PayProviders.UsesCatalogProduct(provider) && !string.IsNullOrWhiteSpace(productId))
         {
             return PayErrors.Status(400, "Bad Request", "solana does not use a MYR catalog product");
         }
@@ -41,6 +41,11 @@ public static class SolanaMoney
         if (n != SolanaUsdc.Currency)
         {
             return PayErrors.Status(400, "Bad Request", "solana currency must be USDC");
+        }
+
+        if (amount is decimal value && !TryToAtomic(value, out _))
+        {
+            return PayErrors.Status(400, "Bad Request", "amount is not a valid USDC amount");
         }
 
         return null;

@@ -48,8 +48,7 @@ public class SolanaHostedTests
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         var row = db.Checkouts.Single();
         Assert.That(row.Status, Is.EqualTo("open"));
-        Assert.That(row.PspRedirectUrl, Is.Null);
-        Assert.That(row.SolanaPayUrl, Is.EqualTo(url));
+        Assert.That(row.PspRedirectUrl, Is.EqualTo(url));
         Assert.That(row.ProviderSessionId, Is.Not.Empty);
         Assert.That(db.Documents.Count(), Is.EqualTo(0));
 

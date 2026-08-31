@@ -136,52 +136,110 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
     {
         var ttl = PaymentLinkOccupancy.ReservationTtl(config);
         var cutoff = DateTimeOffset.UtcNow - ttl;
-        var open = await db.Checkouts
-            .Where(x => x.Provider == PayProviders.Solana && x.Status == "open" && x.SolanaPayUrl != null && x.ProviderSessionId != null)
-            .OrderBy(x => x.CreatedAt)
-            .Take(20)
-            .ToListAsync(ct);
-        foreach (var row in open)
+        var npgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true;
+        while (true)
         {
-            if (row.CreatedAt < cutoff)
+            var open = await ClaimOpenAsync(npgsql, ct);
+            if (open.Count == 0)
             {
-                await FailWatchTimeoutAsync(row, ct);
-                continue;
+                return;
             }
 
-            JsonDocument sigs;
-            try
+            foreach (var row in open)
             {
-                sigs = await rpc.GetSignaturesForAddressAsync(row.ProviderSessionId!, ct);
-            }
-            catch (SolanaRpcThrottledException)
-            {
-                throw;
-            }
-            catch (InvalidOperationException)
-            {
-                continue;
+                if (row.CreatedAt < cutoff)
+                {
+                    await FailWatchTimeoutAsync(row, ct);
+                    continue;
+                }
+
+                await ConfirmSignaturesAsync(row, ct);
             }
 
-            using (sigs)
+            if (!npgsql)
             {
-                if (!sigs.RootElement.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array)
+                return;
+            }
+        }
+    }
+
+    async Task<List<CheckoutRow>> ClaimOpenAsync(bool npgsql, CancellationToken ct)
+    {
+        if (!npgsql)
+        {
+            return await db.Checkouts
+                .Where(x => x.Provider == PayProviders.Solana && x.Status == "open" && x.PspRedirectUrl != null && x.ProviderSessionId != null)
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .ToListAsync(ct);
+        }
+
+        var stamp = DateTimeOffset.UtcNow;
+        var lease = stamp.AddSeconds(-2);
+        var provider = PayProviders.Solana;
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            UPDATE public.checkouts AS c
+            SET "WatchClaimedAt" = {stamp}
+            FROM (
+                SELECT "Id"
+                FROM public.checkouts
+                WHERE "Provider" = {provider}
+                  AND "Status" = 'open'
+                  AND "PspRedirectUrl" IS NOT NULL
+                  AND "ProviderSessionId" IS NOT NULL
+                  AND ("WatchClaimedAt" IS NULL OR "WatchClaimedAt" < {lease})
+                ORDER BY "CreatedAt", "Id"
+                LIMIT 50
+                FOR UPDATE SKIP LOCKED
+            ) AS pick
+            WHERE c."Id" = pick."Id"
+            """,
+            ct);
+        return await db.Checkouts
+            .Where(x => x.WatchClaimedAt == stamp && x.Provider == PayProviders.Solana && x.Status == "open")
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToListAsync(ct);
+    }
+
+    async Task ConfirmSignaturesAsync(CheckoutRow row, CancellationToken ct)
+    {
+        JsonDocument sigs;
+        try
+        {
+            sigs = await rpc.GetSignaturesForAddressAsync(row.ProviderSessionId!, ct);
+        }
+        catch (SolanaRpcThrottledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
+
+        using (sigs)
+        {
+            if (!sigs.RootElement.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array)
+            {
+                return;
+            }
+
+            foreach (var item in result.EnumerateArray())
+            {
+                var sig = item.ValueKind == JsonValueKind.String
+                    ? item.GetString()
+                    : item.TryGetProperty("signature", out var s) ? s.GetString() : null;
+                if (string.IsNullOrWhiteSpace(sig))
                 {
                     continue;
                 }
 
-                foreach (var item in result.EnumerateArray())
+                var outcome = await ConfirmAsync(row, sig, ct);
+                if (outcome is not IStatusCodeHttpResult { StatusCode: 400 })
                 {
-                    var sig = item.ValueKind == JsonValueKind.String
-                        ? item.GetString()
-                        : item.TryGetProperty("signature", out var s) ? s.GetString() : null;
-                    if (string.IsNullOrWhiteSpace(sig))
-                    {
-                        continue;
-                    }
-
-                    await ConfirmAsync(row, sig, ct);
-                    break;
+                    return;
                 }
             }
         }
@@ -194,7 +252,8 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
             return;
         }
 
-        var eventId = "watch_timeout:" + checkout.Id;
+        var linkChild = checkout.PaymentLinkId is not null;
+        var eventId = linkChild ? "expired:" + checkout.Id : "watch_timeout:" + checkout.Id;
         if (await db.PspWebhookEvents.FindAsync([checkout.OrgId, PayProviders.Solana, eventId], ct) is not null)
         {
             return;
@@ -210,18 +269,20 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
                 EventId = eventId,
                 ReceivedAt = DateTimeOffset.UtcNow
             });
-            checkout.Status = "failed";
+            checkout.Status = linkChild ? "expired" : "failed";
             await OutboundWebhookEnqueue.TryAddAsync(
                 db,
                 checkout.OrgId,
                 eventId,
-                PayWebhookEnvelope.Failed,
-                new
-                {
-                    checkout_id = checkout.Id,
-                    reason = "watch_timeout",
-                    provider = PayProviders.Solana
-                },
+                linkChild ? PayWebhookEnvelope.Expired : PayWebhookEnvelope.Failed,
+                linkChild
+                    ? (object)new { checkout_id = checkout.Id, payment_link_id = checkout.PaymentLinkId, reason = "watch_timeout" }
+                    : (object)new
+                    {
+                        checkout_id = checkout.Id,
+                        reason = "watch_timeout",
+                        provider = PayProviders.Solana
+                    },
                 ct);
             await db.SaveChangesAsync(ct);
             await failTx.CommitAsync(ct);

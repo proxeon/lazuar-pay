@@ -71,3 +71,15 @@ export function hostListsTest(list: Processor[]): boolean {
 export function visibleRails(list: Processor[]): Rail[] {
   return hostListsTest(list) ? [...rails] : rails.filter((r) => r !== 'test')
 }
+
+export function usesReceiveAddress(rail: Rail): boolean {
+  return rail === 'solana'
+}
+
+export function usesCatalogProduct(rail: Rail): boolean {
+  return !usesReceiveAddress(rail)
+}
+
+export function defaultCurrency(rail: Rail | ''): string {
+  return rail !== '' && usesReceiveAddress(rail) ? 'USDC' : 'MYR'
+}

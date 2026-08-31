@@ -79,6 +79,12 @@ internal static class PayBoot
             throw new InvalidOperationException("Pay:StartMaxPerMinute must be greater than 0");
         }
 
+        var rpc = config["Pay:Solana:RpcUrl"]?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(rpc))
+        {
+            return;
+        }
+
         var cluster = config["Pay:Solana:Cluster"]?.Trim() ?? "";
         if (cluster is not ("mainnet-beta" or "devnet"))
         {
@@ -90,9 +96,7 @@ internal static class PayBoot
             throw new InvalidOperationException("Pay:Solana:Cluster must be mainnet-beta in Production");
         }
 
-        var rpc = config["Pay:Solana:RpcUrl"]?.Trim() ?? "";
-        if (string.IsNullOrWhiteSpace(rpc)
-            || !Uri.TryCreate(rpc, UriKind.Absolute, out var rpcUri)
+        if (!Uri.TryCreate(rpc, UriKind.Absolute, out var rpcUri)
             || rpcUri.Scheme != Uri.UriSchemeHttps
             || rpcUri.IsLoopback
             || rpc.Contains("VITE_", StringComparison.Ordinal)
@@ -111,20 +115,15 @@ internal static class PayBoot
         {
             throw new InvalidOperationException("Pay:Solana:RpcUrl genesis hash mismatch");
         }
-
-        var mintOverride = config["Pay:Solana:UsdcMint"]?.Trim() ?? "";
-        if (mintOverride.Length > 0)
-        {
-            var other = cluster == SolanaCluster.Mainnet ? SolanaUsdc.DevnetMint : SolanaUsdc.MainnetMint;
-            if (mintOverride == other)
-            {
-                throw new InvalidOperationException("Pay:Solana:UsdcMint does not match cluster");
-            }
-        }
     }
 
     public static async Task ProbeSolanaRpcAsync(IServiceProvider services, IConfiguration config, CancellationToken ct)
     {
+        if (SolanaCluster.RpcUrl(config) is null)
+        {
+            return;
+        }
+
         await using var scope = services.CreateAsyncScope();
         var rpc = scope.ServiceProvider.GetRequiredService<SolanaRpc>();
         var cluster = SolanaCluster.FromConfig(config);

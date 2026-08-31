@@ -31,7 +31,7 @@ public sealed class SolanaRpc(IHttpClientFactory http, IConfiguration config)
             new object[]
             {
                 reference,
-                new Dictionary<string, object?> { ["commitment"] = "finalized", ["limit"] = 5 }
+                new Dictionary<string, object?> { ["commitment"] = "finalized", ["limit"] = 20 }
             },
             ct);
 

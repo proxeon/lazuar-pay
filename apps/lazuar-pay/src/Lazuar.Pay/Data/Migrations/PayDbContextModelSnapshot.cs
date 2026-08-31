@@ -132,9 +132,6 @@ namespace Lazuar.Pay.Data.Migrations
                     b.Property<string>("PspRedirectUrl")
                         .HasColumnType("text");
 
-                    b.Property<string>("SolanaPayUrl")
-                        .HasColumnType("text");
-
                     b.Property<string>("PublicToken")
                         .IsRequired()
                         .HasColumnType("text");
@@ -148,6 +145,9 @@ namespace Lazuar.Pay.Data.Migrations
 
                     b.Property<string>("SuccessUrl")
                         .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("WatchClaimedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

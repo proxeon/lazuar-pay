@@ -1,3 +1,3 @@
 namespace Lazuar.Pay.Rails;
 
-public readonly record struct HostedSession(string RedirectUrl, string? ProviderSessionId, string? SolanaPayUrl = null);
+public readonly record struct HostedSession(string Url, string? ProviderSessionId);

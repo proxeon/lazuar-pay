@@ -88,7 +88,7 @@ internal static class PaymentLinkEndpoints
         }
 
         var productId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim();
-        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval: null, productId);
+        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval: null, productId, body.Amount);
         if (mintErr is not null)
         {
             return mintErr;
