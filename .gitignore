@@ -116,3 +116,6 @@ scripts/lhdn_sandbox/**/cookies.txt
 mitm_mcp_traffic.db
 
 *.tsbuildinfo
+
+# pnpm local store
+.pnpm-store/

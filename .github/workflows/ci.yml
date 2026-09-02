@@ -38,5 +38,9 @@ jobs:
           pnpm --filter lazuar-pay-checkout build
       - name: Compile pay-spec
         run: pnpm --filter @repo/pay-spec exec tsp compile .
+      - name: Generated TS matches pay-spec (no drift)
+        run: |
+          pnpm --filter @repo/pay-types-ts generate
+          git diff --exit-code -- packages/pay-types-ts
       - name: Pay OpenAPI ↔ Map* honesty
         run: node scripts/check-pay-openapi-honesty.mjs

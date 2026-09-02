@@ -551,7 +551,7 @@ interface Money {
 @route("/v1")
 @tag("Webhooks")
 interface Webhooks {
-  /** Plane B. 200 is paid `{ok}`, replay `{duplicate}`, `{ignored}`, persisted `{failed}`, or late-pay `{refunded}`. */
+  /** Plane B. 200 is paid `{ok}`, replay `{duplicate}`, `{ignored}`, persisted `{failed}`, or late-pay `{refunded}` — false leaves the refund row `pending` for ops, never a fake settled refund. */
   @post
   @route("/webhooks/{provider}/{orgId}")
   psp(@path provider: string, @path orgId: string): PspWebhookResult;

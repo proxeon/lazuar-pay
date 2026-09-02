@@ -1,91 +1,8 @@
 version: '3'
 
 tasks:
-  infra:up:
-    desc: Start local Docker dependencies (PostgreSQL) in the background
-    cmds:
-      - docker-compose up db -d
-
-  infra:down:
-    desc: Stop and remove local Docker containers
-    cmds:
-      - docker-compose down
-
-  infra:reset:
-    desc: "Stop containers and completely wipe local database volumes (Warning: destructive)"
-    cmds:
-      - docker-compose down -v
-
-  infra:logs:
-    desc: View and follow logs from local Docker infrastructure containers
-    cmds:
-      - docker-compose logs -f
-
-  dev:
-    desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
-    deps: [infra:up]
-    cmds:
-      # - task: api:db:migrate
-      - pnpm --filter lazuar-api dev
-
-  docs:
-    desc: VitePress Hub integrator guides (apps/lazuar-docs) at http://localhost:5180
-    cmds:
-      - pnpm docs:dev
-
-  docs:build:
-    desc: Build static Hub docs site
-    cmds:
-      - pnpm docs:build
-
-  fe:
-    desc: Full dev stack (Docker infra + mprocs for frontends and tunnels)
-    cmds:
-      - mprocs -c mprocs-dev.yaml
-
-  proxy:
-    desc: Local Caddy gateway on :9080 via Docker (caddy:2-alpine → host FE/API ports)
-    cmds:
-      - |
-        if ! docker info >/dev/null 2>&1; then
-          echo "Docker is not running. Start Docker Desktop, then retry: task proxy"
-          exit 1
-        fi
-        echo "Caddy gateway → http://localhost:9080"
-        echo "Upstream host apps must be up (task dev + task fe)."
-        docker compose -f docker-compose.dev-proxy.yml up
-
-  proxy:up:
-    desc: Start local Caddy gateway detached (docker compose -d)
-    cmds:
-      - |
-        if ! docker info >/dev/null 2>&1; then
-          echo "Docker is not running. Start Docker Desktop, then retry."
-          exit 1
-        fi
-        docker compose -f docker-compose.dev-proxy.yml up -d
-        echo "Gateway: http://localhost:9080  (stop: task proxy:down)"
-
-  proxy:down:
-    desc: Stop local Caddy gateway container
-    cmds:
-      - docker compose -f docker-compose.dev-proxy.yml down
-
-  proxy:validate:
-    desc: Validate deploy/dev/Caddyfile via caddy Docker image
-    cmds:
-      - |
-        if ! docker info >/dev/null 2>&1; then
-          echo "Docker is not running. Start Docker Desktop, then retry."
-          exit 1
-        fi
-        docker run --rm \
-          -v "$PWD/deploy/dev/Caddyfile:/etc/caddy/Caddyfile:ro" \
-          caddy:2-alpine \
-          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-
   # ==========================================
-  # Focused Pay (apps/lazuar-pay) — not the old modular API
+  # Focused Pay (apps/lazuar-pay)
   # ==========================================
   pay:restore:
     desc: Restore the focused Pay solution
@@ -107,7 +24,7 @@ tasks:
       - dotnet test Lazuar.Pay.slnx --nologo --verbosity minimal
 
   pay:dev:
-    desc: Run focused Pay on http://localhost:8081 (old API stays on 8080)
+    desc: Run focused Pay on http://localhost:8081
     dir: apps/lazuar-pay
     cmds:
       - dotnet watch run --project src/Lazuar.Pay/Lazuar.Pay.csproj
@@ -131,98 +48,26 @@ tasks:
       - pnpm exec tsp compile .
       - node ../../scripts/check-pay-openapi-honesty.mjs
 
+  pay:types:
+    desc: Regenerate @repo/pay-types-ts from the compiled spec (run pay:spec first)
+    cmds:
+      - pnpm --filter @repo/pay-types-ts generate
+
   pay:merchant:
-    desc: Merchant Vite shell on http://localhost:5178 (not lazuar-ops)
+    desc: Merchant Vite shell on http://localhost:5178
     cmds:
       - pnpm --filter lazuar-pay-merchant dev
 
   pay:checkout:
-    desc: Hosted buyer pay page on http://localhost:5179 (not lazuar-portal)
+    desc: Hosted buyer pay page on http://localhost:5179
     cmds:
       - pnpm --filter lazuar-pay-checkout dev
 
   # ==========================================
-  # .NET API Tasks (apps/lazuar-api — old modular monolith)
-  # ==========================================
-  api:restore:
-    desc: Restore the .NET API solution dependencies
-    dir: apps/lazuar-api
-    cmds:
-      - dotnet restore Lazuar.slnx
-
-  api:build:
-    desc: Build the .NET API solution
-    deps: [api:restore]
-    dir: apps/lazuar-api
-    cmds:
-      - dotnet build Lazuar.slnx
-
-  api:test:
-    desc: Run .NET architecture and unit tests
-    dir: apps/lazuar-api
-    cmds:
-      - dotnet test tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj
-      - dotnet test tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj
-      - dotnet test tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj
-      - dotnet test tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj
-      - dotnet test tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj
-
-  api:db:migrate:
-    desc: Apply all pending migrations for all modular contexts sequentially
-    dir: apps/lazuar-api/src/Lazuar.Api
-    cmds:
-      - dotnet ef database update --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      - dotnet ef database update --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-
-  api:migrations:purge:
-    desc: Forcefully deletes all Migrations folders across all modules to prepare for a clean init.
-    cmds:
-      - rm -rf apps/lazuar-api/Modules/One/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Messaging/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Payments/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/CRM/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Ops/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Billing/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Lhdn/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Commerce/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Communications/Infrastructure/Migrations
-
-  api:migrations:init:
-    desc: Generate the initial EF Core migrations for all core modules
-    dir: apps/lazuar-api/src/Lazuar.Api
-    cmds:
-      - dotnet ef migrations add InitialOneSchema --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialLhdnSchema --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialCommerceSchema --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialCommunicationsSchema --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-
-  api:migrations:add:
-    desc: "Generate a new EF Core migration. Usage: task api:migrations:add MODULE=Billing NAME=AddUsersTable. MODULE = DbContext prefix (Billing→BillingDbContext; One, Commerce, Ops, …). CRM: folder/csproj are Modules/CRM + Modules.CRM.*, but context is CrmDbContext — use MODULE=Crm (not CRM). On case-sensitive Linux, prefer raw: --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj"
-    dir: apps/lazuar-api/src/Lazuar.Api
-    requires:
-      vars: [MODULE, NAME]
-    cmds:
-      - dotnet ef migrations add {{.NAME}} --context {{.MODULE}}DbContext --project ../../Modules/{{.MODULE}}/Infrastructure/Modules.{{.MODULE}}.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-
-  # ==========================================
-  # Cloudflare named tunnel (preferred hop A)
-  # Same tunnel as Aura `task tunnel:cf` — one process, two ingresses.
-  # Dual-run Pay listens on :8090 (Aura owns 8080).
+  # Cloudflare named tunnel (preferred hop A for Billplz callbacks)
   # ==========================================
   tunnel:cf:
-    desc: Run named Cloudflare tunnel (Pay :8090 + Aura :8000). Preferred hop A for Billplz. Same command as Aura task tunnel:cf.
+    desc: Run named Cloudflare tunnel. Preferred hop A for Billplz.
     interactive: true
     cmds:
       - |
@@ -278,89 +123,14 @@ tasks:
           exit 1
         fi
 
-  # ==========================================
-  # Ngrok Tunnel Tasks (legacy — not hop A)
-  # ==========================================
   tunnel:stop:
     desc: Force kill any orphaned ngrok processes running in the background
     cmds:
       - pkill -9 ngrok || echo "No ngrok processes were running."
 
-  tunnel:api:
-    desc: Start ngrok for standalone Pay API :8080 (not dual-run). Prefer task tunnel:cf for Aura dual-run hop A on :8090.
-    cmds:
-      - |
-        echo "Starting ngrok on Hub API port 8080 (standalone Pay, not Aura dual-run)..."
-        echo "Dual-run next to Aura uses :8090 + task tunnel:cf (pay-local.lazuar.dev)."
-        echo "After this ngrok is up, set App__ApiBaseUrl to:"
-        echo "  https://{public-host}/api/v1"
-        echo "Billplz callback pattern:"
-        echo "  {App__ApiBaseUrl}/webhooks/payments/billplz/{tenantId}"
-        echo "⚠️  Do not point Billplz at Aura legacy /webhooks/gateway/* in hub mode."
-        echo "⚠️  localhost / lazuar-local-dev.com is not hop A (CALLBACK_BASE_NOT_PUBLIC)."
-        ngrok http 8080
-
-  tunnel:fe:
-    desc: Start ngrok tunnel for lazuar-portal (Next.js) on port 3004
-    cmds:
-      - ngrok http 3004
-
-  tunnel:status:
-    desc: Query the local ngrok agent API to print active public tunnel URLs
-    cmds:
-      - |
-        echo "Querying active ngrok tunnels..."
-        curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
-        echo ""
-        echo "Hub public base should be: https://{host}/api/v1  → App__ApiBaseUrl"
-        echo "Billplz inbound: {App__ApiBaseUrl}/webhooks/payments/{gateway}/{tenantId}"
-
-  # ─── CODE GENERATION (TypeSpec -> OpenAPI -> Clients) ──────────────────────
-  gen:
-    desc: Run the full code-generation pipeline
-    cmds:
-      - task: gen:spec
-      - task: gen:types-ts
-      - task: gen:types-dotnet
-      - task: gen:sdk-lhdn
-    sources:
-      - "packages/api-spec/**/*.tsp"
-      - "packages/api-spec/tspconfig.yaml"
-    generates:
-      - "packages/api-spec/dist/openapi.yaml"
-      - "packages/api-types-ts/src/index.ts"
-      - "packages/api-types-dotnet/Lazuar.ApiContracts.cs"
-
-  gen:spec:
-    desc: Compile TypeSpec to OpenAPI.yaml
-    dir: packages/api-spec
-    cmds:
-      - pnpm build
-
-  gen:types-ts:
-    desc: Generate TypeScript types for Frontend apps
-    cmds:
-      - pnpm --filter @repo/api-types-ts generate
-
-  gen:types-dotnet:
-    desc: Generate C# DTOs for the Backend API
-    cmds:
-      - pnpm --filter @repo/api-types-dotnet generate
-
-  gen:sdk-lhdn:
-    desc: Generate the external LHDN SDKs using Microsoft Kiota
-    cmds:
-      - dotnet tool run kiota generate -l typescript -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-ts/src/generated --class-name LhdnClient --clean-output
-      - dotnet tool run kiota generate -l csharp -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-dotnet/src/Generated --class-name LhdnClient --namespace-name Lazuar.Lhdn.Sdk.Generated --clean-output
-
-  contracts:honesty:
-    desc: OpenAPI paths vs Minimal API maps (allowlist-aware honesty gate)
-    deps: [gen:spec]
-    cmds:
-      - node scripts/check-openapi-minimal-honesty.mjs
-
   # ==========================================
   # Docker / GHCR  (always linux/amd64 for Ubuntu servers)
+  # Bake default group = the three Pay images (see docker-bake.hcl)
   # ==========================================
   docker:builder:
     desc: Ensure a buildx builder that can cross-compile linux/amd64 (from Mac ARM too)
@@ -374,27 +144,15 @@ tasks:
         echo "Active builder supports: $(docker buildx inspect --bootstrap | sed -n 's/.*Platforms: //p')"
 
   docker:build:
-    desc: "Build all runtime images (api + frontends) as linux/amd64"
+    desc: "Build the Pay images (host, merchant, checkout) as linux/amd64"
     deps: [docker:builder]
     cmds:
       - |
         TAG="${TAG:-$(git rev-parse --short HEAD)}"
         REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
         PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (api, lazuar-portal, lazuar-ops, lazuar-admin, lazuar-developers)"
+        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (lazuar-pay, lazuar-pay-merchant, lazuar-pay-checkout)"
         docker buildx bake --load \
-          --builder lazuar-builder \
-          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
-
-  docker:build:api:
-    desc: Build only the API image as linux/amd64
-    deps: [docker:builder]
-    cmds:
-      - |
-        TAG="${TAG:-$(git rev-parse --short HEAD)}"
-        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
-        PLATFORMS="${PLATFORMS:-linux/amd64}"
-        docker buildx bake api --load \
           --builder lazuar-builder \
           REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
 
@@ -411,38 +169,14 @@ tasks:
         echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
   docker:push:
-    desc: "Build linux/amd64 and push all images to GHCR (lazuar-hub/*). Requires docker login."
+    desc: "Build linux/amd64 and push the Pay images to GHCR. Requires docker login."
     deps: [docker:builder]
     cmds:
       - |
         TAG="${TAG:-$(git rev-parse --short HEAD)}"
         REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
         PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Pushing $REGISTRY/lazuar-hub/*:$TAG as $PLATFORMS"
+        echo "Pushing $REGISTRY/lazuar-pay*:$TAG as $PLATFORMS"
         docker buildx bake --push \
           --builder lazuar-builder \
           REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
-
-  docker:push:api:
-    desc: "Build linux/amd64 API only and push to GHCR"
-    deps: [docker:builder]
-    cmds:
-      - |
-        TAG="${TAG:-$(git rev-parse --short HEAD)}"
-        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
-        PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Pushing $REGISTRY/lazuar-hub-api:$TAG as $PLATFORMS"
-        docker buildx bake api --push \
-          --builder lazuar-builder \
-          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
-
-  docker:up:ghcr:
-    desc: Run stack from GHCR images (docker-compose.ghcr.yml)
-    cmds:
-      - docker compose -f docker-compose.ghcr.yml pull
-      - docker compose -f docker-compose.ghcr.yml up -d
-
-  docker:up:full:
-    desc: Build and run full local stack (api + all frontends)
-    cmds:
-      - docker compose --profile full up -d --build

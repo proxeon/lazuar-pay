@@ -401,7 +401,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Plane B. 200 is paid `{ok}`, replay `{duplicate}`, `{ignored}`, persisted `{failed}`, or late-pay `{refunded}`. */
+        /** @description Plane B. 200 is paid `{ok}`, replay `{duplicate}`, `{ignored}`, persisted `{failed}`, or late-pay `{refunded}` — false leaves the refund row `pending` for ops, never a fake settled refund. */
         post: operations["Webhooks_psp"];
         delete?: never;
         options?: never;
@@ -648,7 +648,7 @@ export interface components {
             mine?: boolean;
             provider?: string;
             redirect_url?: string;
-            /** @description solana: URI for QR. Present when provider is solana and start has run. redirect_url is null. */
+            /** @description Hosted URL when the scheme is solana: (QR, not a browser redirect). redirect_url is null. */
             solana_pay_url?: string;
             /** @description Process cluster. `devnet` or `mainnet-beta`. Present when provider is solana. */
             solana_cluster?: string;
