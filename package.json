@@ -7,11 +7,7 @@
     "lint": "turbo run lint --filter=!@examples/*",
     "test": "turbo run test --filter=!@examples/*",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types --filter=!@examples/*",
-    "docs:dev": "pnpm --filter lazuar-docs dev",
-    "docs:build": "pnpm --filter lazuar-docs build",
-    "docs:preview": "pnpm --filter lazuar-docs preview",
-    "example:cashier": "pnpm --filter @examples/hub-cashier-next dev"
+    "check-types": "turbo run check-types --filter=!@examples/*"
   },
   "devDependencies": {
     "prettier": "^3.7.4",

@@ -51,7 +51,7 @@ target "docker-metadata-action" {}
 target "_common" {
   platforms = [PLATFORMS]
   labels = {
-    "org.opencontainers.image.source"      = "https://github.com/proxeon/lazuar-hub"
+    "org.opencontainers.image.source"      = "https://github.com/proxeon/lazuar-pay"
     "org.opencontainers.image.vendor"      = "Lazuar"
     "org.opencontainers.image.description" = "Lazuar Pay CaaS"
   }
