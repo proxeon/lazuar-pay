@@ -19,7 +19,7 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay", "INR");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -27,7 +27,7 @@ public class RazorpayRailTests
         var started = await client.SendAsync(start);
         Assert.That(started.IsSuccessStatusCode, await started.Content.ReadAsStringAsync());
 
-        var payload = "{\"event\":\"payment.captured\",\"payload\":{\"payment\":{\"entity\":{\"id\":\"pay_1\",\"amount\":1000,\"currency\":\"MYR\",\"tax\":12,\"fee\":30,\"notes\":{\"checkout_id\":\"" + checkoutId + "\"}}}}}";
+        var payload = "{\"event\":\"payment.captured\",\"payload\":{\"payment\":{\"entity\":{\"id\":\"pay_1\",\"amount\":1000,\"currency\":\"INR\",\"tax\":12,\"fee\":30,\"notes\":{\"checkout_id\":\"" + checkoutId + "\"}}}}}";
         var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("wh_rzp"), Encoding.UTF8.GetBytes(payload));
         var sig = Convert.ToHexString(mac).ToLowerInvariant();
         using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/razorpay/t1")
@@ -52,7 +52,7 @@ public class RazorpayRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh"}""");
-        var (token, _) = await PayTest.SeedCheckout(client, "razorpay");
+        var (token, _) = await PayTest.SeedCheckout(client, "razorpay", "INR");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"customer@example.com"}""", Encoding.UTF8, "application/json")
@@ -85,13 +85,13 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay", "INR");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
         };
         await client.SendAsync(start);
-        var payload = "{\"event\":\"payment.failed\",\"payload\":{\"payment\":{\"entity\":{\"id\":\"pay_1\",\"amount\":1000,\"currency\":\"MYR\",\"notes\":{\"checkout_id\":\"" + checkoutId + "\"}}}}}";
+        var payload = "{\"event\":\"payment.failed\",\"payload\":{\"payment\":{\"entity\":{\"id\":\"pay_1\",\"amount\":1000,\"currency\":\"INR\",\"notes\":{\"checkout_id\":\"" + checkoutId + "\"}}}}}";
         var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("wh_rzp"), Encoding.UTF8.GetBytes(payload));
         using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/razorpay/t1")
         {
@@ -116,13 +116,13 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, _) = await PayTest.SeedCheckout(client, "razorpay");
+        var (token, _) = await PayTest.SeedCheckout(client, "razorpay", "INR");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
         };
         await client.SendAsync(start);
-        var payload = """{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1","amount":1000,"currency":"MYR"}},"payment_link":{"entity":{"id":"plink_1"}}}}""";
+        var payload = """{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1","amount":1000,"currency":"INR"}},"payment_link":{"entity":{"id":"plink_1"}}}}""";
         var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("wh_rzp"), Encoding.UTF8.GetBytes(payload));
         using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/razorpay/t1")
         {

@@ -1,6 +1,7 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Solana;
@@ -95,6 +96,15 @@ internal static class PaymentLinkEndpoints
         }
 
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
+        // Issues 003/014: reject currencies the rail cannot settle before the link is minted.
+        // ToMinor assumes two-decimal currencies (×100) — a JPY link would charge 100× the
+        // quote — and Billplz bills MYR only, so a USD link there collected ringgit while
+        // the checkout, charge, and receipt all booked USD.
+        if (!RailCurrencies.IsSupported(provider, currency))
+        {
+            return PayErrors.Status(400, "Bad Request",
+                $"currency {currency} is not supported on {provider}; supported: {RailCurrencies.Describe(provider)}");
+        }
         if (productId is not null)
         {
             var product = await db.Products.AsNoTracking()
@@ -152,7 +162,11 @@ internal static class PaymentLinkEndpoints
         var q = db.PaymentLinks.AsNoTracking().Where(x => x.OrgId == orgId);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, cancellationToken);
+            // Issue 015 (issues/001): the cursor row is fetched org-scoped — a foreign org's
+            // id used to resolve globally, leaking cross-org existence + timestamps through
+            // the page boundary an empty/bogus cursor would not produce.
+            var cursor = await db.PaymentLinks.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, cancellationToken);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt

@@ -1,6 +1,7 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Solana;
@@ -88,6 +89,15 @@ internal static class CheckoutEndpoints
         }
 
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
+        // Issues 003/014: only currencies this rail actually settles may be quoted. ToMinor
+        // assumes two-decimal currencies (×100), so a zero-decimal code like JPY would be
+        // charged 100× the quote at the processor; and Billplz/CHIP bill MYR only, so a USD
+        // quote there used to collect ringgit while the ledger booked dollars.
+        if (!RailCurrencies.IsSupported(provider, currency))
+        {
+            return PayErrors.Status(400, "Bad Request",
+                $"currency {currency} is not supported on {provider}; supported: {RailCurrencies.Describe(provider)}");
+        }
         var idempotency = request.Headers["Idempotency-Key"].ToString();
         if (string.IsNullOrWhiteSpace(idempotency))
         {
@@ -202,7 +212,9 @@ internal static class CheckoutEndpoints
         var q = db.Checkouts.AsNoTracking().Where(x => x.OrgId == orgId && x.PaymentLinkId == null);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, cancellationToken);
+            // Issue 015: org-scope the cursor row (see PaymentLinkEndpoints.List).
+            var cursor = await db.Checkouts.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, cancellationToken);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt
