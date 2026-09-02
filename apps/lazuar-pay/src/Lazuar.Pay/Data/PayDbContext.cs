@@ -129,7 +129,10 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         {
             e.ToTable("documents");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => x.CheckoutId).IsUnique();
+            // Non-unique: a checkout holds its RCPT and every REF document. The
+            // one-fulfillment-per-checkout guard is charges.CheckoutId; receipt numbering is
+            // guarded by (OrgId, Number) plus the atomic sequence allocation.
+            e.HasIndex(x => x.CheckoutId);
             e.HasIndex(x => new { x.OrgId, x.Number }).IsUnique();
         });
         model.Entity<DocumentSequenceRow>(e =>

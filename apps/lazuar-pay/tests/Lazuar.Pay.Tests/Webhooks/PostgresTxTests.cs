@@ -114,4 +114,82 @@ public class PostgresTxTests
         Assert.That(await db.Documents.CountAsync(), Is.EqualTo(1));
         Assert.That(await db.Charges.CountAsync(), Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task Refund_after_fulfill_books_refund_document_on_postgres()
+    {
+        // InMemory does not enforce unique indexes — only Postgres catches a refund document
+        // colliding with the receipt on the same CheckoutId.
+        await using var factory = await PayPostgres.FactoryAsync();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "test");
+
+        var body = $$"""{"id":"evt_pg_pay","checkout_id":"{{checkoutId}}","amount_total":1000,"currency":"myr"}""";
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("test_whsec_local"), Encoding.UTF8.GetBytes(body));
+        using var pay = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/test/t1")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        pay.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
+        Assert.That((await client.SendAsync(pay)).IsSuccessStatusCode, Is.True,
+            await pay.Content.ReadAsStringAsync());
+
+        using var refund = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/refunds")
+        {
+            Content = new StringContent($$"""{"checkout_id":"{{checkoutId}}"}""", Encoding.UTF8, "application/json")
+        };
+        refund.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(refund);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+
+        using var settled = factory.Services.CreateScope();
+        var db = settled.ServiceProvider.GetRequiredService<PayDbContext>();
+        var titles = await db.Documents.Select(x => x.Title).ToListAsync();
+        Assert.That(titles, Does.Contain("Official Receipt"));
+        Assert.That(titles, Does.Contain("Refund"));
+        Assert.That(await db.JournalLines.CountAsync(x => x.Account == "cash" && x.Dc == "C"), Is.EqualTo(1));
+        Assert.That((await db.Charges.SingleAsync()).Status, Is.EqualTo("refunded"));
+    }
+
+    [Test]
+    public async Task Concurrent_same_key_refunds_replay_not_conflict()
+    {
+        await using var factory = await PayPostgres.FactoryAsync();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "test");
+
+        var body = $$"""{"id":"evt_pg_idem","checkout_id":"{{checkoutId}}","amount_total":1000,"currency":"myr"}""";
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("test_whsec_local"), Encoding.UTF8.GetBytes(body));
+        using var pay = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/test/t1")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        pay.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
+        Assert.That((await client.SendAsync(pay)).IsSuccessStatusCode, Is.True);
+
+        async Task<HttpResponseMessage> Refund()
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/refunds")
+            {
+                Content = new StringContent($$"""{"checkout_id":"{{checkoutId}}"}""", Encoding.UTF8, "application/json")
+            };
+            req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+            req.Headers.TryAddWithoutValidation("Idempotency-Key", "pg-ref-1");
+            return await client.SendAsync(req);
+        }
+
+        var results = await Task.WhenAll(Refund(), Refund());
+        Assert.That(results.Count(r => (int)r.StatusCode == 201), Is.EqualTo(1),
+            string.Join(" | ", results.Select(r => ((int)r.StatusCode) + " " + r.Content.ReadAsStringAsync().Result)));
+        Assert.That(results.Count(r => (int)r.StatusCode == 200), Is.EqualTo(1),
+            string.Join(" | ", results.Select(r => ((int)r.StatusCode) + " " + r.Content.ReadAsStringAsync().Result)));
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(await db.Refunds.CountAsync(), Is.EqualTo(1));
+        Assert.That((await db.Charges.SingleAsync()).Status, Is.EqualTo("refunded"));
+        Assert.That(await db.JournalLines.CountAsync(x => x.Account == "cash" && x.Dc == "C"), Is.EqualTo(1));
+    }
 }
