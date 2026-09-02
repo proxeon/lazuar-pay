@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.PaymentLinks;
 using Lazuar.Pay.Rails;
@@ -67,6 +68,13 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             var link = await db.PaymentLinks.FirstOrDefaultAsync(x => x.Id == checkout.PaymentLinkId, ct);
             if (link is not null)
             {
+                // Issue 008: serialize the capacity check against minting and other fulfillers
+                // on the parent link row (FOR UPDATE), exactly as MintOrResume does. The old
+                // unlocked count let two concurrent late captures on a full link both read
+                // paid = max-1 and both fulfill, exceeding MaxPayers with no refund for the
+                // excess. The in-process CheckoutGates only serialize per-checkout, not
+                // per-link, and only within one process.
+                await PaymentLinkOccupancy.LockParentAsync(db, link.Id, ct);
                 var paid = await db.Checkouts.CountAsync(
                     x => x.PaymentLinkId == link.Id && x.Status == "paid",
                     ct);
@@ -77,21 +85,7 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
                     // this row id as the idempotency key — a fresh Guid per attempt previously
                     // let a retry move money twice. Rails with no refund API keep the row
                     // pending as the ops marker.
-                    checkout.Status = "expired";
-                    var refundId = Guid.NewGuid().ToString("N");
-                    db.Refunds.Add(new RefundRow
-                    {
-                        Id = refundId,
-                        OrgId = checkout.OrgId,
-                        CheckoutId = checkout.Id,
-                        Amount = checkout.Amount,
-                        Currency = checkout.Currency,
-                        Status = "pending",
-                        Provider = provider,
-                        ProviderRef = providerRef,
-                        Reason = "late_pay",
-                        CreatedAt = DateTimeOffset.UtcNow
-                    });
+                    await CheckoutTransitions.TryLeaveOpenAsync(db, checkout, "expired", ct);
                     await OutboundWebhookEnqueue.TryAddAsync(
                         db,
                         checkout.OrgId,
@@ -99,13 +93,34 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
                         PayWebhookEnvelope.Expired,
                         new { checkout_id = checkout.Id, payment_link_id = checkout.PaymentLinkId, reason = "over_capacity" },
                         ct);
-                    await db.SaveChangesAsync(ct);
-                    return new FulfillOutcome(false, refundId, MoneyMath.ToMinor(checkout.Amount));
+                    return await BookLateRefundAsync(checkout, provider, providerRef, ct);
                 }
             }
         }
 
-        checkout.Status = "paid";
+        // Issue 002: claim the checkout with a compare-and-set off "open". The previous blind
+        // "paid" write could land over a concurrently committed "expired" (TTL sweep / charges
+        // paused), turning a late capture into a fulfilled order with a spurious expired
+        // webhook behind it.
+        if (!await CheckoutTransitions.TryLeaveOpenAsync(db, checkout, "paid", ct))
+        {
+            // Another writer moved the row between our read and here. If it was fulfilled,
+            // this delivery is a duplicate; if it expired/failed, the money arrived late and
+            // follows the late-pay refund route instead of a forced fulfillment.
+            // (Detach only this entity — the caller's tracked webhook-event row must survive
+            // so the dedupe insert still commits with the caller's transaction.)
+            db.Entry(checkout).State = EntityState.Detached;
+            var current = await db.Checkouts.AsNoTracking()
+                .Where(x => x.Id == checkout.Id)
+                .Select(x => x.Status)
+                .FirstAsync(ct);
+            if (current is "expired" or "failed")
+            {
+                return await BookLateRefundAsync(checkout, provider, providerRef, ct);
+            }
+
+            return new FulfillOutcome(false);
+        }
         var chargeId = Guid.NewGuid().ToString("N");
         db.Charges.Add(new ChargeRow
         {
@@ -226,6 +241,33 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
         // checkout was already fulfilled concurrently and the caller answers "duplicate".
         await db.SaveChangesAsync(ct);
         return new FulfillOutcome(true);
+    }
+
+    /// <summary>
+    /// Book a pending late_pay refund for money that arrived after the checkout left "open" —
+    /// over capacity (issue 008), or expired/failed concurrently with fulfillment (issue 002).
+    /// The caller must settle the returned refund id via ProcessorRemote only after its own
+    /// transaction commits; rails with no refund API leave the row pending as the ops marker.
+    /// </summary>
+    async Task<FulfillOutcome> BookLateRefundAsync(
+        CheckoutRow checkout, string provider, string? providerRef, CancellationToken ct)
+    {
+        var refundId = Guid.NewGuid().ToString("N");
+        db.Refunds.Add(new RefundRow
+        {
+            Id = refundId,
+            OrgId = checkout.OrgId,
+            CheckoutId = checkout.Id,
+            Amount = checkout.Amount,
+            Currency = checkout.Currency,
+            Status = "pending",
+            Provider = provider,
+            ProviderRef = providerRef,
+            Reason = "late_pay",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync(ct);
+        return new FulfillOutcome(false, refundId, MoneyMath.ToMinor(checkout.Amount));
     }
 }
 

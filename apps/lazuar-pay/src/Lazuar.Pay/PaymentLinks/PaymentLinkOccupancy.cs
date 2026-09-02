@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
@@ -93,7 +94,9 @@ internal static class PaymentLinkOccupancy
         return await MarkExpiredAsync(db, open, "charges_paused", ct).ConfigureAwait(false);
     }
 
-    static async Task<IReadOnlyList<CheckoutRow>> MarkExpiredAsync(
+    // internal for OccupancyRaceTests: the SELECT→write race must be driven with a stale row
+    // list, which the public Expire*Async entry points re-query away.
+    internal static async Task<IReadOnlyList<CheckoutRow>> MarkExpiredAsync(
         PayDbContext db,
         List<CheckoutRow> rows,
         string reason,
@@ -104,9 +107,19 @@ internal static class PaymentLinkOccupancy
             return rows;
         }
 
+        var expired = new List<CheckoutRow>(rows.Count);
         foreach (var row in rows)
         {
-            row.Status = "expired";
+            // Issue 002: expiry is a compare-and-set off "open" — the previous blind write
+            // raced the fulfiller (a sweep that had SELECTed the row while open could
+            // overwrite a just-committed "paid", freeing capacity for a delivered order and
+            // arming a late-pay refund against a fulfilled checkout). Rows another writer
+            // already moved are skipped, and the webhook only fires for rows we expired.
+            if (!await CheckoutTransitions.TryLeaveOpenAsync(db, row, "expired", ct).ConfigureAwait(false))
+            {
+                continue;
+            }
+
             await OutboundWebhookEnqueue.TryAddAsync(
                 db,
                 row.OrgId,
@@ -114,9 +127,10 @@ internal static class PaymentLinkOccupancy
                 PayWebhookEnvelope.Expired,
                 new { checkout_id = row.Id, payment_link_id = row.PaymentLinkId, reason },
                 ct).ConfigureAwait(false);
+            expired.Add(row);
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return rows;
+        return expired;
     }
 }

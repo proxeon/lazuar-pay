@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
@@ -286,7 +287,22 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
                 EventId = eventId,
                 ReceivedAt = DateTimeOffset.UtcNow
             });
-            checkout.Status = linkChild ? "expired" : "failed";
+
+            // Issue 002: the watch-timeout flip is a compare-and-set off "open" — a webhook or
+            // fulfiller may have committed a status change between the read and this write, and
+            // the old blind write could overwrite it. Losing the CAS aborts the whole timeout:
+            // the event row is rolled back and the winner's status stands.
+            if (!await CheckoutTransitions.TryLeaveOpenAsync(
+                    db, checkout, linkChild ? "expired" : "failed", ct))
+            {
+                // Roll back the event row; clear the tracker so the rolled-back Add cannot be
+                // resurrected by a later SaveChanges in this worker scope. Only the watcher
+                // loop reaches this path, and it re-queries every batch.
+                await failTx.RollbackAsync(ct);
+                db.ChangeTracker.Clear();
+                return;
+            }
+
             await OutboundWebhookEnqueue.TryAddAsync(
                 db,
                 checkout.OrgId,
