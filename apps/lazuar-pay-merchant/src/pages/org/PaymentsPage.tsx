@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { listItems, payJson } from '../../lib/payApi'
+import { listAll } from '../../lib/payApi'
 import { isRail, railLabel } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
@@ -49,10 +49,12 @@ export function PaymentsPage() {
     let stop = false
     setLoaded(false)
     setListError(null)
-    payJson<Payment[] | { items: Payment[] }>(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
+    // Issue 006 (issues/001): follow next_cursor — page 1 alone silently hid every row past
+    // the server's 50-row clamp.
+    listAll<Payment>(token, `/v1/orgs/${orgId}/payments`, { orgHint: orgId })
       .then((rows) => {
         if (stop) return
-        setPayments(listItems(rows))
+        setPayments(rows)
         setLoaded(true)
       })
       .catch((err: unknown) => {

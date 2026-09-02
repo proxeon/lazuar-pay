@@ -88,4 +88,31 @@ export function listItems<T>(payload: T[] | PayPage<T> | null | undefined): T[] 
   return payload.items ?? []
 }
 
+/**
+ * Issue 006 (issues/001): every list endpoint clamps to a page (default 50 rows) and
+ * answers with next_cursor — which the merchant pages never followed, so an org's 51st pay
+ * link (or payment, or receipt) silently vanished from the dashboard. Follow the cursor
+ * until it is exhausted. maxPages bounds the loop so a pathological org cannot hang the UI.
+ */
+export async function listAll<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit & { orgHint?: string },
+  { maxPages = 50 }: { maxPages?: number } = {},
+): Promise<T[]> {
+  const out: T[] = []
+  let cursor: string | null | undefined = null
+  for (let page = 0; page < maxPages; page++) {
+    const suffix: string = cursor
+      ? `${path.includes('?') ? '&' : '?'}after=${encodeURIComponent(cursor)}`
+      : ''
+    const body = await payJson<T[] | PayPage<T>>(accessToken, path + suffix, init)
+    const payload: PayPage<T> | null = Array.isArray(body) ? { items: body } : body
+    out.push(...(payload?.items ?? []))
+    cursor = payload?.next_cursor
+    if (!cursor) break
+  }
+  return out
+}
+
 export { payApi }

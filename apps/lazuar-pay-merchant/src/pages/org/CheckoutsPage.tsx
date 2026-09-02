@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { parseAmountInput } from '../../lib/money'
-import { listItems, payFetch, payJson } from '../../lib/payApi'
+import { listAll, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
 import {
@@ -112,11 +112,18 @@ export function CheckoutsPage() {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
 
+  // Issue 013 (issues/001): loadLinks used to set state unconditionally, so a slow response
+  // for workspace A could land after the switch to workspace B and render A's pay links
+  // under B's URL (a copied buyer link then charges the wrong org). Each load takes an
+  // epoch; only the newest load may touch state. The same load also now follows
+  // next_cursor (issue 006) instead of showing only the first 50 rows.
+  const linksEpoch = useRef(0)
+
   async function loadLinks() {
-    const rows = await payJson<PayLink[] | { items: PayLink[] }>(token, `/v1/orgs/${orgId}/payment-links`, {
-      orgHint: orgId,
-    })
-    setLinks(listItems(rows))
+    const epoch = ++linksEpoch.current
+    const rows = await listAll<PayLink>(token, `/v1/orgs/${orgId}/payment-links`, { orgHint: orgId })
+    if (epoch !== linksEpoch.current) return
+    setLinks(rows)
     setListError(null)
     setLinksLoaded(true)
   }
