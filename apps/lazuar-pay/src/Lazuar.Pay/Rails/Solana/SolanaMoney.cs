@@ -43,9 +43,21 @@ public static class SolanaMoney
             return PayErrors.Status(400, "Bad Request", "solana currency must be USDC");
         }
 
-        if (amount is decimal value && !TryToAtomic(value, out _))
+        if (amount is decimal value)
         {
-            return PayErrors.Status(400, "Bad Request", "amount is not a valid USDC amount");
+            if (!TryToAtomic(value, out _))
+            {
+                return PayErrors.Status(400, "Bad Request", "amount is not a valid USDC amount");
+            }
+
+            // Amounts are stored numeric(18,2) and the QR is validated against the stored
+            // value. Accepting sub-cent mints would render a QR whose exact payment can never
+            // confirm — the buyer's USDC lands on the receive address with no booking and no
+            // refund path. Cent-quoted only.
+            if (decimal.Round(value, 2, MidpointRounding.AwayFromZero) != value)
+            {
+                return PayErrors.Status(400, "Bad Request", "solana amounts support at most 2 decimal places");
+            }
         }
 
         return null;
