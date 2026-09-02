@@ -52,8 +52,23 @@ builder.Services.AddHttpClient("xendit");
 builder.Services.AddHttpClient("razorpay");
 builder.Services.AddHttpClient("solana", c => c.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+// Issue 017 (issues/001): outbound webhook connections are pinned to connect-time-validated
+// addresses. Validating the DNS answer in the dispatcher and then letting HttpClient
+// re-resolve the hostname was a DNS-rebinding TOCTOU — the checked answer and the dialed
+// answer could differ, pointing signed payment payloads at internal addresses. Loopback
+// stays dialable in Development/Testing (same rule as OutboundUrl.AllowsLoopback).
+var webhookAllowLoopback = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 builder.Services.AddHttpClient("pay-webhooks", c => c.Timeout = TimeSpan.FromSeconds(10))
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        ConnectCallback = async (context, ct) =>
+        {
+            System.IO.Stream stream = await Lazuar.Pay.Webhooks.Outbound.OutboundUrl.ConnectValidatedAsync(
+                context.DnsEndPoint, webhookAllowLoopback, ct);
+            return stream;
+        }
+    });
 builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>();
 if (!builder.Environment.IsEnvironment("Testing"))
 {

@@ -73,6 +73,53 @@ internal static class OutboundUrl
     public static bool IsDisallowed(IPAddress ip, IHostEnvironment env) =>
         IsPrivateOrLoopback(ip) && !AllowsLoopback(env);
 
+    /// <summary>
+    /// Issue 017 (issues/001): dial the webhook endpoint on an address that passes the
+    /// private-range check AT CONNECT TIME. The dispatcher's pre-send resolve is advisory
+    /// only — HttpClient re-resolved the hostname independently, so a DNS rebinding could
+    /// answer the validation query with a public IP and the dial query with
+    /// 169.254.169.254/10.x. TLS is untouched (SNI and verification still use the original
+    /// hostname); only the dialed IP is pinned to the validated answer. Loopback stays
+    /// dialable in Development/Testing only, mirroring <see cref="AllowsLoopback"/>.
+    /// </summary>
+    public static async Task<NetworkStream> ConnectValidatedAsync(
+        DnsEndPoint endpoint, bool allowLoopback, CancellationToken ct)
+    {
+        var addresses = IPAddress.TryParse(endpoint.Host, out var literal)
+            ? [literal]
+            : await ResolveAsync(endpoint.Host, ct);
+        if (addresses.Count == 0)
+        {
+            throw new SocketException((int)SocketError.HostNotFound);
+        }
+
+        Exception? last = null;
+        foreach (var ip in addresses)
+        {
+            if (IsPrivateOrLoopback(ip) && !(allowLoopback && IPAddress.IsLoopback(ip)))
+            {
+                last = new InvalidOperationException($"refusing to dial private address {ip}");
+                continue;
+            }
+
+            var socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(5));
+                await socket.ConnectAsync(new IPEndPoint(ip, endpoint.Port), timeout.Token);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (Exception ex)
+            {
+                socket.Dispose();
+                last = ex;
+            }
+        }
+
+        throw last ?? new InvalidOperationException("no dialable address passed validation");
+    }
+
     public static async Task<List<IPAddress>> ResolveAsync(string host, CancellationToken ct)
     {
         try
