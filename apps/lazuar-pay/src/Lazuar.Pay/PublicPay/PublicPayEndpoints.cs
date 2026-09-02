@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
@@ -20,6 +21,13 @@ namespace Lazuar.Pay.PublicPay;
 
 internal static class PublicPayEndpoints
 {
+    // Issue 007 (issues/001): double-click double-starts both passed the read-side resume
+    // guard (PspRedirectUrl == null), both minted, and the second write overwrote the first
+    // session — on Solana the tab holding the overwritten QR could pay on-chain into a
+    // reference nobody would ever confirm. The mint is now serialized per checkout, and the
+    // persist itself is a conditional update so a second replica cannot win either.
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> StartGates = new(StringComparer.Ordinal);
+
     public static void MapPublicPay(this WebApplication app)
     {
         app.MapGet("/v1/pay/{token}", Get);
@@ -161,7 +169,17 @@ internal static class PublicPayEndpoints
 
             if (session.Status is "paid" or "expired" or "failed")
             {
-                return PayErrors.Status(409, "Conflict", "Checkout is not open");
+                // Issue 004 (issues/001): a failed checkout tied to a past_due subscription is
+                // the subscription's only recovery path — Start used to 409 on every non-open
+                // status, and since no rail ever re-bills, past_due was a dead end the payer
+                // could never leave. Failed ONE-OFF checkouts stay terminal (a fresh checkout
+                // is the retry); expired stays terminal (late-pay refund logic depends on it).
+                if (session.Status != "failed"
+                    || await db.Subscriptions.AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.CheckoutId == session.Id, ct) is null)
+                {
+                    return PayErrors.Status(409, "Conflict", "Checkout is not open");
+                }
             }
 
             var settings = await db.OrgSettings.FindAsync([session.OrgId], ct);
@@ -171,89 +189,149 @@ internal static class PublicPayEndpoints
             }
 
             row = await db.Checkouts.FirstAsync(x => x.Id == session.Id, ct);
-        }
-
-        if (!string.IsNullOrWhiteSpace(body?.Name))
-        {
-            row.PayerName = body.Name.Trim();
-        }
-
-        if (!string.IsNullOrWhiteSpace(body?.Email))
-        {
-            row.PayerEmail = body.Email.Trim();
-        }
-
-        var provider = row.Provider ?? link?.Provider;
-        if (!PayProviders.TryNormalize(provider, out var name))
-        {
-            return PayErrors.Status(503, "Service Unavailable", "rail not configured");
-        }
-
-        if (PayProviders.RequiresEmail(name) && !BuyerEmail.IsUsable(row.PayerEmail))
-        {
-            return PayErrors.Status(400, "Bad Request", "email is required");
-        }
-
-        if (!string.IsNullOrWhiteSpace(row.PspRedirectUrl)
-            || !string.IsNullOrWhiteSpace(row.ProviderSessionId))
-        {
-            if (string.IsNullOrWhiteSpace(row.PspRedirectUrl))
+            if (session.Status == "failed")
             {
-                return PayErrors.Status(409, "Conflict", "Checkout is not open");
-            }
-
-            await db.SaveChangesAsync(ct);
-            return StartedPay(row.PspRedirectUrl);
-        }
-
-        IHostedRail rail = name switch
-        {
-            PayProviders.Stripe => stripe,
-            PayProviders.Chip => chip,
-            PayProviders.Billplz => billplz,
-            PayProviders.Xendit => xendit,
-            PayProviders.Razorpay => razorpay,
-            PayProviders.Solana => solana,
-            PayProviders.Test => test,
-            _ => throw new InvalidOperationException("rail not configured")
-        };
-
-        try
-        {
-            // PSP HTTP then persist. A SaveChanges failure after the processor
-            // already created a session may mint a second session on retry.
-            var hosted = await rail.CreateHostedUrlAsync(row, ct);
-            row.Provider = name;
-            row.ProviderSessionId = hosted.ProviderSessionId;
-            row.PspRedirectUrl = hosted.Url;
-            if (PayProviders.IsTest(name))
-            {
-                db.PspWebhookEvents.Add(new PspWebhookEventRow
+                // CAS failed→open so exactly one retryer wins; drop the dead PSP session so a
+                // fresh hosted URL mints instead of resuming the spent one.
+                if (!await CheckoutTransitions.TryTransitionAsync(db, row, from: "failed", to: "open", ct))
                 {
-                    OrgId = row.OrgId,
-                    Provider = name,
-                    EventId = hosted.ProviderSessionId ?? "test:" + row.Id,
-                    ReceivedAt = DateTimeOffset.UtcNow
-                });
-                await fulfillment.FulfillPaidAsync(row.Id, name, hosted.ProviderSessionId, ct);
-            }
-            else
-            {
+                    return PayErrors.Status(409, "Conflict", "Checkout is not open");
+                }
+
+                row.PspRedirectUrl = null;
+                row.ProviderSessionId = null;
                 await db.SaveChangesAsync(ct);
             }
+        }
 
-            return StartedPay(hosted.Url);
-        }
-        catch (InvalidOperationException ex)
+        var gate = StartGates.GetOrAdd(row.Id, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
         {
-            await ExpireFailedReservation(db, row, remote, ct);
-            var status = ex.Message.Contains("callback base", StringComparison.Ordinal) ? 400 : 503;
-            return PayErrors.Status(status, status == 400 ? "Bad Request" : "Service Unavailable", ex.Message);
+            // The row was loaded before this request acquired the gate — a concurrent start
+            // that minted while we waited may have persisted its session since. Reload under
+            // the gate so the resume guard below decides on committed state, not a stale copy.
+            // Payer fields are assigned AFTER the reload (reloading would otherwise wipe
+            // unsaved modifications) and persist with the SaveChanges calls below.
+            await db.Entry(row).ReloadAsync(ct);
+
+            if (!string.IsNullOrWhiteSpace(body?.Name))
+            {
+                row.PayerName = body.Name.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(body?.Email))
+            {
+                row.PayerEmail = body.Email.Trim();
+            }
+
+            var provider = row.Provider ?? link?.Provider;
+            if (!PayProviders.TryNormalize(provider, out var name))
+            {
+                return PayErrors.Status(503, "Service Unavailable", "rail not configured");
+            }
+
+            if (PayProviders.RequiresEmail(name) && !BuyerEmail.IsUsable(row.PayerEmail))
+            {
+                return PayErrors.Status(400, "Bad Request", "email is required");
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.PspRedirectUrl)
+                || !string.IsNullOrWhiteSpace(row.ProviderSessionId))
+            {
+                if (string.IsNullOrWhiteSpace(row.PspRedirectUrl))
+                {
+                    return PayErrors.Status(409, "Conflict", "Checkout is not open");
+                }
+
+                await db.SaveChangesAsync(ct);
+                return StartedPay(row.PspRedirectUrl);
+            }
+
+            IHostedRail rail = name switch
+            {
+                PayProviders.Stripe => stripe,
+                PayProviders.Chip => chip,
+                PayProviders.Billplz => billplz,
+                PayProviders.Xendit => xendit,
+                PayProviders.Razorpay => razorpay,
+                PayProviders.Solana => solana,
+                PayProviders.Test => test,
+                _ => throw new InvalidOperationException("rail not configured")
+            };
+
+            try
+            {
+                // PSP HTTP then persist. A SaveChanges failure after the processor
+                // already created a session may mint a second session on retry.
+                var hosted = await rail.CreateHostedUrlAsync(row, ct);
+                row.Provider = name;
+                row.ProviderSessionId = hosted.ProviderSessionId;
+                row.PspRedirectUrl = hosted.Url;
+                if (PayProviders.IsTest(name))
+                {
+                    db.PspWebhookEvents.Add(new PspWebhookEventRow
+                    {
+                        OrgId = row.OrgId,
+                        Provider = name,
+                        EventId = hosted.ProviderSessionId ?? "test:" + row.Id,
+                        ReceivedAt = DateTimeOffset.UtcNow
+                    });
+                    await fulfillment.FulfillPaidAsync(row.Id, name, hosted.ProviderSessionId, ct);
+                }
+                else if (CheckoutTransitions.IsNpgsql(db))
+                {
+                    // Issue 007: conditional persist — exactly one minted session may land.
+                    // The WHERE clause fails when another replica minted and persisted first;
+                    // our duplicate session is discarded and the winner's URL is returned so
+                    // the payer is never shown a redirect/QR that no confirmation will ever
+                    // reference (the in-process gate above covers same-process double-clicks).
+                    var claimed = await db.Database.ExecuteSqlInterpolatedAsync(
+                        $"""
+                        UPDATE public.checkouts
+                        SET "PspRedirectUrl" = {hosted.Url}, "ProviderSessionId" = {hosted.ProviderSessionId}, "Provider" = {name}
+                        WHERE "Id" = {row.Id} AND "PspRedirectUrl" IS NULL AND "ProviderSessionId" IS NULL
+                        """,
+                        ct);
+                    if (claimed == 0)
+                    {
+                        db.Entry(row).State = EntityState.Detached;
+                        var winner = await db.Checkouts.AsNoTracking().FirstAsync(x => x.Id == row.Id, ct);
+                        return string.IsNullOrWhiteSpace(winner.PspRedirectUrl)
+                            ? PayErrors.Status(409, "Conflict", "Checkout is not open")
+                            : StartedPay(winner.PspRedirectUrl);
+                    }
+
+                    // Backdate the originals so SaveChanges cannot re-issue these writes and
+                    // race the row again; only other pending changes (payer name/email) persist.
+                    var entry = db.Entry(row);
+                    entry.Property(x => x.Provider).OriginalValue = name;
+                    entry.Property(x => x.ProviderSessionId).OriginalValue = hosted.ProviderSessionId;
+                    entry.Property(x => x.PspRedirectUrl).OriginalValue = hosted.Url;
+                    await db.SaveChangesAsync(ct);
+                }
+                else
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+
+                return StartedPay(hosted.Url);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await ExpireFailedReservation(db, row, remote, ct);
+                var status = ex.Message.Contains("callback base", StringComparison.Ordinal) ? 400 : 503;
+                return PayErrors.Status(status, status == 400 ? "Bad Request" : "Service Unavailable", ex.Message);
+            }
+            catch (Stripe.StripeException)
+            {
+                await ExpireFailedReservation(db, row, remote, ct);
+                return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
+            }
         }
-        catch (Stripe.StripeException)
+        finally
         {
-            await ExpireFailedReservation(db, row, remote, ct);
-            return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
+            gate.Release();
         }
     }
 
@@ -410,6 +488,14 @@ internal static class PublicPayEndpoints
                     await tx.RollbackAsync(ct);
                 }
 
+                // Issue 011 (issues/001): the failed INSERT stays tracked after a
+                // DbUpdateException — RollbackAsync does not clear the change tracker — so
+                // every later SaveChanges on this scoped context re-attempted the doomed row
+                // and threw again: the "recovered" raced checkout 503'd forever and the
+                // payer's edits plus PspRedirectUrl never persisted. Clear before re-querying,
+                // exactly as CheckoutStore.CreateAsync does for the same race.
+                db.ChangeTracker.Clear();
+
                 var raced = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(
                     x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
                 if (raced is not null && raced.Status is not "paid" and not "expired" and not "failed")
@@ -431,7 +517,12 @@ internal static class PublicPayEndpoints
             return;
         }
 
-        row.Status = "expired";
+        // Issue 002: compare-and-set off "open" — a concurrent webhook may have fulfilled this
+        // row between the read and the write; the old blind write could erase a committed "paid".
+        if (!await CheckoutTransitions.TryLeaveOpenAsync(db, row, "expired", ct))
+        {
+            return;
+        }
         await OutboundWebhookEnqueue.TryAddAsync(
             db,
             row.OrgId,
