@@ -43,6 +43,30 @@ public class OrgWebhookTests
     }
 
     [Test]
+    public void Production_rejects_private_ipv6_and_mapped_literals()
+    {
+        var env = new NamedEnv("Production");
+        // The old check only judged 4-byte literals: mapped, ULA, and link-local IPv6 passed.
+        Assert.That(OutboundUrl.TryValidate("http://[::ffff:10.0.0.1]/hook", env, out _, out _), Is.False);
+        Assert.That(OutboundUrl.TryValidate("http://[fc00::1]/hook", env, out _, out _), Is.False);
+        Assert.That(OutboundUrl.TryValidate("http://[fe80::1]/hook", env, out _, out _), Is.False);
+        Assert.That(OutboundUrl.TryValidate("http://[::1]/hook", env, out _, out _), Is.False);
+        Assert.That(OutboundUrl.TryValidate("http://100.64.0.1/hook", env, out _, out _), Is.False);
+    }
+
+    [Test]
+    public async Task Production_rejects_hostname_that_resolves_private()
+    {
+        var env = new NamedEnv("Production");
+        // localhost resolves to loopback — a literal-only check waved it through.
+        var localhost = await OutboundUrl.ValidateResolvableAsync("http://localhost/hook", env, CancellationToken.None);
+        Assert.That(localhost.Ok, Is.False);
+
+        var publicHost = await OutboundUrl.ValidateResolvableAsync("https://app.example/hook", env, CancellationToken.None);
+        Assert.That(publicHost.Ok, Is.True);
+    }
+
+    [Test]
     public void Testing_allows_loopback()
     {
         Assert.That(OutboundUrl.TryValidate("http://127.0.0.1:9/x", new NamedEnv("Testing"), out _, out _), Is.True);

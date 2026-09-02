@@ -1,13 +1,15 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Identity.OneWebhooks;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Webhooks.Outbound;
 
-internal sealed class OutboundWebhookDispatch(PayDbContext db, SecretBox box, IHttpClientFactory http)
+internal sealed class OutboundWebhookDispatch(PayDbContext db, SecretBox box, IHttpClientFactory http, IHostEnvironment env)
 {
     public async Task ProcessBatchAsync(CancellationToken ct)
     {
@@ -25,6 +27,22 @@ internal sealed class OutboundWebhookDispatch(PayDbContext db, SecretBox box, IH
             {
                 row.Status = "dead";
                 row.LastError = "endpoint missing";
+                continue;
+            }
+
+            // Re-resolve per attempt: the DNS answer at registration is not the answer at send
+            // time. A URL that has come to resolve into private space dies here instead of
+            // pointing signed payloads at the internal network. A failed lookup goes to send
+            // and lands in the normal retry path.
+            var destination = new Uri(endpoint.Url, UriKind.Absolute);
+            var addresses = IPAddress.TryParse(destination.Host, out var literal)
+                ? [literal]
+                : await OutboundUrl.ResolveAsync(destination.Host, ct);
+            if (!env.IsEnvironment("Testing") && !env.IsDevelopment()
+                && addresses.Any(OutboundUrl.IsPrivateOrLoopback))
+            {
+                row.Status = "dead";
+                row.LastError = "url resolves to a private address";
                 continue;
             }
 

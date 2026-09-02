@@ -1,7 +1,10 @@
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Webhooks.Outbound;
+
+internal sealed record OutboundUrlResult(bool Ok, string Url, string Error);
 
 internal static class OutboundUrl
 {
@@ -24,8 +27,7 @@ internal static class OutboundUrl
         if (uri.Host.Equals("169.254.169.254", StringComparison.OrdinalIgnoreCase)
             || IsPrivateOrLoopback(uri))
         {
-            var testing = env.IsEnvironment("Testing") || env.IsDevelopment();
-            if (IsLoopback(uri) && testing)
+            if (IsLoopback(uri) && AllowsLoopback(env))
             {
                 url = uri.ToString();
                 return true;
@@ -39,32 +41,85 @@ internal static class OutboundUrl
         return true;
     }
 
+    /// <summary>
+    /// Registration check including DNS. A literal-only check misses hostnames that resolve
+    /// into RFC1918/ULA space. A host that does not resolve today is accepted; the dispatcher
+    /// re-resolves on every attempt, so the answer at send time is the one that counts.
+    /// </summary>
+    public static async Task<OutboundUrlResult> ValidateResolvableAsync(string? raw, IHostEnvironment env, CancellationToken ct)
+    {
+        if (!TryValidate(raw, env, out var url, out var error))
+        {
+            return new OutboundUrlResult(false, "", error);
+        }
+
+        var uri = new Uri(url, UriKind.Absolute);
+        if (IPAddress.TryParse(uri.Host, out _))
+        {
+            return new OutboundUrlResult(true, url, ""); // literal — fully judged by TryValidate
+        }
+
+        foreach (var ip in await ResolveAsync(uri.Host, ct))
+        {
+            if (IsDisallowed(ip, env))
+            {
+                return new OutboundUrlResult(false, "", "url is not allowed");
+            }
+        }
+
+        return new OutboundUrlResult(true, url, "");
+    }
+
+    public static bool IsDisallowed(IPAddress ip, IHostEnvironment env) =>
+        IsPrivateOrLoopback(ip) && !AllowsLoopback(env);
+
+    public static async Task<List<IPAddress>> ResolveAsync(string host, CancellationToken ct)
+    {
+        try
+        {
+            return [.. await Dns.GetHostAddressesAsync(host, ct)];
+        }
+        catch (Exception ex) when (ex is SocketException or ArgumentException)
+        {
+            return [];
+        }
+    }
+
+    static bool AllowsLoopback(IHostEnvironment env) =>
+        env.IsEnvironment("Testing") || env.IsDevelopment();
+
     static bool IsLoopback(Uri uri) =>
         uri.IsLoopback
         || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
         || uri.Host is "127.0.0.1" or "::1";
 
-    static bool IsPrivateOrLoopback(Uri uri)
-    {
-        if (IsLoopback(uri))
-        {
-            return true;
-        }
+    static bool IsPrivateOrLoopback(Uri uri) =>
+        IsLoopback(uri) || (IPAddress.TryParse(uri.Host, out var ip) && IsPrivateOrLoopback(ip));
 
-        if (!IPAddress.TryParse(uri.Host, out var ip))
+    public static bool IsPrivateOrLoopback(IPAddress ip)
+    {
+        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
         {
-            return false;
+            var b = ip.GetAddressBytes();
+            // ::ffff:a.b.c.d — judge the embedded IPv4, not the wrapper.
+            if (b.Length == 16 && b[..10].All(x => x == 0) && b[10] == 0xFF && b[11] == 0xFF)
+            {
+                return IsPrivateOrLoopback(new IPAddress(b[12..]));
+            }
+
+            return b[0] == 0xFF                             // multicast ff00::/8
+                || (b[0] == 0xFE && (b[1] & 0xC0) == 0x80)  // link-local fe80::/10
+                || (b[0] & 0xFE) == 0xFC                    // unique-local fc00::/7
+                || b.All(x => x == 0);                      // unspecified ::
         }
 
         var bytes = ip.GetAddressBytes();
-        if (bytes.Length == 4)
-        {
-            return bytes[0] == 10
-                || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
-                || (bytes[0] == 192 && bytes[1] == 168)
-                || (bytes[0] == 169 && bytes[1] == 254);
-        }
-
-        return false;
+        return bytes[0] == 0
+            || bytes[0] == 10
+            || bytes[0] == 127
+            || (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) // CGNAT
+            || (bytes[0] == 169 && bytes[1] == 254)
+            || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+            || (bytes[0] == 192 && bytes[1] == 168);
     }
 }

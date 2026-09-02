@@ -32,10 +32,13 @@ internal static class OrgWebhookEndpoints
             return denied;
         }
 
-        if (!OutboundUrl.TryValidate(body?.Url, env, out var url, out var error))
+        var check = await OutboundUrl.ValidateResolvableAsync(body?.Url, env, ct);
+        if (!check.Ok)
         {
-            return PayErrors.Status(400, "Bad Request", error);
+            return PayErrors.Status(400, "Bad Request", check.Error);
         }
+
+        var url = check.Url;
 
         string wrapped;
         string secret;
