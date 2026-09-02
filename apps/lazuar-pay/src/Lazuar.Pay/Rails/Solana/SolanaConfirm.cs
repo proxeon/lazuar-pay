@@ -116,7 +116,15 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
         catch (DbUpdateException)
         {
             await tx.RollbackAsync(ct);
-            return Results.Ok(new { duplicate = true });
+            // Same rule as the PSP webhook path: only "duplicate" when the winner really paid.
+            db.ChangeTracker.Clear();
+            var fresh = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == checkout.Id, ct);
+            if (fresh?.Status == "paid")
+            {
+                return Results.Ok(new { duplicate = true });
+            }
+
+            return PayErrors.Status(500, "Internal Server Error", "fulfill conflict");
         }
         catch (ChargesPausedException)
         {

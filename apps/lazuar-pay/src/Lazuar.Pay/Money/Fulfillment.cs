@@ -73,7 +73,8 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
                         new { checkout_id = checkout.Id, payment_link_id = checkout.PaymentLinkId, reason = "over_capacity" },
                         ct);
                     await db.SaveChangesAsync(ct);
-                    await remote.RefundLateAsync(checkout, providerRef, MoneyMath.ToMinor(checkout.Amount), ct);
+                    await remote.RefundLateAsync(
+                        checkout, providerRef, MoneyMath.ToMinor(checkout.Amount), Guid.NewGuid().ToString("N"), ct);
                     return;
                 }
             }
@@ -156,15 +157,7 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
         });
 
         var year = MalaysiaTime.Year(DateTimeOffset.UtcNow);
-        var seq = await db.DocumentSequences.FindAsync([checkout.OrgId, "RCPT", year], ct);
-        if (seq is null)
-        {
-            seq = new DocumentSequenceRow { OrgId = checkout.OrgId, Series = "RCPT", YearMyt = year, LastN = 0 };
-            db.DocumentSequences.Add(seq);
-        }
-
-        seq.LastN += 1;
-        var number = $"RCPT-{year}-{seq.LastN:00000}";
+        var number = await DocumentNumbers.AllocateAsync(db, checkout.OrgId, "RCPT", year, ct);
         db.Documents.Add(new DocumentRow
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -200,17 +193,13 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
             },
             ct);
 
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State != EntityState.Unchanged))
-            {
-                entry.State = EntityState.Detached;
-            }
-        }
+        // Deliberately no catch: a SaveChanges failure must unwind the caller's transaction,
+        // which holds the PSP event dedupe row. Swallowing here acked the webhook while the
+        // charge, journal, and receipt silently never landed — a real payment acknowledged lost.
+        // The in-process gate plus the unique charges.CheckoutId index are the dupes guard;
+        // receipt numbering is atomic (DocumentNumbers), so a DbUpdateException here means the
+        // checkout was already fulfilled concurrently and the caller answers "duplicate".
+        await db.SaveChangesAsync(ct);
     }
 }
 

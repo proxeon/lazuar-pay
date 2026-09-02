@@ -20,7 +20,6 @@ internal static class BillplzWebhook
 
     public static PspParseResult Parse(
         string raw,
-        IQueryCollection query,
         GatewayCredentialRow cred,
         SecretBox box)
     {
@@ -61,16 +60,11 @@ internal static class BillplzWebhook
             return new PspParseResult { EventId = "unpaid:" + billId, Ignored = true, IgnoreReason = "unpaid" };
         }
 
-        var checkoutId = query["checkout_id"].ToString();
-        if (string.IsNullOrWhiteSpace(checkoutId))
-        {
-            checkoutId = form.GetValueOrDefault("checkout_id", "");
-        }
-
-        if (string.IsNullOrWhiteSpace(checkoutId))
-        {
-            checkoutId = form.GetValueOrDefault("reference_1", "");
-        }
+        // Bind only from the HMAC-signed form. The callback URL's ?checkout_id= query is NOT
+        // covered by the x_signature, so trusting it would let a replayed paid body be aimed
+        // at any same-org checkout. reference_1 is stamped with the checkout id at bill create;
+        // a mismatched bill id still resolves via HostedSessionId in WebhookEndpoints.
+        var checkoutId = form.GetValueOrDefault("reference_1", "");
 
         // Form paid_amount is sen (minor). RM10.00 → 1000.
         var paidCents = long.TryParse(form.GetValueOrDefault("paid_amount", "0"), out var pac) ? pac : 0L;

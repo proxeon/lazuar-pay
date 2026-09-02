@@ -122,5 +122,6 @@ public class RefundTests
         Assert.That(pay.Charges.Count(), Is.EqualTo(0));
         Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("expired"));
         Assert.That(pay.Refunds.Single().Reason, Is.EqualTo("late_pay"));
+        Assert.That(pay.Refunds.Single().Status, Is.EqualTo("succeeded"));
     }
 }

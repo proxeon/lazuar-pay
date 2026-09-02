@@ -49,33 +49,46 @@ public sealed class ProcessorRemote(
         }
     }
 
-    public async Task RefundLateAsync(CheckoutRow checkout, string? providerRef, long? amountMinor, CancellationToken ct)
+    /// <summary>
+    /// Best-effort late-capture refund. Callers book the refund row as <c>pending</c> first;
+    /// false (or a thrown-then-caught failure) leaves it pending — the capture is real, so it
+    /// must never read as settled. Rails with no refund API return false.
+    /// <paramref name="refundId"/> keys the Stripe idempotency key so a re-attempt of the same
+    /// logical refund cannot move money twice.
+    /// </summary>
+    public async Task<bool> RefundLateAsync(CheckoutRow checkout, string? providerRef, long? amountMinor, string refundId, CancellationToken ct)
     {
         if (!PayProviders.TryNormalize(checkout.Provider, out var provider))
         {
-            return;
+            return false;
         }
 
         if (PayProviders.IsTest(provider))
         {
-            return;
+            return true;
         }
 
         try
         {
             if (provider == PayProviders.Stripe)
             {
-                await RefundStripeAsync(checkout, providerRef, amountMinor, ct);
+                await RefundStripeAsync(checkout, providerRef, amountMinor, ct, refundId);
+                return true;
             }
-            else if (provider == PayProviders.Chip)
+
+            if (provider == PayProviders.Chip)
             {
                 object? body = amountMinor is long minor ? new { amount = minor } : null;
                 await ChipPostAsync(checkout, "refund/", body, ct);
+                return true;
             }
+
+            return false;
         }
         catch (Exception)
         {
-            // Caller already refused fulfill. Cash at the processor is an ops follow-up.
+            // Cash at the processor; the pending row is the ops follow-up marker.
+            return false;
         }
     }
 

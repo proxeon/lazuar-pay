@@ -74,7 +74,7 @@ internal static class WebhookEndpoints
             {
                 PayProviders.Stripe => StripeWebhook.Parse(raw, request.Headers, cred!, box, config, env),
                 PayProviders.Chip => ChipWebhook.Parse(raw, request.Headers, cred!, box),
-                PayProviders.Billplz => BillplzWebhook.Parse(raw, request.Query, cred!, box),
+                PayProviders.Billplz => BillplzWebhook.Parse(raw, cred!, box),
                 PayProviders.Xendit => XenditWebhook.Parse(raw, request.Headers, cred!, box),
                 PayProviders.Razorpay => RazorpayWebhook.Parse(raw, request.Headers, cred!, box),
                 PayProviders.Solana => SolanaWebhook.Parse(raw, request.Headers),
@@ -190,6 +190,23 @@ internal static class WebhookEndpoints
 
         if (checkout.Status is "expired" or "failed")
         {
+            // Book the refund pending before any money moves. The old flow wrote "succeeded"
+            // up front and swallowed RefundLateAsync failures, which left rails with no refund
+            // API (billplz/xendit/razorpay) holding permanent fake settled refunds.
+            var refundId = Guid.NewGuid().ToString("N");
+            var refundRow = new RefundRow
+            {
+                Id = refundId,
+                OrgId = orgId,
+                CheckoutId = checkout.Id,
+                Amount = checkout.Amount,
+                Currency = checkout.Currency,
+                Status = "pending",
+                Provider = name,
+                ProviderRef = parsed.ProviderRef,
+                Reason = "late_pay",
+                CreatedAt = DateTimeOffset.UtcNow
+            };
             await using var lateTx = await db.Database.BeginTransactionAsync(ct);
             try
             {
@@ -200,19 +217,7 @@ internal static class WebhookEndpoints
                     EventId = parsed.EventId,
                     ReceivedAt = DateTimeOffset.UtcNow
                 });
-                db.Refunds.Add(new RefundRow
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    OrgId = orgId,
-                    CheckoutId = checkout.Id,
-                    Amount = checkout.Amount,
-                    Currency = checkout.Currency,
-                    Status = "succeeded",
-                    Provider = name,
-                    ProviderRef = parsed.ProviderRef,
-                    Reason = "late_pay",
-                    CreatedAt = DateTimeOffset.UtcNow
-                });
+                db.Refunds.Add(refundRow);
                 await db.SaveChangesAsync(ct);
                 await lateTx.CommitAsync(ct);
             }
@@ -222,8 +227,14 @@ internal static class WebhookEndpoints
                 return Results.Ok(new { duplicate = true });
             }
 
-            await remote.RefundLateAsync(checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
-            return Results.Json(new { refunded = true }, OneClient.Json);
+            var refunded = await remote.RefundLateAsync(checkout, parsed.ProviderRef, parsed.AmountMinor, refundId, ct);
+            if (refunded)
+            {
+                refundRow.Status = "succeeded";
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Json(new { refunded }, OneClient.Json);
         }
 
         if (parsed.Currency is not null
@@ -253,7 +264,17 @@ internal static class WebhookEndpoints
         catch (DbUpdateException)
         {
             await tx.RollbackAsync(ct);
-            return Results.Ok(new { duplicate = true });
+            // "duplicate" only if the concurrent winner actually paid this checkout. Anything
+            // else must 5xx so the PSP retries — answering ok on a rolled-back fulfill is how
+            // a real payment disappears.
+            db.ChangeTracker.Clear();
+            var fresh = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == checkout.Id, ct);
+            if (fresh?.Status == "paid")
+            {
+                return Results.Ok(new { duplicate = true });
+            }
+
+            return PayErrors.Status(500, "Internal Server Error", "fulfill conflict");
         }
         catch (ChargesPausedException)
         {
