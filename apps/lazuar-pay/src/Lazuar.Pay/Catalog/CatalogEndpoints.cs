@@ -77,7 +77,9 @@ internal static class CatalogEndpoints
         var q = db.Products.AsNoTracking().Where(p => p.OrgId == orgId);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, ct);
+            // Issue 015: org-scope the cursor row (see PaymentLinkEndpoints.List).
+            var cursor = await db.Products.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, ct);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt

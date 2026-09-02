@@ -33,10 +33,13 @@ internal static class PaymentQueryEndpoints
             select new { Charge = c, Checkout = ch };
         if (!string.IsNullOrWhiteSpace(after))
         {
+            // Issue 015: the cursor row is fetched org-scoped — a foreign org's charge id
+            // used to resolve globally, leaking cross-org existence + timestamps through the
+            // page boundary an empty/bogus cursor would not produce.
             var cursor = await (
                 from c in db.Charges.AsNoTracking()
                 join ch in db.Checkouts.AsNoTracking() on c.CheckoutId equals ch.Id
-                where c.Id == after
+                where c.OrgId == orgId && c.Id == after
                 select new { c.Id, ch.CreatedAt }).FirstOrDefaultAsync(ct);
             if (cursor is not null)
             {
@@ -108,7 +111,9 @@ internal static class PaymentQueryEndpoints
         var q = db.Documents.AsNoTracking().Where(d => d.OrgId == orgId);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, ct);
+            // Issue 015: org-scope the cursor row (see PaymentLinkEndpoints.List).
+            var cursor = await db.Documents.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, ct);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt
