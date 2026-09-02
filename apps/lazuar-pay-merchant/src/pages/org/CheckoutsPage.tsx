@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
+import { parseAmountInput } from '../../lib/money'
 import { listItems, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
@@ -157,6 +158,11 @@ export function CheckoutsPage() {
       setError('VITE_CHECKOUT_ORIGIN is required in production')
       return
     }
+    const parsedAmount = parseAmountInput(amount)
+    if (parsedAmount === null) {
+      setError('Amount must be greater than 0 with at most 2 decimal places')
+      return
+    }
     const limited = Number(maxPayers)
     if (capacity === 'limited' && (!Number.isInteger(limited) || limited < 2)) {
       setError('Limited links need at least 2 people')
@@ -173,7 +179,7 @@ export function CheckoutsPage() {
           method: 'POST',
           orgHint: orgId,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: productName, amount: Number(amount), currency }),
+          body: JSON.stringify({ name: productName, amount: parsedAmount, currency }),
         })
         if (!created.ok) {
           setError(await problemDetail(created, `product ${created.status}`))
@@ -189,7 +195,7 @@ export function CheckoutsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           org_id: orgId,
-          amount: Number(amount),
+          amount: parsedAmount,
           currency,
           provider,
           product_id: productId,
@@ -378,7 +384,13 @@ export function CheckoutsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount ({defaultCurrency(provider)})</Label>
-                <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <Input
+                  id="amount"
+                  inputMode="decimal"
+                  placeholder="10.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
