@@ -9,20 +9,28 @@ namespace Lazuar.Pay.Money;
 
 public interface IFulfillPaid
 {
-    Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct);
+    Task<FulfillOutcome> FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct);
 }
 
-public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulfillPaid
+/// <summary>
+/// What the fulfill attempt did. PendingLateRefundId marks an over-capacity late capture whose
+/// refund row was booked <c>pending</c> inside the transaction — the caller must settle it via
+/// ProcessorRemote only AFTER its own transaction commits, using this id as the Stripe
+/// idempotency key.
+/// </summary>
+public sealed record FulfillOutcome(bool Fulfilled, string? PendingLateRefundId = null, long? LateRefundAmountMinor = null);
+
+public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 {
     static readonly ConcurrentDictionary<string, SemaphoreSlim> CheckoutGates = new(StringComparer.Ordinal);
 
-    public async Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
+    public async Task<FulfillOutcome> FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {
         var gate = CheckoutGates.GetOrAdd(checkoutId, static _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            await FulfillPaidCoreAsync(checkoutId, provider, providerRef, ct);
+            return await FulfillPaidCoreAsync(checkoutId, provider, providerRef, ct);
         }
         finally
         {
@@ -30,22 +38,22 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
         }
     }
 
-    async Task FulfillPaidCoreAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
+    async Task<FulfillOutcome> FulfillPaidCoreAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {
         var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == checkoutId, ct);
         if (checkout is null)
         {
-            return;
+            return new FulfillOutcome(false);
         }
 
         if (checkout.Amount <= 0)
         {
-            return;
+            return new FulfillOutcome(false);
         }
 
         if (checkout.Status != "open")
         {
-            return;
+            return new FulfillOutcome(false);
         }
 
         var settings = await db.OrgSettings.FindAsync([checkout.OrgId], ct);
@@ -64,7 +72,26 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
                     ct);
                 if (PaymentLinkOccupancy.IsFull(link.MaxPayers, paid))
                 {
+                    // Over capacity: money already arrived. Book the refund pending NOW (same
+                    // transaction as the expiry) and let the caller settle it after commit with
+                    // this row id as the idempotency key — a fresh Guid per attempt previously
+                    // let a retry move money twice. Rails with no refund API keep the row
+                    // pending as the ops marker.
                     checkout.Status = "expired";
+                    var refundId = Guid.NewGuid().ToString("N");
+                    db.Refunds.Add(new RefundRow
+                    {
+                        Id = refundId,
+                        OrgId = checkout.OrgId,
+                        CheckoutId = checkout.Id,
+                        Amount = checkout.Amount,
+                        Currency = checkout.Currency,
+                        Status = "pending",
+                        Provider = provider,
+                        ProviderRef = providerRef,
+                        Reason = "late_pay",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    });
                     await OutboundWebhookEnqueue.TryAddAsync(
                         db,
                         checkout.OrgId,
@@ -73,9 +100,7 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
                         new { checkout_id = checkout.Id, payment_link_id = checkout.PaymentLinkId, reason = "over_capacity" },
                         ct);
                     await db.SaveChangesAsync(ct);
-                    await remote.RefundLateAsync(
-                        checkout, providerRef, MoneyMath.ToMinor(checkout.Amount), Guid.NewGuid().ToString("N"), ct);
-                    return;
+                    return new FulfillOutcome(false, refundId, MoneyMath.ToMinor(checkout.Amount));
                 }
             }
         }
@@ -200,6 +225,7 @@ public sealed class Fulfillment(PayDbContext db, ProcessorRemote remote) : IFulf
         // receipt numbering is atomic (DocumentNumbers), so a DbUpdateException here means the
         // checkout was already fulfilled concurrently and the caller answers "duplicate".
         await db.SaveChangesAsync(ct);
+        return new FulfillOutcome(true);
     }
 }
 

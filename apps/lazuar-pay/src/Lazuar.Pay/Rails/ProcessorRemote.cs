@@ -78,6 +78,14 @@ public sealed class ProcessorRemote(
 
             if (provider == PayProviders.Chip)
             {
+                if (string.IsNullOrWhiteSpace(checkout.ProviderSessionId)
+                    || !await db.GatewayCredentials.AsNoTracking()
+                        .AnyAsync(x => x.OrgId == checkout.OrgId && x.Provider == PayProviders.Chip, ct))
+                {
+                    // No purchase to refund. Honest pending beats a fake settled row.
+                    return false;
+                }
+
                 object? body = amountMinor is long minor ? new { amount = minor } : null;
                 await ChipPostAsync(checkout, "refund/", body, ct);
                 return true;
@@ -90,6 +98,25 @@ public sealed class ProcessorRemote(
             // Cash at the processor; the pending row is the ops follow-up marker.
             return false;
         }
+    }
+
+    /// <summary>
+    /// Settle a pending late-pay refund AFTER the caller's transaction has committed: move the
+    /// money, then flip the row to succeeded. False (or unsupported rails) leaves it pending.
+    /// </summary>
+    public async Task<bool> SettlePendingRefundAsync(
+        string refundId, CheckoutRow checkout, string? providerRef, long? amountMinor, CancellationToken ct)
+    {
+        var refunded = await RefundLateAsync(checkout, providerRef, amountMinor, refundId, ct);
+        if (!refunded)
+        {
+            return false;
+        }
+
+        var row = await db.Refunds.FirstAsync(x => x.Id == refundId, ct);
+        row.Status = "succeeded";
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 
     public async Task RefundChargeAsync(ChargeRow charge, CheckoutRow checkout, decimal amount, string refundId, CancellationToken ct)
@@ -113,6 +140,18 @@ public sealed class ProcessorRemote(
 
         if (provider == PayProviders.Chip)
         {
+            if (string.IsNullOrWhiteSpace(checkout.ProviderSessionId))
+            {
+                throw new InvalidOperationException("chip purchase is missing; nothing to refund");
+            }
+
+            var hasCred = await db.GatewayCredentials.AsNoTracking()
+                .AnyAsync(x => x.OrgId == checkout.OrgId && x.Provider == PayProviders.Chip, ct);
+            if (!hasCred)
+            {
+                throw new InvalidOperationException("chip is not configured; nothing to refund with");
+            }
+
             await ChipPostAsync(checkout, "refund/", new { amount = minor }, ct);
             return;
         }
@@ -137,7 +176,9 @@ public sealed class ProcessorRemote(
         var secret = await StripeSecretAsync(checkout.OrgId, ct);
         if (secret is null)
         {
-            return;
+            // Throwing, not silently returning: the caller books the refund from our outcome,
+            // and a silent no-op used to read as a settled refund.
+            throw new InvalidOperationException("stripe is not configured; cannot refund");
         }
 
         var client = new StripeClient(secret);
@@ -146,7 +187,7 @@ public sealed class ProcessorRemote(
             : providerRef;
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            return;
+            throw new InvalidOperationException("no stripe session or payment intent to refund");
         }
 
         string? paymentIntent = null;
@@ -162,7 +203,7 @@ public sealed class ProcessorRemote(
 
         if (string.IsNullOrWhiteSpace(paymentIntent))
         {
-            return;
+            throw new InvalidOperationException("stripe capture has no payment intent to refund");
         }
 
         var options = new RefundCreateOptions { PaymentIntent = paymentIntent };

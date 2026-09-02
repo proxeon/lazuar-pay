@@ -192,14 +192,16 @@ internal static class WebhookEndpoints
         {
             // Book the refund pending before any money moves. The old flow wrote "succeeded"
             // up front and swallowed RefundLateAsync failures, which left rails with no refund
-            // API (billplz/xendit/razorpay) holding permanent fake settled refunds.
+            // API (billplz/xendit/razorpay) holding permanent fake settled refunds. The row
+            // carries the amount actually being handed back — the capture can differ from the
+            // quoted checkout amount on a late event.
             var refundId = Guid.NewGuid().ToString("N");
             var refundRow = new RefundRow
             {
                 Id = refundId,
                 OrgId = orgId,
                 CheckoutId = checkout.Id,
-                Amount = checkout.Amount,
+                Amount = parsed.AmountMinor is long minor && minor > 0 ? MoneyMath.FromMinor(minor) : checkout.Amount,
                 Currency = checkout.Currency,
                 Status = "pending",
                 Provider = name,
@@ -227,13 +229,7 @@ internal static class WebhookEndpoints
                 return Results.Ok(new { duplicate = true });
             }
 
-            var refunded = await remote.RefundLateAsync(checkout, parsed.ProviderRef, parsed.AmountMinor, refundId, ct);
-            if (refunded)
-            {
-                refundRow.Status = "succeeded";
-                await db.SaveChangesAsync(ct);
-            }
-
+            var refunded = await remote.SettlePendingRefundAsync(refundId, checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
             return Results.Json(new { refunded }, OneClient.Json);
         }
 
@@ -248,6 +244,7 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "amount mismatch");
         }
 
+        FulfillOutcome outcome;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         try
         {
@@ -258,7 +255,7 @@ internal static class WebhookEndpoints
                 EventId = parsed.EventId,
                 ReceivedAt = DateTimeOffset.UtcNow
             });
-            await fulfillment.FulfillPaidAsync(checkout.Id, name, parsed.ProviderRef, ct);
+            outcome = await fulfillment.FulfillPaidAsync(checkout.Id, name, parsed.ProviderRef, ct);
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException)
@@ -286,6 +283,14 @@ internal static class WebhookEndpoints
         {
             await tx.RollbackAsync(ct);
             return PayErrors.Status(500, "Internal Server Error", "fulfill failed");
+        }
+
+        // Settle the over-capacity late refund only after commit: the pending row is durable
+        // and its id (the Stripe idempotency key) is stable across any retry.
+        if (outcome.PendingLateRefundId is not null)
+        {
+            await remote.SettlePendingRefundAsync(
+                outcome.PendingLateRefundId, checkout, parsed.ProviderRef, outcome.LateRefundAmountMinor, ct);
         }
 
         return Results.Json(new { ok = true }, OneClient.Json);

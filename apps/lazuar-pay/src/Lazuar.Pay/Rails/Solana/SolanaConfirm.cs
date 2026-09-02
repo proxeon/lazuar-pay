@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Rails.Solana;
 
-public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid fulfillment, IConfiguration config)
+public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid fulfillment, IConfiguration config, ProcessorRemote remote)
 {
     public async Task<IResult> ConfirmAsync(CheckoutRow checkout, string signature, CancellationToken ct)
     {
@@ -100,6 +100,7 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
             return PayErrors.Status(409, "Conflict", "Checkout is not open");
         }
 
+        FulfillOutcome outcome;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         try
         {
@@ -110,7 +111,7 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
                 EventId = signature,
                 ReceivedAt = DateTimeOffset.UtcNow
             });
-            await fulfillment.FulfillPaidAsync(checkout.Id, PayProviders.Solana, signature, ct);
+            outcome = await fulfillment.FulfillPaidAsync(checkout.Id, PayProviders.Solana, signature, ct);
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException)
@@ -135,6 +136,14 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
         {
             await tx.RollbackAsync(ct);
             return PayErrors.Status(500, "Internal Server Error", "fulfill failed");
+        }
+
+        // Over-capacity link child: the pending refund row was booked in the transaction.
+        // Solana has no refund API, so this stays pending as the ops marker.
+        if (outcome.PendingLateRefundId is not null)
+        {
+            await remote.SettlePendingRefundAsync(
+                outcome.PendingLateRefundId, checkout, signature, outcome.LateRefundAmountMinor, ct);
         }
 
         return Results.Json(new { ok = true }, OneClient.Json);

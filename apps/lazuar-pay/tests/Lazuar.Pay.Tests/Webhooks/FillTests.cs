@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lazuar.Pay.Tests;
@@ -176,5 +177,71 @@ public class FillTests
         Assert.That(db.Documents.Count(), Is.EqualTo(1));
         Assert.That(db.Charges.Count(), Is.EqualTo(1));
         Assert.That(db.Checkouts.Single(x => x.Id == checkoutId).Status, Is.EqualTo("paid"));
+    }
+
+    [Test]
+    public async Task Over_capacity_paid_webhook_books_pending_late_refund()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"bill_1","url":"https://www.billplz-sandbox.com/bills/bill_1"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"billplz","secret":"bp_sk","webhook_secret":"xsig","public_merchant_id":"col_1","environment":"test"}""");
+        var (linkToken, linkId) = await PayTest.SeedPaymentLink(client, "billplz", maxPayers: 2);
+        var a = await PayTest.StartPay(client, linkToken, "slot-oc-a", """{"email":"ada@acme.test"}""");
+        var b = await PayTest.StartPay(client, linkToken, "slot-oc-b", """{"email":"bob@acme.test"}""");
+        Assert.That(a.IsSuccessStatusCode && b.IsSuccessStatusCode);
+
+        string checkoutA, checkoutB;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            checkoutA = db.Checkouts.Single(x => x.SlotKey == "slot-oc-a").Id;
+            checkoutB = db.Checkouts.Single(x => x.SlotKey == "slot-oc-b").Id;
+        }
+
+        var paidA = await PayAsync(WebhookForm(checkoutA, "bill_oc_a"));
+        Assert.That(paidA.IsSuccessStatusCode, Is.True, await paidA.Content.ReadAsStringAsync());
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var link = await db.PaymentLinks.SingleAsync(x => x.Id == linkId);
+            link.MaxPayers = 1; // cap cut after A paid; B's money is already on the rail
+            await db.SaveChangesAsync();
+        }
+
+        var paidB = await PayAsync(WebhookForm(checkoutB, "bill_oc_b"));
+        Assert.That(paidB.IsSuccessStatusCode, Is.True, await paidB.Content.ReadAsStringAsync());
+
+        using var after = factory.Services.CreateScope();
+        var db2 = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db2.Checkouts.Single(x => x.Id == checkoutB).Status, Is.EqualTo("expired"));
+        var refund = db2.Refunds.Single();
+        Assert.That(refund.Status, Is.EqualTo("pending"));
+        Assert.That(refund.Reason, Is.EqualTo("late_pay"));
+        Assert.That(refund.CheckoutId, Is.EqualTo(checkoutB));
+        // Billplz has no refund API: no PSP movement, no settlement, and the ops marker stays.
+        Assert.That(db2.Charges.Count(), Is.EqualTo(1));
+        Assert.That(db2.Documents.Count(), Is.EqualTo(1));
+
+        async Task<HttpResponseMessage> PayAsync(string form)
+        {
+            using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/billplz/t1")
+            {
+                Content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded")
+            };
+            return await client.SendAsync(wh);
+        }
+    }
+
+    static string WebhookForm(string checkoutId, string billId)
+    {
+        var fields = Lazuar.Pay.Rails.Billplz.BillplzWebhook.ParseForm(
+            $"id={billId}&paid=true&state=paid&paid_amount=1000&currency=MYR&x_signature=pending&reference_1={checkoutId}");
+        var mac = Lazuar.Pay.Rails.Billplz.BillplzWebhook.ComputeHmac(fields, "xsig", excludeExtra: false);
+        return $"id={billId}&paid=true&state=paid&paid_amount=1000&currency=MYR&x_signature={mac}&reference_1={checkoutId}";
     }
 }

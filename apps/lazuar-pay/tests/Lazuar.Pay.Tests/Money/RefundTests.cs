@@ -93,6 +93,88 @@ public class RefundTests
     }
 
     [Test]
+    public async Task Solana_refund_is_refused_and_releases_the_reservation()
+    {
+        // Pins the refusal to the provider label, not just the shared throw exercised via Billplz.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Add(new CheckoutRow
+            {
+                Id = "c_sol", OrgId = "t1", PublicToken = "tok_sol",
+                Amount = 10m, Currency = "USDC", Status = "paid", Provider = "solana"
+            });
+            db.Charges.Add(new ChargeRow
+            {
+                Id = "ch_sol", OrgId = "t1", CheckoutId = "c_sol",
+                Provider = "solana", Amount = 10m, Currency = "USDC", Status = "paid"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var refund = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/refunds")
+        {
+            Content = new StringContent("""{"checkout_id":"c_sol"}""", Encoding.UTF8, "application/json")
+        };
+        refund.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(refund);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("refund not supported"));
+
+        using var after = factory.Services.CreateScope();
+        var db2 = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db2.Refunds.Single().Status, Is.EqualTo("failed"));
+        Assert.That(db2.Charges.Single().Status, Is.EqualTo("paid"));
+    }
+
+    [Test]
+    public async Task Stripe_refund_without_session_or_intent_fails_closed()
+    {
+        // A refund whose capture cannot be located at the processor must not read as settled.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
+        var (_, checkoutId) = await PayTest.SeedCheckout(client);
+
+        var payload = "{\"id\":\"evt_fs\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_fs_1\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\"}}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var sig = $"t={t},v1={Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(factory.StripeWebhookSecret), Encoding.UTF8.GetBytes($"{t}.{payload}"))).ToLowerInvariant()}";
+        using var pay = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        pay.Headers.TryAddWithoutValidation("Stripe-Signature", sig);
+        Assert.That((await client.SendAsync(pay)).IsSuccessStatusCode, Is.True);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var checkout = db.Checkouts.Single();
+            checkout.ProviderSessionId = null;
+            var charge = db.Charges.Single();
+            charge.ProviderRef = null;
+            await db.SaveChangesAsync();
+        }
+
+        using var refund = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/refunds")
+        {
+            Content = new StringContent($$"""{"checkout_id":"{{checkoutId}}"}""", Encoding.UTF8, "application/json")
+        };
+        refund.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(refund);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), await response.Content.ReadAsStringAsync());
+
+        using var after = factory.Services.CreateScope();
+        var db2 = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db2.Refunds.Single().Status, Is.EqualTo("failed"));
+        Assert.That(db2.Charges.Single().Status, Is.EqualTo("paid"));
+    }
+
+    [Test]
     public async Task Paid_webhook_on_expired_does_not_fulfill()
     {
         await using var factory = new PayApiFactory();

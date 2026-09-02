@@ -33,8 +33,20 @@ internal sealed class OutboundWebhookDispatch(PayDbContext db, SecretBox box, IH
             // Re-resolve per attempt: the DNS answer at registration is not the answer at send
             // time. A URL that has come to resolve into private space dies here instead of
             // pointing signed payloads at the internal network. A failed lookup goes to send
-            // and lands in the normal retry path.
-            var destination = new Uri(endpoint.Url, UriKind.Absolute);
+            // and lands in the normal retry path. A malformed stored URL dies too — throwing
+            // here would abort the batch and starve every delivery behind it.
+            Uri destination;
+            try
+            {
+                destination = new Uri(endpoint.Url, UriKind.Absolute);
+            }
+            catch (UriFormatException)
+            {
+                row.Status = "dead";
+                row.LastError = "endpoint url invalid";
+                continue;
+            }
+
             var addresses = IPAddress.TryParse(destination.Host, out var literal)
                 ? [literal]
                 : await OutboundUrl.ResolveAsync(destination.Host, ct);

@@ -90,7 +90,8 @@ internal static class RefundEndpoints
 
             if (charge.Status is "refunded")
             {
-                return PayErrors.Status(409, "Conflict", "already refunded");
+                return await ReplayOrAsync(db, orgId, checkoutId, idempotency, body?.Amount,
+                    PayErrors.Status(409, "Conflict", "already refunded"), ct);
             }
 
             var reserved = await db.Refunds
@@ -99,7 +100,8 @@ internal static class RefundEndpoints
             remaining = charge.Amount - reserved;
             if (remaining <= 0)
             {
-                return PayErrors.Status(409, "Conflict", "already refunded");
+                return await ReplayOrAsync(db, orgId, checkoutId, idempotency, body?.Amount,
+                    PayErrors.Status(409, "Conflict", "already refunded"), ct);
             }
 
             amount = body?.Amount ?? remaining;
@@ -258,6 +260,40 @@ internal static class RefundEndpoints
         }
 
         return Results.Json(new { items = rows.Select(r => View(r)), next_cursor = next }, OneClient.Json);
+    }
+
+    /// <summary>
+    /// Two concurrent requests with the same Idempotency-Key serialize on the charge lock; the
+    /// loser reaches an already-reserved charge. That loser is a replay, so it gets the original
+    /// row, not a 409.
+    /// </summary>
+    static async Task<IResult> ReplayOrAsync(
+        PayDbContext db,
+        string orgId,
+        string checkoutId,
+        string idempotency,
+        decimal? amount,
+        IResult fallback,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(idempotency))
+        {
+            return fallback;
+        }
+
+        var existing = await db.Refunds.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.OrgId == orgId && x.IdempotencyKey == idempotency, ct);
+        if (existing is null)
+        {
+            return fallback;
+        }
+
+        if (existing.CheckoutId != checkoutId || (amount is decimal amt && amt != existing.Amount))
+        {
+            return PayErrors.Status(409, "Conflict", "idempotency key reused with a different body");
+        }
+
+        return Results.Json(View(existing), OneClient.Json);
     }
 
     static object View(RefundRow row, string? number = null) => new
