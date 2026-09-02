@@ -112,6 +112,13 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
                 e.HasIndex(x => new { x.OrgId, x.IdempotencyKey })
                     .IsUnique()
                     .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                // Issue 009: at most one late_pay refund per checkout, enforced across
+                // replicas. Rails can emit several success events for one payment (Stripe
+                // async methods do), and dedupe by event id let each book another refund.
+                e.HasIndex(x => x.CheckoutId, "IX_refunds_CheckoutId_late_pay")
+                    .IsUnique()
+                    .HasFilter("\"Reason\" = 'late_pay'");
             }
         });
         model.Entity<JournalEntryRow>(e =>

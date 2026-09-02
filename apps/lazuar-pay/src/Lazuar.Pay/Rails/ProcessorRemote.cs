@@ -134,7 +134,23 @@ public sealed class ProcessorRemote(
         var minor = MoneyMath.ToMinor(amount);
         if (provider == PayProviders.Stripe)
         {
-            await RefundStripeAsync(checkout, charge.ProviderRef, minor, ct, refundId);
+            try
+            {
+                await RefundStripeAsync(checkout, charge.ProviderRef, minor, ct, refundId);
+            }
+            catch (StripeException ex) when ((int)ex.HttpStatusCode >= 500)
+            {
+                // 5xx from Stripe is ambiguous: the refund may have been created before the
+                // server errored. Callers must hold the reservation pending (issue 001) —
+                // releasing it on a 5xx is how a retry double-refunded.
+                throw new ProcessorOutcomeUnknownException("stripe refund status " + (int)ex.HttpStatusCode);
+            }
+            catch (StripeException ex)
+            {
+                // A definitive (<500) Stripe answer: the refund was NOT created.
+                throw new ProcessorRejectedException(ex.StripeError?.Message ?? ex.Message);
+            }
+
             return;
         }
 
@@ -246,7 +262,17 @@ public sealed class ProcessorRemote(
         using var response = await client.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException("CHIP " + action.Trim('/') + " rejected");
+            var code = (int)response.StatusCode;
+            // Issue 001: a CHIP 4xx is a definitive no (nothing executed), but a 5xx — like a
+            // lost response or timeout — is ambiguous: the purchase may already have been
+            // refunded before the server errored. Callers distinguish the two to decide
+            // whether releasing the refund reservation is safe.
+            if (code >= 500)
+            {
+                throw new ProcessorOutcomeUnknownException($"chip {action.Trim('/')} returned {code}");
+            }
+
+            throw new ProcessorRejectedException($"chip {action.Trim('/')} rejected ({code})");
         }
     }
 
@@ -262,3 +288,16 @@ public sealed class ProcessorRemote(
         return box.Unprotect(cred.Ciphertext);
     }
 }
+
+/// <summary>
+/// The processor definitively answered "no" (a &lt;500 response). No money moved, so callers may
+/// release the refund reservation (<c>failed</c>) safely. Issue 001.
+/// </summary>
+public sealed class ProcessorRejectedException(string message) : Exception(message);
+
+/// <summary>
+/// The refund's outcome is unknown: the response was lost, timed out, or the processor returned
+/// 5xx — the refund may already have executed. Callers must keep the reservation <c>pending</c>
+/// (capacity stays reserved) and reconcile before releasing. Issue 001.
+/// </summary>
+public sealed class ProcessorOutcomeUnknownException(string message) : Exception(message);

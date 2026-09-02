@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
@@ -70,7 +72,14 @@ internal static class RefundEndpoints
             return PayErrors.Status(404, "Not Found", "checkout not found");
         }
 
-        var refundId = Guid.NewGuid().ToString("N");
+        // Issue 001: the refund id doubles as the processor idempotency key. When the caller
+        // supplies an Idempotency-Key we derive it deterministically from (org, key), so a
+        // retry of the same logical refund reuses the original processor key instead of
+        // minting a fresh one — a fresh key was how a retry after a lost response could
+        // refund the same money twice at the processor.
+        var refundId = string.IsNullOrWhiteSpace(idempotency)
+            ? Guid.NewGuid().ToString("N")
+            : StableRefundId(orgId, idempotency);
         decimal remaining;
         decimal amount;
         RefundRow row;
@@ -126,7 +135,22 @@ internal static class RefundEndpoints
                 CreatedAt = DateTimeOffset.UtcNow
             };
             db.Refunds.Add(row);
-            await db.SaveChangesAsync(ct);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException) when (!string.IsNullOrWhiteSpace(idempotency))
+            {
+                // Issue 012: two concurrent partial refunds with the same Idempotency-Key both
+                // pass the read-side pre-check; the loser hits the filtered unique index here.
+                // That loser is a replay by contract — roll back, drop the tracked duplicate,
+                // and answer with the winner's row instead of a raw 500.
+                await reserveTx.RollbackAsync(ct);
+                db.ChangeTracker.Clear();
+                return await ReplayOrAsync(db, orgId, checkoutId, idempotency, body?.Amount,
+                    PayErrors.Status(500, "Internal Server Error", "refund reservation conflict"), ct);
+            }
+
             await reserveTx.CommitAsync(ct);
         }
 
@@ -136,90 +160,133 @@ internal static class RefundEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            // Unsupported rail. The reservation is released (failed); nothing was booked.
+            // Unsupported/unconfigured rail: nothing could have moved at the processor, so
+            // releasing the reservation (failed) is safe.
             row.Status = "failed";
             await db.SaveChangesAsync(ct);
             return PayErrors.Status(400, "Bad Request", ex.Message);
         }
-        catch (Exception)
+        catch (ProcessorRejectedException)
         {
-            // Processor said no — or the response was lost after it may have said yes. Booking
-            // failed is honest about what we know; a lost-response refund is visible at the
-            // processor (same refundId → same Stripe idempotency key) but never re-attempted here.
+            // Definitive processor no (<500 response): no money moved, so the reservation can
+            // be released safely.
             row.Status = "failed";
             await db.SaveChangesAsync(ct);
             return PayErrors.Status(502, "Bad Gateway", "processor rejected the refund");
         }
+        catch (Exception)
+        {
+            // Issue 001: ambiguous outcome — the response was lost after the processor may
+            // have executed the refund (timeout, connection reset, PSP 5xx). Booking "failed"
+            // here used to release the refundable remainder, and the retry's fresh processor
+            // idempotency key let the processor execute it again — a single intended refund
+            // moving money twice. The row stays pending instead: capacity remains reserved,
+            // same-key retries replay this row, and ops reconcile against the processor
+            // before releasing it.
+            return PayErrors.Status(502, "Bad Gateway", "refund outcome unknown — held pending for reconciliation");
+        }
 
-        var full = amount == remaining;
-        charge.Status = full ? "refunded" : "partially_refunded";
-        row.Status = "succeeded";
-
-        var entryId = Guid.NewGuid().ToString("N");
-        db.JournalEntries.Add(new JournalEntryRow
+        // Settle inside a fresh transaction that re-locks the charge and recomputes the
+        // refund total from persisted rows (issue 010). The reserve-time `remaining` snapshot
+        // is stale by now — a concurrent partial refund may have committed while we were at
+        // the processor — and the old unlocked last-writer-wins status write could permanently
+        // mislabel a fully refunded charge as "partially_refunded".
+        string number;
+        await using (var settleTx = await db.Database.BeginTransactionAsync(ct))
         {
-            Id = entryId,
-            OrgId = orgId,
-            CheckoutId = checkoutId,
-            Currency = charge.Currency,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
-        db.JournalLines.Add(new JournalLineRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            EntryId = entryId,
-            Account = "revenue",
-            Dc = "D",
-            Amount = amount
-        });
-        db.JournalLines.Add(new JournalLineRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            EntryId = entryId,
-            Account = "cash",
-            Dc = "C",
-            Amount = amount
-        });
-
-        var year = MalaysiaTime.Year(DateTimeOffset.UtcNow);
-        var number = await DocumentNumbers.AllocateAsync(db, orgId, "REF", year, ct);
-        db.Documents.Add(new DocumentRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            CheckoutId = checkoutId,
-            Number = number,
-            Title = "Refund",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
-
-        // row was inserted pending in the reservation transaction above; it flips to
-        // succeeded only now that the processor accepted the refund.
-        db.AuditEvents.Add(new AuditEventRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "refund.created",
-            At = DateTimeOffset.UtcNow
-        });
-        await OutboundWebhookEnqueue.TryAddAsync(
-            db,
-            orgId,
-            refundId,
-            PayWebhookEnvelope.RefundCreated,
-            new
+            if (npgsql)
             {
-                refund_id = refundId,
-                checkout_id = checkoutId,
-                charge_id = charge.Id,
-                amount,
-                currency = charge.Currency,
-                number,
-                provider = charge.Provider
-            },
-            ct);
-        await db.SaveChangesAsync(ct);
+                charge = (await db.Charges.FromSqlInterpolated(
+                    $"SELECT * FROM public.charges WHERE \"Id\" = {charge.Id} FOR UPDATE").ToListAsync(ct)).Single();
+            }
+
+            // Pending rows count as refunded for status purposes, mirroring the reservation
+            // semantics: a pending row reserves capacity, so the charge must not read as more
+            // refundable than it is.
+            var refundedTotal = await db.Refunds
+                .Where(x => x.ChargeId == charge.Id && (x.Status == "succeeded" || x.Status == "pending"))
+                .SumAsync(x => x.Amount, ct);
+            charge.Status = refundedTotal >= charge.Amount ? "refunded" : "partially_refunded";
+            row.Status = "succeeded";
+
+            var entryId = Guid.NewGuid().ToString("N");
+            db.JournalEntries.Add(new JournalEntryRow
+            {
+                Id = entryId,
+                OrgId = orgId,
+                CheckoutId = checkoutId,
+                Currency = charge.Currency,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            db.JournalLines.Add(new JournalLineRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntryId = entryId,
+                Account = "revenue",
+                Dc = "D",
+                Amount = amount
+            });
+            db.JournalLines.Add(new JournalLineRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntryId = entryId,
+                Account = "cash",
+                Dc = "C",
+                Amount = amount
+            });
+
+            var year = MalaysiaTime.Year(DateTimeOffset.UtcNow);
+            number = await DocumentNumbers.AllocateAsync(db, orgId, "REF", year, ct);
+            db.Documents.Add(new DocumentRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = orgId,
+                CheckoutId = checkoutId,
+                Number = number,
+                Title = "Refund",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+
+            // row was inserted pending in the reservation transaction above; it flips to
+            // succeeded only now that the processor accepted the refund.
+            db.AuditEvents.Add(new AuditEventRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = orgId,
+                Action = "refund.created",
+                At = DateTimeOffset.UtcNow
+            });
+            await OutboundWebhookEnqueue.TryAddAsync(
+                db,
+                orgId,
+                refundId,
+                PayWebhookEnvelope.RefundCreated,
+                new
+                {
+                    refund_id = refundId,
+                    checkout_id = checkoutId,
+                    charge_id = charge.Id,
+                    amount,
+                    currency = charge.Currency,
+                    number,
+                    provider = charge.Provider
+                },
+                ct);
+            await db.SaveChangesAsync(ct);
+            await settleTx.CommitAsync(ct);
+        }
+
         return Results.Json(View(row, number), OneClient.Json, statusCode: 201);
+    }
+
+    /// <summary>
+    /// Deterministic refund id per (org, idempotency key). SHA-256 → Guid: retries of the same
+    /// logical refund reuse both the row id and the processor idempotency key (issue 001).
+    /// </summary>
+    static string StableRefundId(string orgId, string idempotency)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes("lazuar-refund:" + orgId + ":" + idempotency));
+        return new Guid(hash.AsSpan(0, 16)).ToString("N");
     }
 
     static async Task<IResult> List(
@@ -241,7 +308,9 @@ internal static class RefundEndpoints
         var q = db.Refunds.AsNoTracking().Where(x => x.OrgId == orgId);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.Refunds.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, ct);
+            // Issue 015: org-scope the cursor row (see PaymentLinkEndpoints.List).
+            var cursor = await db.Refunds.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, ct);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt

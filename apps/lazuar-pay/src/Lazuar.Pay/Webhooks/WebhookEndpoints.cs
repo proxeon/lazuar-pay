@@ -1,4 +1,5 @@
 using System.Text;
+using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
@@ -153,7 +154,17 @@ internal static class WebhookEndpoints
                 });
                 if (checkout.Status == "open")
                 {
-                    checkout.Status = "failed";
+                    // Issue 002: the failed-flip is a compare-and-set off "open" — the TTL
+                    // sweep (or a charges-paused expiry) may have committed "expired" between
+                    // the read above and this write. Losing the CAS means the row is already
+                    // terminal; the sub stays untouched and this event is still recorded.
+                    if (!await CheckoutTransitions.TryLeaveOpenAsync(db, checkout, "failed", ct))
+                    {
+                        await db.SaveChangesAsync(ct);
+                        await failTx.CommitAsync(ct);
+                        return Results.Json(new { failed = true }, OneClient.Json);
+                    }
+
                     var sub = await db.Subscriptions.FirstOrDefaultAsync(x => x.CheckoutId == checkout.Id, ct);
                     if (sub is not null)
                     {
@@ -196,20 +207,8 @@ internal static class WebhookEndpoints
             // carries the amount actually being handed back — the capture can differ from the
             // quoted checkout amount on a late event.
             var refundId = Guid.NewGuid().ToString("N");
-            var refundRow = new RefundRow
-            {
-                Id = refundId,
-                OrgId = orgId,
-                CheckoutId = checkout.Id,
-                Amount = parsed.AmountMinor is long minor && minor > 0 ? MoneyMath.FromMinor(minor) : checkout.Amount,
-                Currency = checkout.Currency,
-                Status = "pending",
-                Provider = name,
-                ProviderRef = parsed.ProviderRef,
-                Reason = "late_pay",
-                CreatedAt = DateTimeOffset.UtcNow
-            };
             await using var lateTx = await db.Database.BeginTransactionAsync(ct);
+            bool alreadyReserved;
             try
             {
                 db.PspWebhookEvents.Add(new PspWebhookEventRow
@@ -219,7 +218,33 @@ internal static class WebhookEndpoints
                     EventId = parsed.EventId,
                     ReceivedAt = DateTimeOffset.UtcNow
                 });
-                db.Refunds.Add(refundRow);
+
+                // Issue 009: one late-pay refund per checkout. Rails can emit more than one
+                // success event for the same payment (Stripe async methods deliver both
+                // async_payment_succeeded and checkout.session.completed with distinct event
+                // ids), so the event-id dedupe above let each one book another refund row.
+                // The in-transaction check covers this replica; the filtered unique index
+                // on refunds(CheckoutId) WHERE Reason='late_pay' covers concurrent webhooks
+                // across replicas (its DbUpdateException lands in the catch below).
+                alreadyReserved = await db.Refunds.AsNoTracking()
+                    .AnyAsync(x => x.CheckoutId == checkout.Id && x.Reason == "late_pay", ct);
+                if (!alreadyReserved)
+                {
+                    db.Refunds.Add(new RefundRow
+                    {
+                        Id = refundId,
+                        OrgId = orgId,
+                        CheckoutId = checkout.Id,
+                        Amount = parsed.AmountMinor is long minor && minor > 0 ? MoneyMath.FromMinor(minor) : checkout.Amount,
+                        Currency = checkout.Currency,
+                        Status = "pending",
+                        Provider = name,
+                        ProviderRef = parsed.ProviderRef,
+                        Reason = "late_pay",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    });
+                }
+
                 await db.SaveChangesAsync(ct);
                 await lateTx.CommitAsync(ct);
             }
@@ -229,7 +254,9 @@ internal static class WebhookEndpoints
                 return Results.Ok(new { duplicate = true });
             }
 
-            var refunded = await remote.SettlePendingRefundAsync(refundId, checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
+            var refunded = alreadyReserved
+                ? false
+                : await remote.SettlePendingRefundAsync(refundId, checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
             return Results.Json(new { refunded }, OneClient.Json);
         }
 
