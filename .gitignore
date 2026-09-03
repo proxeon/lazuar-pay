@@ -86,7 +86,7 @@ docs/payment/
 /issues/
 /plans/
 /apps/lazuar-admin/
-/apps/lazuar-api/
+# /apps/lazuar-api/ — un-ignored 2026-09-03: now the Rust port home (branch rust-port)
 /apps/lazuar-developers/
 /apps/lazuar-docs/
 /apps/lazuar-ops/
