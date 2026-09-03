@@ -98,7 +98,7 @@ pub struct TestApp {
     pub config: Config,
     pub psp: Arc<FakeTransport>,
     pub one: Arc<FakeTransport>,
-    pool: app::PgPool,
+    pub pool: app::PgPool,
     admin: postgres::Client,
 }
 
