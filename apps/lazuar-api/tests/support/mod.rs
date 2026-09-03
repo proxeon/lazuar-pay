@@ -194,6 +194,38 @@ impl Drop for TestApp {
     }
 }
 
+/// Insert a minimal checkout row with a given status, for transition tests.
+pub fn insert_checkout(
+    db: &mut postgres::Client,
+    id: uuid::Uuid,
+    status: &str,
+) {
+    db.execute(
+        "INSERT INTO public.checkouts \
+         (\"Id\",\"OrgId\",\"PublicToken\",\"Amount\",\"Currency\",\"Status\",\"Interval\",\"CreatedAt\",\"Provider\") \
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        &[
+            &id.to_string(),
+            &"org_test",
+            &format!("tok_{id}"),
+            &rust_decimal::Decimal::new(990, 2),
+            &"MYR",
+            &status,
+            &"mo",
+            &chrono::Utc::now(),
+            &"test",
+        ],
+    )
+    .expect("insert checkout");
+}
+
+/// Read back a checkout's status.
+pub fn checkout_status(db: &mut postgres::Client, id: uuid::Uuid) -> String {
+    db.query_one("SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1", &[&id.to_string()])
+        .expect("checkout exists")
+        .get(0)
+}
+
 fn reserve_port() -> u16 {
     std::net::TcpListener::bind("127.0.0.1:0")
         .expect("reserve loopback port")

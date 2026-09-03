@@ -6,4 +6,6 @@
 
 pub mod app;
 pub mod config;
+pub mod domain;
+pub mod rails;
 pub mod transport;
