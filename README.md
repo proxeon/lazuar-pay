@@ -4,6 +4,8 @@ Checkout-as-a-service for **other apps**. Your frontend stays yours. Pay mints a
 
 Built by [Akmal Firdaus](https://x.com/akmalfirdxus) — solo, Malaysia.
 
+![Lazuar Pay merchant — the Processor page, one card per rail: Test, Stripe, CHIP, Billplz, Xendit, Razorpay, Solana](assets/merchant-processor.png)
+
 **Focused Pay** (this repo’s cashier) is `apps/lazuar-pay` on **8081**, merchant **:5178**, checkout **:5179**. One API is **8080**.
 
 Integrators: [`apps/lazuar-pay/README.md`](apps/lazuar-pay/README.md) and [`examples/pay-node`](examples/pay-node).
