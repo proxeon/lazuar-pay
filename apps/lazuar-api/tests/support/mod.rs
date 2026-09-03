@@ -18,6 +18,15 @@ use lazuar_api::transport::{OutRequest, OutResponse, Transport};
 // FakeTransport — FakePspHandler / FakeOneHandler semantics
 // ---------------------------------------------------------------------------
 
+pub fn secretbox_testing() -> lazuar_api::secrets::SecretBox {
+    lazuar_api::secrets::SecretBox::from_env_testing(None).unwrap()
+}
+
+pub fn b64_decode(s: &str) -> Vec<u8> {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.decode(s).unwrap()
+}
+
 #[derive(Debug, Clone)]
 pub struct RecordedRequest {
     pub method: String,

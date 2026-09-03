@@ -19,8 +19,8 @@ use uuid::Uuid;
 
 /// CAS transition from "open" to `status`. Returns false when another writer
 /// already moved the row off "open".
-pub fn try_leave_open(
-    conn: &mut postgres::Client,
+pub fn try_leave_open<C: postgres::GenericClient>(
+    conn: &mut C,
     checkout_id: Uuid,
     status: &str,
 ) -> Result<bool, postgres::Error> {
@@ -29,8 +29,8 @@ pub fn try_leave_open(
 
 /// CAS transition from `from` to `to`. Issue 004 uses the failed→open direction
 /// to re-open a past_due subscription's checkout for retry.
-pub fn try_transition(
-    conn: &mut postgres::Client,
+pub fn try_transition<C: postgres::GenericClient>(
+    conn: &mut C,
     checkout_id: Uuid,
     from: &str,
     to: &str,
