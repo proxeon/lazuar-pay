@@ -8,92 +8,35 @@
 
 use std::sync::Arc;
 
-type PgPool = r2d2::Pool<r2d2_postgres::PostgresConnectionManager<postgres::NoTls>>;
+use lazuar_api::app::{self, State};
+use lazuar_api::config::Config;
+use lazuar_api::transport::{Transport, UreqTransport};
 
 fn main() {
-    let addr = std::env::var("LISTEN_ADDR").unwrap_or_else(|_| "127.0.0.1:8095".to_string());
-    let state = Arc::new(State::from_env());
+    let config = Config::from_env();
 
-    println!("lazuar-api (sync rust) listening on http://{addr}");
+    let pool = config.connection_string.as_deref().map(|cs| {
+        let manager = r2d2_postgres::PostgresConnectionManager::new(
+            cs.parse().expect("invalid Pay__ConnectionString"),
+            postgres::NoTls,
+        );
+        r2d2::Pool::builder()
+            .build(manager)
+            .expect("failed to build db pool")
+    });
 
-    // rouille: thread-per-request. Blocking inside a handler is safe by design —
-    // there is no executor to stall (PORT_DECISIONS D001).
-    rouille::start_server(addr, move |request| router(request, &state));
-}
+    // Real transports. Per-client timeouts mirror Program.cs: solana 10s,
+    // webhooks 10s, rails default 10s (the 100s-default hazard is not ported).
+    let psp: Arc<dyn Transport> = Arc::new(UreqTransport::new(10));
+    let one: Arc<dyn Transport> = Arc::new(UreqTransport::new(2));
 
-/// Anything a handler might reach for. Grows as phases land; stays cheap to clone
-/// into each rouille worker thread.
-struct State {
-    #[allow(dead_code)] // consumed by the request-log phase (port order step 9)
-    started_at: chrono::DateTime<chrono::Utc>,
-    pool: Option<PgPool>,
-}
+    let state = Arc::new(State {
+        config: config.clone(),
+        started_at: chrono::Utc::now(),
+        pool,
+        psp,
+        one,
+    });
 
-impl State {
-    fn from_env() -> Self {
-        let pool = match std::env::var("Pay__ConnectionString") {
-            Ok(cs) => {
-                let manager = r2d2_postgres::PostgresConnectionManager::new(
-                    cs.parse().expect("invalid Pay__ConnectionString"),
-                    postgres::NoTls,
-                );
-                match r2d2::Pool::builder().build(manager) {
-                    Ok(pool) => Some(pool),
-                    // D005: the .NET service stays authoritative; a missing DB must not
-                    // stop this process from booting for local fixture work.
-                    Err(err) => {
-                        eprintln!("db pool unavailable, running degraded: {err}");
-                        None
-                    }
-                }
-            }
-            Err(_) => None,
-        };
-        Self { started_at: chrono::Utc::now(), pool }
-    }
-}
-
-fn router(request: &rouille::Request, state: &State) -> rouille::Response {
-    let route = format!("{} {}", request.method(), request.url());
-    match route.as_str() {
-        "GET /health" => health(state),
-        "GET /ready" => ready(state),
-        _ => not_found(&route),
-    }
-}
-
-fn health(_state: &State) -> rouille::Response {
-    rouille::Response::json(&serde_json::json!({ "status": "ok" }))
-}
-
-/// DB-ping readiness, mirroring `Hosting/HealthEndpoints.cs` + `Hosting/PayReady.cs`:
-/// `/ready` degrades when the database is unreachable; `/health` never does.
-fn ready(state: &State) -> rouille::Response {
-    let db_ok = match &state.pool {
-        Some(pool) => pool
-            .get()
-            .ok()
-            .map(|mut conn| conn.query_one("SELECT 1", &[]).is_ok())
-            .unwrap_or(false),
-        None => false,
-    };
-
-    if db_ok {
-        rouille::Response::json(&serde_json::json!({ "status": "ready" }))
-    } else {
-        rouille::Response::json(&serde_json::json!({
-            "status": "not_ready",
-            "checks": { "database": { "ok": false } }
-        }))
-        .with_status_code(503)
-    }
-}
-
-fn not_found(route: &str) -> rouille::Response {
-    let _ = route;
-    rouille::Response::json(&serde_json::json!({
-        "status": 404,
-        "title": "Not Found"
-    }))
-    .with_status_code(404)
+    app::serve(config.listen_addr, state);
 }
