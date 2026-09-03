@@ -9,11 +9,11 @@ publish = false
 rouille = "3.6"
 ureq = { version = "2", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["arbitrary_precision"] }
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1", features = ["serde-with-str", "db-postgres"] }
+rust_decimal = { version = "1", features = ["serde-with-arbitrary-precision", "db-postgres"] }
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
 r2d2 = "0.8"
 r2d2_postgres = "0.18"

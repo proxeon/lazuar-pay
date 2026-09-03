@@ -195,9 +195,10 @@ impl Drop for TestApp {
 }
 
 /// Insert a minimal checkout row with a given status, for transition tests.
-pub fn insert_checkout(
+pub fn insert_checkout_org(
     db: &mut postgres::Client,
     id: uuid::Uuid,
+    org_id: &str,
     status: &str,
 ) {
     db.execute(
@@ -206,7 +207,7 @@ pub fn insert_checkout(
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
         &[
             &id.to_string(),
-            &"org_test",
+            &org_id,
             &format!("tok_{id}"),
             &rust_decimal::Decimal::new(990, 2),
             &"MYR",
@@ -219,11 +220,65 @@ pub fn insert_checkout(
     .expect("insert checkout");
 }
 
+/// Insert a checkout under the default test org.
+pub fn insert_checkout(db: &mut postgres::Client, id: uuid::Uuid, status: &str) {
+    insert_checkout_org(db, id, "org_test", status);
+}
+
 /// Read back a checkout's status.
 pub fn checkout_status(db: &mut postgres::Client, id: uuid::Uuid) -> String {
     db.query_one("SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1", &[&id.to_string()])
         .expect("checkout exists")
         .get(0)
+}
+
+/// Insert a charge row for refund tests. Status "succeeded" = money took.
+pub fn insert_charge(
+    db: &mut postgres::Client,
+    charge_id: &str,
+    org_id: &str,
+    checkout_id: &str,
+    amount: rust_decimal::Decimal,
+    currency: &str,
+    status: &str,
+    provider: &str,
+    provider_ref: Option<&str>,
+) {
+    db.execute(
+        "INSERT INTO public.charges \
+         (\"Id\",\"OrgId\",\"CheckoutId\",\"Provider\",\"ProviderRef\",\"Amount\",\"Currency\",\"Status\") \
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+        &[
+            &charge_id,
+            &org_id,
+            &checkout_id,
+            &provider,
+            &provider_ref,
+            &amount,
+            &currency,
+            &status,
+        ],
+    )
+    .expect("insert charge");
+}
+
+/// A checkout + its succeeded charge, ready for refund tests.
+pub fn insert_charged_checkout(db: &mut postgres::Client, org: &str, amount: rust_decimal::Decimal) -> String {
+    let checkout_id = uuid::Uuid::new_v4().to_string();
+    insert_checkout_org(db, uuid::Uuid::parse_str(&checkout_id).unwrap(), org, "paid");
+    let charge_id = format!("ch_{}", uuid::Uuid::new_v4().simple());
+    insert_charge(
+        db,
+        &charge_id,
+        org,
+        &checkout_id,
+        amount,
+        "MYR",
+        "succeeded",
+        "test",
+        Some(&format!("{}_ref", charge_id)),
+    );
+    checkout_id
 }
 
 fn reserve_port() -> u16 {
