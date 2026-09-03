@@ -416,7 +416,7 @@ fn handle_failed(
             let has_past_due: Option<DateTime<Utc>> = row.get(1);
             fail_tx.execute(
                 "UPDATE public.subscriptions \
-                 SET \"Status\" = 'past_due', \"PastDueAt\" = COALESCE($1, $2), \"AttemptCount\" = $3 \
+                 SET \"Status\" = 'past_due', \"PastDueAt\" = COALESCE($1::timestamptz, $2), \"AttemptCount\" = $3 \
                  WHERE \"CheckoutId\" = $4",
                 &[&has_past_due, &Utc::now(), &(attempts + 1), &checkout.id],
             )?;
