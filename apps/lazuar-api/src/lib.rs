@@ -7,6 +7,7 @@
 pub mod app;
 pub mod config;
 pub mod domain;
+pub mod hosting;
 pub mod identity;
 pub mod money;
 pub mod publicpay;
