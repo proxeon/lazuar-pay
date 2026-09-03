@@ -6,11 +6,12 @@ pub fn decode(input: &str) -> Option<Vec<u8>> {
     if input.is_empty() {
         return None;
     }
+    // Little-endian accumulator; reversed at the end (canonical b58 decode).
     let mut output: Vec<u8> = Vec::with_capacity(input.len());
     for ch in input.bytes() {
         let value = ALPHABET.iter().position(|a| *a == ch)? as u32;
         let mut carry = value;
-        for byte in output.iter_mut().rev() {
+        for byte in output.iter_mut() {
             carry += (*byte as u32) * 58;
             *byte = (carry & 0xff) as u8;
             carry >>= 8;
