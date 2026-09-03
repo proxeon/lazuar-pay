@@ -19,7 +19,6 @@ use crate::domain::transitions;
 use crate::domain::currency;
 use crate::money::document_numbers;
 use crate::money::malaysia_time;
-use crate::rails::providers;
 use crate::webhooks::envelope;
 use crate::webhooks::enqueue;
 
@@ -48,10 +47,6 @@ pub enum FulfillError {
 #[derive(Default)]
 pub struct CheckoutGates {
     inner: Mutex<HashMap<String, Arc<Mutex<()>>>>,
-}
-
-pub struct CheckoutGateGuard {
-    _arc: Arc<Mutex<()>>,
 }
 
 impl CheckoutGates {
@@ -178,10 +173,6 @@ fn fulfill_paid_core(
     // Issue 002: claim the checkout with CAS off "open". The previous blind "paid"
     // write could land over a concurrently committed "expired", turning a late
     // capture into a fulfilled order with a spurious expired webhook behind it.
-    let checkout_uuid = match Uuid::parse_str(&checkout.id) {
-        Ok(id) => id,
-        Err(_) => return Ok(FulfillOutcome::default()),
-    };
     if !transitions::try_leave_open(tx, checkout_uuid, "paid")? {
         // Another writer moved the row between our read and here. If it was
         // fulfilled, this delivery is a duplicate; if it expired/failed, the money

@@ -277,10 +277,9 @@ fn chip_valid_rsa_signature_parses_paid_purchase() {
 
 #[test]
 fn chip_tampered_body_rejected() {
-    use rsa::pkcs1v15::{Signature, SigningKey};
+    use rsa::pkcs1v15::SigningKey;
     use rsa::pkcs8::EncodePublicKey;
     use rsa::signature::{RandomizedSigner, SignatureEncoding};
-    #[allow(unused_imports)] use rsa::signature::SignatureEncoding as _;
     use rsa::RsaPrivateKey;
     use sha2::Sha256;
 

@@ -4,9 +4,7 @@
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
-use rsa::signature::{SignatureEncoding, Verifier};
-use rsa::pkcs1::DecodeRsaPublicKey as _;
-use rsa::pkcs8::DecodePublicKey as _;
+use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
 use serde_json::Value;
 use sha2::Sha256;

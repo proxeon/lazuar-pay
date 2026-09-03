@@ -14,8 +14,6 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use chrono::Utc;
-use postgres::Transaction;
-use uuid::Uuid;
 
 use crate::identity::one_webhook_signature;
 use crate::secrets::SecretBox;

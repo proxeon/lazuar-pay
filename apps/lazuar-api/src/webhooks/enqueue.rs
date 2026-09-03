@@ -5,15 +5,15 @@
 //! deliveries dedupe on unique EventId.
 
 use chrono::Utc;
-use postgres::Transaction;
+
 use uuid::Uuid;
 
 use super::envelope;
 
 /// Enqueue a delivery for the org's endpoint, if one exists and the event id
 /// has not been delivered before. Best-effort by contract: no endpoint, no enqueue.
-pub fn try_add(
-    tx: &mut Transaction,
+pub fn try_add<C: postgres::GenericClient>(
+    tx: &mut C,
     org_id: &str,
     event_id: &str,
     event_type: &str,
