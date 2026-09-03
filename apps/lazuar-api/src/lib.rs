@@ -9,6 +9,7 @@ pub mod config;
 pub mod domain;
 pub mod hosting;
 pub mod identity;
+pub mod links;
 pub mod money;
 pub mod publicpay;
 pub mod rails;
