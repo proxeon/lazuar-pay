@@ -408,18 +408,41 @@ pub fn machine_one(app: &TestApp) {
 pub const MACHINE_KEY: &str = "lzr_sk_testfixture";
 
 /// CHIP vault PUT needs a ≥2048-bit RSA SubjectPublicKeyInfo PEM.
-pub fn chip_pem() -> String {
+/// The matching private key is kept so paid-webhook tests can sign bodies.
+pub struct ChipSigner {
+    pub pem: String,
+    key: rsa::RsaPrivateKey,
+}
+
+impl ChipSigner {
+    pub fn sign(&self, body: &str) -> String {
+        use base64::Engine as _;
+        use rsa::pkcs1v15::{Signature, SigningKey};
+        use rsa::signature::{RandomizedSigner, SignatureEncoding};
+        use sha2::Sha256;
+        let signing = SigningKey::<Sha256>::new(self.key.clone());
+        let mut rng = rand::thread_rng();
+        let signature: Signature = signing.sign_with_rng(&mut rng, body.as_bytes());
+        base64::engine::general_purpose::STANDARD.encode(signature.to_vec())
+    }
+}
+
+pub fn chip_signer() -> &'static ChipSigner {
     use rsa::pkcs8::EncodePublicKey;
     use rsa::{RsaPrivateKey, RsaPublicKey};
-    static PEM: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    PEM.get_or_init(|| {
+    static SIGNER: std::sync::OnceLock<ChipSigner> = std::sync::OnceLock::new();
+    SIGNER.get_or_init(|| {
         let mut rng = rand::thread_rng();
         let key = RsaPrivateKey::new(&mut rng, 2048).expect("rsa 2048");
-        RsaPublicKey::from(&key)
+        let pem = RsaPublicKey::from(&key)
             .to_public_key_pem(rsa::pkcs8::LineEnding::LF)
-            .expect("chip pem")
+            .expect("chip pem");
+        ChipSigner { pem, key }
     })
-    .clone()
+}
+
+pub fn chip_pem() -> String {
+    chip_signer().pem.clone()
 }
 
 pub fn call(req: ureq::Request) -> ureq::Response {
@@ -529,6 +552,33 @@ pub fn start_pay_at(base_url: &str, token: &str, body: &str) -> ureq::Response {
 /// C# `OccupancyRaceTests.TestWebhookPaid` — signed test-rail paid webhook.
 pub fn test_webhook_paid(app: &TestApp, event_id: &str, checkout_id: &str) -> ureq::Response {
     test_webhook_paid_at(&app.base_url, &app.config.test_webhook_secret, event_id, checkout_id)
+}
+
+pub fn docs_count(app: &TestApp) -> i64 {
+    app.pool
+        .get()
+        .expect("pool")
+        .query_one("SELECT count(*) FROM public.documents", &[])
+        .unwrap()
+        .get(0)
+}
+
+pub fn events_count(app: &TestApp) -> i64 {
+    app.pool
+        .get()
+        .expect("pool")
+        .query_one("SELECT count(*) FROM public.psp_webhook_events", &[])
+        .unwrap()
+        .get(0)
+}
+
+pub fn checkout_status_of(app: &TestApp, id: &str) -> String {
+    app.pool
+        .get()
+        .expect("pool")
+        .query_one("SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1", &[&id])
+        .unwrap()
+        .get(0)
 }
 
 pub fn test_webhook_paid_at(

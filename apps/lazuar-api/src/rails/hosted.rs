@@ -49,7 +49,7 @@ impl HostedRail for VaultedRail<'_> {
             }
             return Ok(HostedSession {
                 provider_session_id: format!("test_{checkout_id}"),
-                url: format!("{}/c/{public_token}", self.checkout_base_url),
+                url: format!("{}/c/{public_token}?status=verifying", self.checkout_base_url),
             });
         }
         if providers::is_solana(name) {
@@ -169,7 +169,7 @@ fn mint_billplz(
     live: bool,
 ) -> Result<HostedSession, StartRailError> {
     if !public_base.starts_with("https://") {
-        return Err(StartRailError::BadRequest("callback base must be public https".into()));
+        return Err(StartRailError::BadRequest("callback base not public".into()));
     }
     let callback = format!(
         "{}/v1/webhooks/billplz/{}?checkout_id={}",

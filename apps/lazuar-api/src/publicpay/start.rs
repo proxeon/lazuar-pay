@@ -68,7 +68,7 @@ impl HostedRail for TestRail {
     ) -> Result<HostedSession, StartRailError> {
         Ok(HostedSession {
             provider_session_id: format!("test:{checkout_id}"),
-            url: format!("{}/c/{public_token}", self.checkout_base_url),
+            url: format!("{}/c/{public_token}?status=verifying", self.checkout_base_url),
         })
     }
 }
