@@ -165,6 +165,16 @@ impl TestApp {
             pool: Some(pool.clone()),
             psp: psp.clone(),
             one: one.clone(),
+            one_client: lazuar_api::identity::one_client::OneClient {
+                base_url: config.one_base_url.clone(),
+                timeout_secs: 2,
+            },
+            secret_box: lazuar_api::secrets::SecretBox::from_env_testing(None)
+                .expect("dev secret box"),
+            fulfill_gates: Default::default(),
+            start_gates: Default::default(),
+            link_gates: Default::default(),
+            limiter: Default::default(),
         });
 
         let port = reserve_port();
