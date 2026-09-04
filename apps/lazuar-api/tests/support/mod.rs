@@ -359,6 +359,51 @@ pub fn role_one(app: &TestApp, role: &str) {
     });
 }
 
+/// C# `CheckoutTests.Allow(orgId)` — membership only for that org.
+pub fn allow_org(app: &TestApp, org_id: &str) {
+    allow_org_role(app, org_id, "owner");
+}
+
+pub fn allow_org_role(app: &TestApp, org_id: &str, role: &str) {
+    let org = org_id.to_string();
+    let role = role.to_string();
+    app.one.respond_with(move |req| {
+        if req.url.contains("/me") {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: format!(
+                    r#"{{"user_id":"u1","email":"ada@acme.test","name":"Ada","is_platform_admin":false,"tenants":[{{"id":"{org}","role":"{role}","status":"active"}}]}}"#
+                ),
+            }
+        } else if req.url.contains(&format!("/tenants/{org}/authz/check")) {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: r#"{"allowed":true}"#.into(),
+            }
+        } else if req.url.contains("/authz/check") {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: r#"{"allowed":false}"#.into(),
+            }
+        } else {
+            lazuar_api::transport::OutResponse {
+                status: 404,
+                body: "{}".into(),
+            }
+        }
+    });
+}
+
+/// C# `PayTest.Key` — machine-key /me with a bound active tenant.
+pub fn machine_one(app: &TestApp) {
+    app.one.respond_with(|_| lazuar_api::transport::OutResponse {
+        status: 200,
+        body: r#"{"user_id":"key-1","is_platform_admin":false,"tenants":[{"id":"t1","role":"member","status":"active"}]}"#.into(),
+    });
+}
+
+pub const MACHINE_KEY: &str = "lzr_sk_testfixture";
+
 /// CHIP vault PUT needs a ≥2048-bit RSA SubjectPublicKeyInfo PEM.
 pub fn chip_pem() -> String {
     use rsa::pkcs8::EncodePublicKey;
@@ -442,4 +487,28 @@ pub fn seed_checkout(app: &TestApp, provider: &str, currency: Option<&str>) -> (
         v["public_token"].as_str().unwrap().to_string(),
         v["id"].as_str().unwrap().to_string(),
     )
+}
+
+/// C# `PayTest.SeedPaymentLink`.
+pub fn seed_payment_link(app: &TestApp, provider: &str, max_payers: i32) -> (String, String) {
+    let body = serde_json::json!({
+        "org_id": "t1",
+        "amount": 10,
+        "provider": provider,
+        "max_payers": max_payers,
+        "unlimited": false,
+    });
+    let resp = auth_post(app, "/v1/payment-links", &body.to_string());
+    let status = resp.status();
+    let raw = resp.into_string().unwrap_or_default();
+    assert_eq!(status, 201, "{raw}");
+    let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    (
+        v["public_token"].as_str().unwrap().to_string(),
+        v["id"].as_str().unwrap().to_string(),
+    )
+}
+
+pub fn start_pay(app: &TestApp, token: &str, body: &str) -> ureq::Response {
+    auth_post(app, &format!("/v1/pay/{token}/start"), body)
 }

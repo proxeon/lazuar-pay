@@ -107,10 +107,10 @@ pub fn list_receipts(
     };
     let has_more = rows.len() as i64 > take;
     let page: Vec<_> = rows.into_iter().take(take as usize).collect();
-    let items: Vec<Value> = page
-        .iter()
-        .map(|row| receipt_item(row))
-        .collect();
+    let mut items = Vec::new();
+    for row in &page {
+        items.push(receipt_item(conn, row)?);
+    }
     let next_cursor = if has_more {
         page.last().map(|r| r.get::<_, String>("Id"))
     } else {
@@ -119,22 +119,55 @@ pub fn list_receipts(
     Ok(json!({ "items": items, "next_cursor": next_cursor }))
 }
 
-fn receipt_item(row: &postgres::Row) -> Value {
+fn receipt_item(conn: &mut Client, row: &postgres::Row) -> Result<Value, postgres::Error> {
     let number: Option<String> = row.get("Number");
     let status = if number.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none() {
         "pending"
     } else {
         "issued"
     };
-    json!({
+    let checkout_id: Option<String> = row.get("CheckoutId");
+    let mut payer_name: Option<String> = None;
+    let mut amount: Option<Decimal> = None;
+    let mut currency: Option<String> = None;
+    let mut product_id: Option<String> = None;
+    if let Some(cid) = checkout_id.as_deref().filter(|s| !s.is_empty()) {
+        if let Some(ch) = conn.query_opt(
+            "SELECT \"PayerName\",\"Amount\",\"Currency\",\"ProductId\" FROM public.checkouts WHERE \"Id\" = $1",
+            &[&cid],
+        )? {
+            payer_name = ch.get("PayerName");
+            amount = Some(ch.get("Amount"));
+            currency = Some(ch.get("Currency"));
+            product_id = ch.get("ProductId");
+        }
+        if let Some(charge) = conn.query_opt(
+            "SELECT \"Amount\",\"Currency\" FROM public.charges WHERE \"CheckoutId\" = $1 LIMIT 1",
+            &[&cid],
+        )? {
+            amount = Some(charge.get("Amount"));
+            currency = Some(charge.get("Currency"));
+        }
+    }
+    let label = match product_id.as_deref().filter(|s| !s.is_empty()) {
+        Some(pid) => conn
+            .query_opt("SELECT \"Name\" FROM public.products WHERE \"Id\" = $1", &[&pid])?
+            .map(|r| r.get::<_, String>(0)),
+        None => None,
+    };
+    Ok(json!({
         "id": row.get::<_, String>("Id"),
         "org_id": row.get::<_, String>("OrgId"),
-        "checkout_id": row.get::<_, Option<String>>("CheckoutId"),
+        "checkout_id": checkout_id,
         "title": row.get::<_, String>("Title"),
         "number": number.clone().unwrap_or_else(|| "PENDING".into()),
         "status": status,
         "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>("CreatedAt"),
-    })
+        "payer_name": payer_name,
+        "amount": amount.map(crate::hosting::decimal_json),
+        "currency": currency,
+        "label": label,
+    }))
 }
 
 pub fn get_receipt(conn: &mut Client, org_id: &str, id: &str) -> Result<Option<Value>, postgres::Error> {
@@ -143,7 +176,10 @@ pub fn get_receipt(conn: &mut Client, org_id: &str, id: &str) -> Result<Option<V
          WHERE \"OrgId\" = $1 AND \"Id\" = $2",
         &[&org_id, &id],
     )?;
-    Ok(row.map(|r| receipt_item(&r)))
+    match row {
+        Some(r) => Ok(Some(receipt_item(conn, &r)?)),
+        None => Ok(None),
+    }
 }
 
 /// Cursor lookup is **not** org-scoped — C# SubscriptionEndpoints.cs deliberate exception.
