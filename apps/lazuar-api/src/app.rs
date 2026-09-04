@@ -36,6 +36,7 @@ pub fn router(request: &rouille::Request, state: &State) -> rouille::Response {
     match (method, segments.as_slice()) {
         ("GET", ["health"]) => health(),
         ("GET", ["ready"]) => ready(state),
+        ("GET", ["v1", "health"]) => health(),
 
         ("GET", ["v1", "whoami"]) => whoami_route(request, state),
 
@@ -95,6 +96,19 @@ fn not_found() -> rouille::Response {
 // ---------------------------------------------------------------------------
 // Error mapping
 // ---------------------------------------------------------------------------
+
+/// Parse an inbound JSON amount as an exact decimal: accepts JSON numbers
+/// (via the raw arbitrary-precision token, so `12.50` keeps its scale) and
+/// numeric strings. C# `decimal?` binds both shapes.
+pub fn parse_decimal(value: Option<&serde_json::Value>) -> Option<rust_decimal::Decimal> {
+    use rust_decimal::Decimal;
+    use std::str::FromStr as _;
+    match value? {
+        serde_json::Value::Number(n) => Decimal::from_str(&n.to_string()).ok(),
+        serde_json::Value::String(s) => Decimal::from_str(s).ok(),
+        _ => None,
+    }
+}
 
 fn error_response(err: &PayError) -> rouille::Response {
     rouille::Response::json(&serde_json::json!({
@@ -410,16 +424,7 @@ fn link_create_route(request: &rouille::Request, state: &State) -> rouille::Resp
     let input = crate::links::create::CreateLinkInput {
         org_id,
         provider: parsed.get("provider").and_then(serde_json::Value::as_str),
-        amount: parsed
-            .get("amount")
-            .and_then(serde_json::Value::as_str)
-            .and_then(|v| rust_decimal::Decimal::from_str(v).ok())
-            .or_else(|| {
-                parsed
-                    .get("amount")
-                    .and_then(serde_json::Value::as_i64)
-                    .map(rust_decimal::Decimal::from)
-            }),
+        amount: parse_decimal(parsed.get("amount")),
         currency: parsed.get("currency").and_then(serde_json::Value::as_str),
         product_id: parsed.get("product_id").and_then(serde_json::Value::as_str),
         max_payers: parsed.get("max_payers").and_then(serde_json::Value::as_i64).map(|v| v as i32),

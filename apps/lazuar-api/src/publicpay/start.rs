@@ -152,10 +152,6 @@ fn require_provider(provider: Option<&str>) -> Result<&'static str, StartOutcome
     providers::try_normalize(provider).ok_or(StartOutcome::RailNotConfigured)
 }
 
-fn requires_email(name: &str) -> bool {
-    !providers::requires_email(name)
-}
-
 pub fn start(
     conn: &mut postgres::Client,
     deps: &StartDeps,

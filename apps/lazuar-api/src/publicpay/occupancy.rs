@@ -88,12 +88,18 @@ pub fn mark_expired(
             continue;
         }
         let org_id = org_of(tx, &id)?;
+        let payment_link_id: Option<String> = tx
+            .query_opt(
+                "SELECT \"PaymentLinkId\" FROM public.checkouts WHERE \"Id\" = $1",
+                &[&id],
+            )?
+            .and_then(|row| row.get(0));
         enqueue::try_add(
             tx,
             &org_id,
             &format!("expired:{id}"),
             envelope::EXPIRED,
-            serde_json::json!({ "checkout_id": id, "reason": reason }),
+            serde_json::json!({ "checkout_id": id, "payment_link_id": payment_link_id, "reason": reason }),
         )?;
         expired.push(id);
     }

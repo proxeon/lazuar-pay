@@ -13,13 +13,11 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 
 pub const DEFAULT_LIMIT: i64 = 50;
-pub const MAX_LIMIT: i64 = 200;
+/// C# `PayList.Clamp` caps at 100 — the earlier 200 was a divergence.
+pub const MAX_LIMIT: i64 = 100;
 
 pub fn clamp(limit: Option<i64>) -> i64 {
-    match limit {
-        Some(n) if n > 0 => n.min(MAX_LIMIT),
-        _ => DEFAULT_LIMIT,
-    }
+    crate::hosting::clamp_limit(limit)
 }
 
 #[derive(Debug, Clone, Serialize)]

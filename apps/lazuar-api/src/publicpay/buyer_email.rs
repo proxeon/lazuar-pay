@@ -18,7 +18,7 @@ pub fn name_from(email: Option<&str>, name: Option<&str>) -> String {
     }
     match email.map(str::trim).filter(|s| !s.is_empty()) {
         Some(e) => e.split('@').next().unwrap_or(e).to_string(),
-        None => String::new(),
+        None => "Customer".to_string(),
     }
 }
 

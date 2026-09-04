@@ -42,3 +42,26 @@ impl PayError {
         Self::new(502, "Bad Gateway", detail)
     }
 }
+
+/// Port of `Hosting/PayList.cs:5-16` — default 50, max 100, `limit < 1` → default.
+pub fn clamp_limit(limit: Option<i64>) -> i64 {
+    match limit {
+        Some(n) if n >= 1 => n.min(100),
+        _ => 50,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clamp_matches_pay_list() {
+        assert_eq!(clamp_limit(None), 50);
+        assert_eq!(clamp_limit(Some(0)), 50);
+        assert_eq!(clamp_limit(Some(-5)), 50);
+        assert_eq!(clamp_limit(Some(1)), 1);
+        assert_eq!(clamp_limit(Some(100)), 100);
+        assert_eq!(clamp_limit(Some(101)), 100);
+    }
+}

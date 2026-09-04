@@ -549,7 +549,7 @@ pub fn list_refunds(
     limit: Option<i64>,
     after: Option<&str>,
 ) -> Result<RefundPage, postgres::Error> {
-    let take = limit.unwrap_or(50).clamp(1, 200);
+    let take = crate::hosting::clamp_limit(limit);
 
     let cursor: Option<RefundRow> = match after.map(str::trim).filter(|a| !a.is_empty()) {
         Some(after_id) => conn

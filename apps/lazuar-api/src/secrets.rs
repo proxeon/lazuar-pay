@@ -23,6 +23,7 @@ pub enum SecretBoxError {
     UnwrapFailed,
 }
 
+#[derive(Debug, Clone)]
 pub struct SecretBox {
     key: Key<Aes256Gcm>,
 }
@@ -37,6 +38,18 @@ impl SecretBox {
                 let key = Sha256::digest(b"lazuar-pay-dev-wrap-key");
                 Ok(Self { key: *Key::<Aes256Gcm>::from_slice(&key) })
             }
+        }
+    }
+
+    /// Production resolution path (PayBoot B1/B5 parity): a present key must
+    /// be valid 32-byte base64; a missing key is only tolerated in
+    /// Development/Testing.
+    pub fn from_env(environment: &str, wrap_key: Option<&str>) -> Result<Self, SecretBoxError> {
+        let boot_strict = environment != "Development" && environment != "Testing";
+        match wrap_key.map(str::trim).filter(|k| !k.is_empty()) {
+            Some(b64) => Self::from_wrap_key_b64(b64),
+            None if boot_strict => Err(SecretBoxError::KeyRequired),
+            None => Self::from_env_testing(None),
         }
     }
 

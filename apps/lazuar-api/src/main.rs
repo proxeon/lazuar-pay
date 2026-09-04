@@ -36,12 +36,13 @@ fn main() {
     let one: Arc<dyn Transport> = Arc::new(UreqTransport::new(2));
     let one_client = lazuar_api::identity::one_client::OneClient {
         base_url: config.one_base_url.clone(),
-        timeout_secs: 2,
+        timeout_secs: config.one_timeout_secs,
     };
-    let secret_box = lazuar_api::secrets::SecretBox::from_env_testing(
-        std::env::var("Pay__WrapKey").ok().as_deref(),
+    let secret_box = lazuar_api::secrets::SecretBox::from_env(
+        &config.environment,
+        config.wrap_key.as_deref(),
     )
-    .expect("Pay__WrapKey must be 32 bytes base64 when set");
+    .expect("Pay__WrapKey missing or invalid (PayBoot B1/B5)");
 
     let state = Arc::new(State {
         config: config.clone(),
@@ -58,28 +59,21 @@ fn main() {
     });
 
     // Background workers: outbound webhook dispatch + Solana reference watcher.
-    if let Some(cs) = config.connection_string.clone() {
-        {
-            let cs = cs.clone();
-            let box_one = lazuar_api::secrets::SecretBox::from_env_testing(
-                std::env::var("Pay__WrapKey").ok().as_deref(),
-            )
-            .expect("wrap key");
+    // Skipped in Testing to mirror the C# hosted-service env gate.
+    if config.environment != "Testing" {
+        if let Some(cs) = config.connection_string.clone() {
+            let box_one = state.secret_box.clone();
             let environment = config.environment.clone();
             std::thread::spawn(move || {
                 lazuar_api::workers::webhook_worker(cs, box_one, environment);
             });
         }
-        {
-            let cs = cs.clone();
-            let box_one = lazuar_api::secrets::SecretBox::from_env_testing(
-                std::env::var("Pay__WrapKey").ok().as_deref(),
-            )
-            .expect("wrap key");
+        if let Some(cs) = config.connection_string.clone() {
+            let box_one = state.secret_box.clone();
             let environment = config.environment.clone();
             let cluster = config.solana_cluster.clone();
             let rpc_url = config.solana_rpc_url.clone();
-            let ttl_minutes = 30i64;
+            let ttl_minutes = config.reservation_ttl_minutes;
             std::thread::spawn(move || {
                 lazuar_api::workers::solana_watcher(cs, box_one, environment, cluster, rpc_url, ttl_minutes);
             });
