@@ -50,6 +50,13 @@ fn member_gate_human_member_allowed_via_authz_check() {
     require_member(&client, one.as_ref(), Some("Bearer jwt_1"), None, "org_1")
         .expect("member allowed");
     assert_eq!(one.send_count(), 1, "authz check called");
+    let last = one.last().expect("recorded authz check");
+    assert!(
+        last.headers.iter().any(|(k, v)| k.eq_ignore_ascii_case("content-type")
+            && v.to_ascii_lowercase().starts_with("application/json")),
+        "One JSON POST must send Content-Type application/json, got {:?}",
+        last.headers
+    );
 }
 
 #[test]

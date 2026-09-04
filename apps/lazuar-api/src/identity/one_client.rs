@@ -120,14 +120,20 @@ impl OneClient {
         org_id: &str,
         tenant_hint: Option<&str>,
     ) -> Result<bool, OneCall> {
+        // One's minimal-API JSON body binder requires Content-Type:
+        // application/json. Missing it is 500 in Development (throwOnBadRequest)
+        // and 415 otherwise — Pay then maps that to 503 on /gateways.
         let mut request = OutRequest {
             method: "POST".into(),
             url: format!(
                 "{}/tenants/{}/authz/check",
                 self.base_url.trim_end_matches('/'),
-                org_id
+                urlencoding::encode(org_id)
             ),
-            headers: vec![("Authorization".into(), authorization.to_string())],
+            headers: vec![
+                ("Authorization".into(), authorization.to_string()),
+                ("Content-Type".into(), "application/json".into()),
+            ],
             body: Some(
                 serde_json::json!({
                     "relation": "member",

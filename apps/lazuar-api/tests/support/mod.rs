@@ -31,6 +31,7 @@ pub fn b64_decode(s: &str) -> Vec<u8> {
 pub struct RecordedRequest {
     pub method: String,
     pub url: String,
+    pub headers: Vec<(String, String)>,
     pub body: Option<String>,
 }
 
@@ -77,6 +78,7 @@ impl Transport for FakeTransport {
             r.last = Some(RecordedRequest {
                 method: request.method.clone(),
                 url: request.url.clone(),
+                headers: request.headers.clone(),
                 body: request.body.clone(),
             });
         }
@@ -86,6 +88,7 @@ impl Transport for FakeTransport {
                 let recorded = RecordedRequest {
                     method: request.method,
                     url: request.url,
+                    headers: request.headers,
                     body: request.body,
                 };
                 Ok(f(&recorded))
