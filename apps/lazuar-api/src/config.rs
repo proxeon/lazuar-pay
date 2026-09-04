@@ -16,6 +16,7 @@ pub struct Config {
     pub one_worker_org_id: Option<String>,
     pub one_base_url: String,
     pub cors_origins: Vec<String>,
+    pub environment: String,
     pub connection_string: Option<String>,
     pub listen_addr: String,
 }
@@ -51,6 +52,7 @@ impl Config {
                 .filter(|s| !s.is_empty())
                 .map(str::to_string)
                 .collect(),
+            environment: env_or("ASPNETCORE_ENVIRONMENT", "Development"),
             connection_string: env_opt("Pay__ConnectionString"),
             listen_addr: env_or("LISTEN_ADDR", "127.0.0.1:8095"),
         }

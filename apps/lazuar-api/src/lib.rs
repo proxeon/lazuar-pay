@@ -16,3 +16,4 @@ pub mod rails;
 pub mod secrets;
 pub mod transport;
 pub mod webhooks;
+pub mod workers;

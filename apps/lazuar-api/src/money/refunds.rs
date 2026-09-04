@@ -523,8 +523,67 @@ fn replay_or(
     Ok(CreateRefundOutcome::Replayed(existing.view(None)))
 }
 
-/// Test/future-use helper: parse an amount the way the HTTP layer will.
-#[allow(dead_code)]
-pub fn parse_amount(raw: &str) -> Option<Decimal> {
-    Decimal::from_str(raw).ok()
+/// HTTP-layer placeholder refunder: nothing settles at a processor here;
+/// ambiguous rows stay pending as the ops marker. Real rails replace this
+/// per-environment when the hosted mints wire the live remotes.
+pub struct NoopRefunder;
+
+impl Refunder for NoopRefunder {
+    fn refund_charge(&self, _: &ChargeRef, _: Decimal, _: &str) -> Result<(), RefundRemoteError> {
+        Err(RefundRemoteError::OutcomeUnknown(
+            "no processor configured for this rail — held pending for reconciliation".into(),
+        ))
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct RefundPage {
+    pub items: Vec<RefundView>,
+    pub next_cursor: Option<String>,
+}
+
+/// Org-scoped listing, newest first, cursor = last id (issue 015 org-scope).
+pub fn list_refunds(
+    conn: &mut postgres::Client,
+    org_id: &str,
+    limit: Option<i64>,
+    after: Option<&str>,
+) -> Result<RefundPage, postgres::Error> {
+    let take = limit.unwrap_or(50).clamp(1, 200);
+
+    let cursor: Option<RefundRow> = match after.map(str::trim).filter(|a| !a.is_empty()) {
+        Some(after_id) => conn
+            .query_opt(
+                &format!("{REFUND_COLUMNS} WHERE \"OrgId\" = $1 AND \"Id\" = $2"),
+                &[&org_id, &after_id],
+            )?
+            .map(|row| refund_row_from_row(&row)),
+        None => None,
+    };
+
+    let rows = match &cursor {
+        Some(cursor_row) => conn.query(
+            &format!(
+                "{REFUND_COLUMNS} WHERE \"OrgId\" = $1 \
+                 AND (\"CreatedAt\" < $2 OR (\"CreatedAt\" = $2 AND \"Id\" < $3)) \
+                 ORDER BY \"CreatedAt\" DESC, \"Id\" DESC LIMIT $4"
+            ),
+            &[&org_id, &cursor_row.created_at, &cursor_row.id, &(take + 1)],
+        )?,
+        None => conn.query(
+            &format!(
+                "{REFUND_COLUMNS} WHERE \"OrgId\" = $1 \
+                 ORDER BY \"CreatedAt\" DESC, \"Id\" DESC LIMIT $2"
+            ),
+            &[&org_id, &(take + 1)],
+        )?,
+    };
+
+    let mut items: Vec<RefundView> = rows.iter().map(|row| refund_row_from_row(row).view(None)).collect();
+    let mut next_cursor = None;
+    if items.len() as i64 > take {
+        items.truncate(take as usize);
+        next_cursor = items.last().map(|last| last.id.clone());
+    }
+    Ok(RefundPage { items, next_cursor })
 }
