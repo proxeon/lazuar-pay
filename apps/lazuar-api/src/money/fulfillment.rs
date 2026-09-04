@@ -300,7 +300,7 @@ fn fulfill_paid_core(
         serde_json::json!({
             "checkout_id": checkout.id,
             "charge_id": charge_id,
-            "amount": checkout.amount,
+            "amount": crate::hosting::decimal_json(checkout.amount),
             "currency": checkout.currency,
             "provider": provider,
             "provider_ref": provider_ref,

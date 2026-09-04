@@ -479,7 +479,7 @@ pub fn create_refund(
                 "refund_id": refund_id,
                 "checkout_id": checkout_id,
                 "charge_id": charge.id,
-                "amount": refund_amount,
+                "amount": crate::hosting::decimal_json(refund_amount),
                 "currency": charge.currency,
                 "number": number,
                 "provider": charge.provider,

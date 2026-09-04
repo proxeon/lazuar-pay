@@ -65,6 +65,17 @@ pub fn clamp_limit(limit: Option<i64>) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn decimal_json_is_a_number_not_a_string() {
+        let d = rust_decimal::Decimal::from_str("9.90").unwrap();
+        let v = decimal_json(d);
+        assert!(v.is_number(), "{v}");
+        assert_eq!(v.to_string(), "9.90");
+        let via_macro = serde_json::json!({ "amount": d });
+        assert!(via_macro["amount"].is_string(), "raw Decimal still stringifies");
+    }
 
     #[test]
     fn clamp_matches_pay_list() {
