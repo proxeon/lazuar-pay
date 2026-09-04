@@ -103,3 +103,23 @@ fn test_rail_gateway_json_matches_csharp() {
     assert_eq!(body["webhook_configured"], true, "{body}");
     assert_eq!(body["configured"], true, "{body}");
 }
+
+#[test]
+fn solana_gateway_without_valid_address_is_not_configured() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let mut db = app.db();
+    db.execute(
+        "INSERT INTO public.gateway_credentials \
+         (\"OrgId\",\"Provider\",\"Ciphertext\",\"Environment\",\"UpdatedAt\") \
+         VALUES ('t1','solana','wrapped','devnet',$1)",
+        &[&chrono::Utc::now()],
+    )
+    .unwrap();
+    let get = ureq::get(&format!("{}/v1/orgs/t1/gateway?provider=solana", app.base_url))
+        .set("Authorization", "Bearer jwt")
+        .call()
+        .unwrap();
+    let body: serde_json::Value = get.into_json().unwrap();
+    assert_eq!(body["configured"], false, "{body}");
+}

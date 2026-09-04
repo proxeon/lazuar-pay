@@ -496,6 +496,14 @@ pub fn gateway_put(
     })))
 }
 
+fn credential_configured(provider: &str, public_id: Option<&str>) -> bool {
+    if providers::uses_receive_address(provider) {
+        public_id.and_then(solana_address::try_normalize).is_some()
+    } else {
+        true
+    }
+}
+
 fn gateway_object(
     org_id: &str,
     provider: &str,
@@ -557,7 +565,7 @@ pub fn gateway_get(
                 wh.as_deref().is_some_and(|s| !s.is_empty()),
                 public_id.as_deref(),
                 env.as_deref(),
-                true,
+                credential_configured(provider, public_id.as_deref()),
             )))
         }
         None => Ok(Ok(json!({
@@ -600,7 +608,7 @@ pub fn gateway_list(conn: &mut Client, environment: &str, org_id: &str) -> Resul
                     wh.as_deref().is_some_and(|s| !s.is_empty()),
                     public_id.as_deref(),
                     env.as_deref(),
-                    true,
+                    credential_configured(provider, public_id.as_deref()),
                 ));
             }
             None => processors.push(gateway_object(org_id, provider, None, false, None, None, false)),
