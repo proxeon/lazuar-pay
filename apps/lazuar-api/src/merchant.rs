@@ -530,7 +530,15 @@ pub fn gateway_get(
         return Ok(Err(PayError::bad_request("unknown provider")));
     };
     if providers::is_test(provider) && providers::allows_test(environment) {
-        return Ok(Ok(gateway_object(org_id, provider, None, false, None, None, true)));
+        return Ok(Ok(gateway_object(
+            org_id,
+            provider,
+            None,
+            true,
+            None,
+            Some("test"),
+            true,
+        )));
     }
     match conn.query_opt(
         "SELECT \"Last4\",\"WebhookCiphertext\",\"PublicMerchantId\",\"Environment\" \
@@ -564,7 +572,15 @@ pub fn gateway_list(conn: &mut Client, environment: &str, org_id: &str) -> Resul
     let mut processors = Vec::new();
     for provider in providers::listed(environment) {
         if providers::is_test(provider) {
-            processors.push(gateway_object(org_id, provider, None, false, None, None, true));
+            processors.push(gateway_object(
+                org_id,
+                provider,
+                None,
+                true,
+                None,
+                Some("test"),
+                true,
+            ));
             continue;
         }
         match conn.query_opt(

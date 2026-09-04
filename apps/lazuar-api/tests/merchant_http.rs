@@ -89,3 +89,17 @@ fn gateway_put_omitted_environment_does_not_clobber_live() {
     let body: serde_json::Value = get.into_json().unwrap();
     assert_eq!(body["environment"], "live", "{body}");
 }
+
+#[test]
+fn test_rail_gateway_json_matches_csharp() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let get = ureq::get(&format!("{}/v1/orgs/t1/gateway?provider=test", app.base_url))
+        .set("Authorization", "Bearer jwt")
+        .call()
+        .unwrap();
+    let body: serde_json::Value = get.into_json().unwrap();
+    assert_eq!(body["environment"], "test", "{body}");
+    assert_eq!(body["webhook_configured"], true, "{body}");
+    assert_eq!(body["configured"], true, "{body}");
+}
