@@ -28,7 +28,7 @@ pub fn checkout_view(
         (Some(a), Some(b)) => a == b,
         _ => slot_key.is_none(),
     };
-    json!({
+    let mut view = json!({
         "token": token,
         "amount": crate::hosting::decimal_json(session.amount),
         "currency": session.currency,
@@ -47,8 +47,11 @@ pub fn checkout_view(
         },
         "payer_name": session.payer_name,
         "payer_email": session.payer_email,
-        "pay_url": checkout_page_url(checkout_base, token),
-    })
+    });
+    if !session.provider.as_deref().is_some_and(providers::is_solana) {
+        view["pay_url"] = json!(checkout_page_url(checkout_base, token));
+    }
+    view
 }
 
 pub fn get(

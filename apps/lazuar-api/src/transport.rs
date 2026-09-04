@@ -34,6 +34,12 @@ pub trait Transport: Send + Sync {
     fn send(&self, request: OutRequest) -> Result<OutResponse, TransportError>;
 }
 
+impl<T: Transport + ?Sized> Transport for std::sync::Arc<T> {
+    fn send(&self, request: OutRequest) -> Result<OutResponse, TransportError> {
+        (**self).send(request)
+    }
+}
+
 /// Real transport backed by `ureq` (sync). Non-2xx statuses are *responses*,
 /// not errors — rails and the webhook dispatcher branch on status codes, and
 /// a 500-after-send is the ambiguous-outcome case (issues/001) that must reach them.

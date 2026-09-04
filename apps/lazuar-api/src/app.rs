@@ -645,7 +645,11 @@ fn public_start_route(
     use crate::publicpay::start::StartOutcome;
     match crate::publicpay::start::start(&mut conn, &deps, token, &req) {
         Ok(StartOutcome::Started { redirect_url }) => {
-            rouille::Response::json(&serde_json::json!({ "redirect_url": redirect_url }))
+            if crate::rails::providers::is_on_page_url(Some(&redirect_url)) {
+                rouille::Response::json(&serde_json::json!({ "solana_pay_url": redirect_url }))
+            } else {
+                rouille::Response::json(&serde_json::json!({ "redirect_url": redirect_url }))
+            }
         }
         Ok(StartOutcome::TooManyRequests) => error_response(&PayError::too_many_requests()),
         Ok(StartOutcome::CheckoutNotFound) => error_response(&PayError::not_found("Checkout not found")),
@@ -733,7 +737,7 @@ fn public_confirm_route(request: &rouille::Request, state: &State, token: &str) 
     };
     let rpc = crate::rails::solana::rpc::SolanaRpc {
         rpc_url: Some(state.config.solana_rpc_url.clone()),
-        transport: Box::new(crate::transport::UreqTransport::new_no_redirects(10)),
+        transport: Box::new(state.psp.clone()),
     };
     let deps = crate::rails::solana::confirm::ConfirmDeps {
         box_one: &state.secret_box,
@@ -743,9 +747,11 @@ fn public_confirm_route(request: &rouille::Request, state: &State, token: &str) 
         config_cluster: &state.config.solana_cluster,
     };
     match crate::rails::solana::confirm::confirm(&mut conn, &deps, &checkout, &signature) {
-        Ok(crate::rails::solana::confirm::ConfirmOutcome::Ok)
-        | Ok(crate::rails::solana::confirm::ConfirmOutcome::Duplicate) => {
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Ok) => {
             rouille::Response::json(&json!({ "ok": true }))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Duplicate) => {
+            rouille::Response::json(&json!({ "duplicate": true }))
         }
         Ok(crate::rails::solana::confirm::ConfirmOutcome::LatePayManual { refunded }) => {
             rouille::Response::json(&json!({ "refunded": refunded }))
@@ -763,7 +769,7 @@ fn public_confirm_route(request: &rouille::Request, state: &State, token: &str) 
             error_response(&PayError::bad_request("solana cluster mismatch"))
         }
         Ok(crate::rails::solana::confirm::ConfirmOutcome::Paused) => {
-            error_response(&PayError::forbidden("Org charges are paused"))
+            error_response(&PayError::conflict("Org charges are paused"))
         }
         Ok(crate::rails::solana::confirm::ConfirmOutcome::NotOpen) => {
             error_response(&PayError::conflict("Checkout is not open"))

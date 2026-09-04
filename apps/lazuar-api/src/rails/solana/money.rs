@@ -71,12 +71,12 @@ pub fn mint_error(
     }
 
     if let Some(value) = amount {
+        if try_to_atomic(value).is_none() {
+            return Some("amount is not a valid USDC amount".into());
+        }
         let rounded = value.round_dp_with_strategy(2, rust_decimal::RoundingStrategy::AwayFromZero);
         if rounded != value {
             return Some("solana amounts support at most 2 decimal places".into());
-        }
-        if try_to_atomic(value).is_none() {
-            return Some("amount is not a valid USDC amount".into());
         }
     }
 
