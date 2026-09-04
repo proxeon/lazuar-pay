@@ -38,6 +38,7 @@ pub enum CreateLinkOutcome {
     /// Issues 003/014 — rail cannot settle the quoted currency.
     CurrencyUnsupported { currency: String, provider: String, supported: String },
     ProductNotFound,
+    CatalogPriceMismatch,
 }
 
 pub fn create_link(
@@ -128,6 +129,18 @@ pub fn create_link(
         )?;
         if product.is_none() {
             return Ok(CreateLinkOutcome::ProductNotFound);
+        }
+        // Catalog price check (C# PaymentLinkEndpoints.cs:117-124).
+        let price = conn.query_opt(
+            "SELECT \"Amount\",\"Currency\" FROM public.prices WHERE \"ProductId\" = $1",
+            &[&product_id],
+        )?;
+        if let Some(price) = price {
+            let price_amount: Decimal = price.get("Amount");
+            let price_currency: String = price.get("Currency");
+            if price_amount != amount || !price_currency.eq_ignore_ascii_case(&currency) {
+                return Ok(CreateLinkOutcome::CatalogPriceMismatch);
+            }
         }
     }
 

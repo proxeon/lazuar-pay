@@ -456,6 +456,7 @@ fn link_create_route(request: &rouille::Request, state: &State) -> rouille::Resp
                     "currency {currency} is not supported on {provider}; supported: {supported}"
                 )),
                 O::ProductNotFound => PayError::not_found("product not found"),
+                O::CatalogPriceMismatch => PayError::bad_request("amount must match the catalog price"),
             };
             error_response(&err)
         }
