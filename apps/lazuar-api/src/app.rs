@@ -575,9 +575,134 @@ fn public_start_route(
     }
 }
 
+/// Route pattern for logging (C# `RouteEndpoint.RoutePattern.RawText` analogue).
+fn route_pattern(request: &rouille::Request) -> &'static str {
+    let url = request.url().to_string();
+    let segments: Vec<&str> = url.split('/').filter(|s| !s.is_empty()).collect();
+    match (request.method(), segments.as_slice()) {
+        ("GET", ["health"]) | ("GET", ["v1", "health"]) => "/health",
+        ("GET", ["ready"]) => "/ready",
+        ("GET", ["v1", "whoami"]) => "/v1/whoami",
+        ("POST", ["v1", "webhooks", _p, _o]) => "/v1/webhooks/{provider}/{orgId}",
+        ("POST", ["v1", "orgs", _o, "refunds"]) => "/v1/orgs/{orgId}/refunds",
+        ("GET", ["v1", "orgs", _o, "refunds"]) => "/v1/orgs/{orgId}/refunds",
+        ("POST", ["v1", "payment-links"]) => "/v1/payment-links",
+        ("GET", ["v1", "orgs", _o, "payment-links"]) => "/v1/orgs/{orgId}/payment-links",
+        ("GET", ["v1", "public", "pay", _t]) => "/v1/pay/{token}",
+        ("POST", ["v1", "public", "pay", _t, "start"]) => "/v1/pay/{token}/start",
+        _ => "(unmatched)",
+    }
+}
+
+/// `PayCors.Resolve` (C# `Hosting/PayCors.cs:33-47`): configured origins, or
+/// the laptop list in Development/Testing.
+pub fn resolve_cors_origins(raw: &[String], environment: &str) -> Vec<String> {
+    if !raw.is_empty() {
+        return raw.to_vec();
+    }
+    if environment == "Development" || environment == "Testing" {
+        return [
+            "http://localhost:5178",
+            "http://127.0.0.1:5178",
+            "http://localhost:5179",
+            "http://127.0.0.1:5179",
+            "http://localhost:4178",
+            "http://127.0.0.1:4178",
+            "http://localhost:4179",
+            "http://127.0.0.1:4179",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    }
+    Vec::new()
+}
+
+fn origin_allowed(state: &State, request: &rouille::Request) -> Option<String> {
+    let origin = request.header("Origin")?;
+    let allowed = resolve_cors_origins(&state.config.cors_origins, &state.config.environment);
+    allowed
+        .into_iter()
+        .find(|allowed| allowed.eq_ignore_ascii_case(origin))
+}
+
+/// CORS headers for allowed origins (C# `WithOrigins(origins)
+/// .AllowAnyHeader().AllowAnyMethod()`).
+fn cors_headers(response: &mut rouille::Response, state: &State, request: &rouille::Request) {
+    if let Some(allowed) = origin_allowed(state, request) {
+        response
+            .headers
+            .push(("Access-Control-Allow-Origin".into(), allowed.into()));
+        response
+            .headers
+            .push(("Vary".into(), "Origin".into()));
+    }
+}
+
+fn preflight(state: &State, request: &rouille::Request) -> rouille::Response {
+    let Some(allowed) = origin_allowed(state, request) else {
+        return rouille::Response::text("").with_status_code(403);
+    };
+    let mut response = rouille::Response::text("").with_status_code(204);
+    response
+        .headers
+        .push(("Access-Control-Allow-Origin".into(), allowed.into()));
+    response
+        .headers
+        .push(("Access-Control-Allow-Methods".into(), "GET, POST, PUT, DELETE, OPTIONS".into()));
+    if let Some(requested) = request.header("Access-Control-Request-Headers") {
+        response
+            .headers
+            .push(("Access-Control-Allow-Headers".into(), requested.to_string().into()));
+    }
+    response
+        .headers
+        .push(("Access-Control-Max-Age".into(), "600".into()));
+    response
+}
+
 /// Block serving requests. rouille is thread-per-request: blocking inside a
 /// handler is safe by design — there is no executor to stall (D001).
+/// The wrapper adds the CORS layer and the request log (C# UseCors +
+/// UsePayRequestLog, `Program.cs:129-130`).
 pub fn serve(addr: String, state: Arc<State>) -> ! {
     println!("lazuar-api (sync rust) listening on http://{addr}");
-    rouille::start_server(addr, move |request| router(request, &state))
+    rouille::start_server(addr, move |request| {
+        let start = std::time::Instant::now();
+        // X-Request-Id echo with fallback (C# RequestLog.cs:15-17).
+        let request_id = request
+            .header("X-Request-Id")
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string());
+
+        // CORS preflight short-circuits before routing (C# UseCors handles it).
+        let mut response = if request.method() == "OPTIONS" {
+            preflight(&state, request)
+        } else {
+            let mut r = router(request, &state);
+            cors_headers(&mut r, &state, request);
+            r
+        };
+
+        response
+            .headers
+            .push(("X-Request-Id".into(), request_id.clone().into()));
+
+        let pattern = route_pattern(request);
+        let org = if pattern.starts_with("/v1/orgs/") || pattern.starts_with("/v1/webhooks/") {
+            request.url().split('/').nth(4).unwrap_or("").to_string()
+        } else {
+            String::new()
+        };
+        let duration_ms = start.elapsed().as_millis();
+        log::info!(
+            "http {} {} {pattern} {status} {duration_ms} {org}",
+            request_id,
+            request.method(),
+            status = response.status_code,
+        );
+        response
+    })
 }

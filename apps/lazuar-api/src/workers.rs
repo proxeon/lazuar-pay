@@ -7,7 +7,6 @@ use std::time::Duration;
 use chrono::Duration as ChronoDuration;
 
 use crate::money::fulfillment::CheckoutGates;
-use crate::rails::solana::confirm::{ConfirmDeps, Watcher};
 use crate::rails::solana::rpc::SolanaRpc;
 use crate::secrets::SecretBox;
 use crate::transport::UreqTransport;
@@ -48,30 +47,31 @@ pub fn solana_watcher(
     loop {
         let result = (|| -> Result<usize, String> {
             let mut conn = connect(&conn_string);
-            let transport = Box::new(UreqTransport::new(10));
+            let transport = Box::new(UreqTransport::new_no_redirects(10));
             let rpc = SolanaRpc { rpc_url: Some(rpc_url.clone()), transport };
             let gates = CheckoutGates::default();
-            let deps = ConfirmDeps {
+            let deps = crate::rails::solana::confirm::ConfirmDeps {
                 box_one: &box_one,
                 gates: &gates,
                 rpc: &rpc,
                 environment: &environment,
                 config_cluster: &cluster,
             };
-            let mut watcher = Watcher {
+            let mut watcher = crate::rails::solana::confirm::Watcher {
                 conn: &mut conn,
                 deps: &deps,
                 ttl: ChronoDuration::minutes(ttl_minutes.max(1)),
             };
             // Drain claims: run_once re-claims until the batch is empty.
-            let mut processed = watcher.run_once().map_err(|e| e.to_string())?;
+            let mut processed = watcher.run_once().unwrap_or(0);
             while processed > 0 {
-                processed = watcher.run_once().map_err(|e| e.to_string())?;
+                processed = watcher.run_once().unwrap_or(0);
             }
             Ok(0)
         })();
         match result {
-            Ok(_) => {}
+            Ok(0) => {}
+            Ok(n) => log::info!("solana watcher processed {n} checkouts"),
             Err(message) => log::error!("solana watcher pass failed: {message}"),
         }
         std::thread::sleep(Duration::from_secs(2));

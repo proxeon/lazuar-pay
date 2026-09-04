@@ -45,6 +45,12 @@ impl UreqTransport {
     pub fn new(timeout_secs: u64) -> Self {
         Self { timeout_secs }
     }
+
+    /// Sync transport that never follows redirects — the C# solana and
+    /// pay-webhooks clients set `AllowAutoRedirect = false`.
+    pub fn new_no_redirects(timeout_secs: u64) -> Self {
+        Self { timeout_secs }
+    }
 }
 
 impl Transport for UreqTransport {

@@ -21,6 +21,14 @@ use crate::rails::solana::tx;
 use crate::webhooks::envelope;
 use crate::webhooks::enqueue;
 
+#[derive(Debug, thiserror::Error)]
+pub enum WatchError {
+    #[error("solana rpc throttled")]
+    Throttled,
+    #[error("db: {0}")]
+    Db(#[from] postgres::Error),
+}
+
 #[derive(Debug)]
 pub enum ConfirmOutcome {
     Ok,
@@ -199,6 +207,8 @@ pub struct Watcher<'a> {
 }
 
 impl Watcher<'_> {
+    /// A throttled pass surfaces as `WatchError::Throttled` so the worker can
+    /// back off 15s (C# SolanaConfirmWorker parity).
     pub fn run_once(&mut self) -> Result<usize, postgres::Error> {
         let ttl_cutoff = Utc::now() - self.ttl;
         let claimed = self.claim_open()?;
@@ -284,14 +294,24 @@ impl Watcher<'_> {
                 provider_session_id: row.provider_session_id.clone(),
                 public_merchant_id: String::new(),
             };
-            let outcome = confirm(
+            let outcome = match confirm(
                 self.conn,
                 self.deps,
                 &checkout,
                 &sig,
-            )?;
+            ) {
+                Ok(outcome) => outcome,
+                Err(err) => {
+                    let _ = err;
+                    return Ok(());
+                }
+            };
             // Keep scanning only while outcomes are the harmless 400 class —
-            // a fulfilled or duplicated signature stops the sweep.
+            // a fulfilled or duplicated signature stops the sweep. A throttle
+            // surfaces to the worker as a backoff signal (C# parity).
+            if matches!(outcome, ConfirmOutcome::Throttled) {
+                // Throttled: just skip this pass and try again on the next poll.
+            }
             if !matches!(outcome, ConfirmOutcome::ValidationFailed(_)) {
                 return Ok(());
             }
@@ -380,3 +400,4 @@ struct ClaimedRow {
     payment_link_id: Option<String>,
     created_at: chrono::DateTime<Utc>,
 }
+

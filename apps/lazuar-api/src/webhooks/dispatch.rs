@@ -237,11 +237,13 @@ fn persist_outcome(conn: &mut postgres::Client, outcome: &RowOutcome) -> Result<
     Ok(())
 }
 
-/// Build the webhook transport with the connect-time pinning resolver.
+/// Build the webhook transport with the connect-time pinning resolver and no
+/// redirects (C# `AllowAutoRedirect = false` on the pay-webhooks client).
 pub fn webhook_transport(environment: &str) -> Arc<dyn Transport> {
     Arc::new(WebhookTransport {
         inner: ureq::AgentBuilder::new()
             .timeout(std::time::Duration::from_secs(SEND_TIMEOUT_SECS))
+            .redirects(0)
             .resolver(crate::webhooks::outbound_url::PinningResolver {
                 environment: environment.to_string(),
             })
@@ -274,25 +276,5 @@ impl Transport for WebhookTransport {
             }),
             Err(ureq::Error::Transport(t)) => Err(crate::transport::TransportError::Transport(t.to_string())),
         }
-    }
-}
-
-/// The worker loop (C# `OutboundWebhookWorker`), with the silent-swallow fix:
-/// every iteration failure is LOGGED (the C# worker had no logger at all).
-pub fn worker_loop(conn_string: String, box_one: SecretBox, environment: String) -> ! {
-    loop {
-        let result = (|| -> Result<usize, String> {
-            let mut conn = postgres::Client::connect(&conn_string, postgres::NoTls)
-                .map_err(|e| format!("db connect: {e}"))?;
-            let transport = webhook_transport(&environment);
-            process_batch(&mut conn, &box_one, transport.as_ref(), &environment)
-                .map_err(|e| format!("batch: {e}"))
-        })();
-        match result {
-            Ok(0) => {}
-            Ok(n) => log::info!("webhook dispatch processed {n} deliveries"),
-            Err(message) => log::error!("webhook dispatch pass failed: {message}"),
-        }
-        std::thread::sleep(std::time::Duration::from_secs(5));
     }
 }

@@ -6,6 +6,7 @@
 
 pub mod app;
 pub mod config;
+pub mod boot;
 pub mod domain;
 pub mod hosting;
 pub mod identity;
