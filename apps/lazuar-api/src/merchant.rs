@@ -449,18 +449,20 @@ pub fn gateway_put(
     };
 
     ensure_org_settings(conn, org_id)?;
-    let env_store = environment.clone().unwrap_or_else(|| "test".into());
+    // Insert: omitted environment defaults to 'test' (C# `environment ?? "test"`).
+    // Update: omitted environment keeps the existing live/test value (C# assigns
+    // only when the body sent environment).
     conn.execute(
         "INSERT INTO public.gateway_credentials \
          (\"OrgId\",\"Provider\",\"Ciphertext\",\"Last4\",\"WebhookCiphertext\",\
          \"PublicMerchantId\",\"Environment\",\"UpdatedAt\") \
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) \
+         VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7, 'test'),$8) \
          ON CONFLICT (\"OrgId\",\"Provider\") DO UPDATE SET \
          \"Ciphertext\" = EXCLUDED.\"Ciphertext\", \
          \"WebhookCiphertext\" = EXCLUDED.\"WebhookCiphertext\", \
          \"Last4\" = EXCLUDED.\"Last4\", \
          \"PublicMerchantId\" = EXCLUDED.\"PublicMerchantId\", \
-         \"Environment\" = COALESCE(EXCLUDED.\"Environment\", public.gateway_credentials.\"Environment\"), \
+         \"Environment\" = COALESCE($7, public.gateway_credentials.\"Environment\"), \
          \"UpdatedAt\" = EXCLUDED.\"UpdatedAt\"",
         &[
             &org_id,
@@ -469,7 +471,7 @@ pub fn gateway_put(
             &last4,
             &wrapped_wh,
             &public_id,
-            &env_store,
+            &environment,
             &chrono::Utc::now(),
         ],
     )?;

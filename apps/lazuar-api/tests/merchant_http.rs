@@ -58,3 +58,34 @@ fn catalog_rejects_non_myr_with_exact_string() {
         other => panic!("expected 400, got {other:?}"),
     }
 }
+
+#[test]
+fn gateway_put_omitted_environment_does_not_clobber_live() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let put = |body: &str| {
+        ureq::put(&format!("{}/v1/orgs/t1/gateway", app.base_url))
+            .set("Authorization", "Bearer jwt")
+            .send_string(body)
+    };
+    let first = put(
+        r#"{"provider":"stripe","secret":"sk_live_abc","webhook_secret":"whsec_x","environment":"live"}"#,
+    );
+    match first {
+        Ok(r) => assert!(r.status() < 300, "status {}", r.status()),
+        Err(ureq::Error::Status(code, r)) => panic!("status {code} {}", r.into_string().unwrap_or_default()),
+        Err(e) => panic!("{e}"),
+    }
+    let second = put(r#"{"provider":"stripe","secret":"sk_live_xyz","webhook_secret":"whsec_y"}"#);
+    match second {
+        Ok(r) => assert!(r.status() < 300, "status {}", r.status()),
+        Err(ureq::Error::Status(code, r)) => panic!("status {code} {}", r.into_string().unwrap_or_default()),
+        Err(e) => panic!("{e}"),
+    }
+    let get = ureq::get(&format!("{}/v1/orgs/t1/gateway?provider=stripe", app.base_url))
+        .set("Authorization", "Bearer jwt")
+        .call()
+        .unwrap();
+    let body: serde_json::Value = get.into_json().unwrap();
+    assert_eq!(body["environment"], "live", "{body}");
+}
