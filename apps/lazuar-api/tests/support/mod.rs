@@ -155,7 +155,10 @@ impl TestApp {
             lazuar_api::db::tls_connector(),
         );
         let pool = r2d2::Pool::builder()
-            .max_size(8)
+            // Stay well under local Postgres `max_connections` (100) when cargo
+            // runs several TestApp binaries in parallel. Concurrent HTTP tests
+            // need two checkouts plus one assertion connection.
+            .max_size(4)
             .build(manager)
             .expect("build test pool");
 
@@ -512,5 +515,34 @@ pub fn seed_payment_link(app: &TestApp, provider: &str, max_payers: Option<i32>)
 }
 
 pub fn start_pay(app: &TestApp, token: &str, body: &str) -> ureq::Response {
-    auth_post(app, &format!("/v1/pay/{token}/start"), body)
+    start_pay_at(&app.base_url, token, body)
+}
+
+/// Same as [`start_pay`] against an already-known base URL — for concurrent threads.
+pub fn start_pay_at(base_url: &str, token: &str, body: &str) -> ureq::Response {
+    send(
+        ureq::post(&format!("{base_url}/v1/pay/{token}/start")).set("Authorization", "Bearer jwt"),
+        body,
+    )
+}
+
+/// C# `OccupancyRaceTests.TestWebhookPaid` — signed test-rail paid webhook.
+pub fn test_webhook_paid(app: &TestApp, event_id: &str, checkout_id: &str) -> ureq::Response {
+    test_webhook_paid_at(&app.base_url, &app.config.test_webhook_secret, event_id, checkout_id)
+}
+
+pub fn test_webhook_paid_at(
+    base_url: &str,
+    secret: &str,
+    event_id: &str,
+    checkout_id: &str,
+) -> ureq::Response {
+    let body = format!(
+        r#"{{"id":"{event_id}","checkout_id":"{checkout_id}","amount_total":1000,"currency":"myr"}}"#
+    );
+    let mac = lazuar_api::rails::test_webhook::test_hmac_hex(secret, &body);
+    send(
+        ureq::post(&format!("{base_url}/v1/webhooks/test/t1")).set("X-Pay-Test-Signature", &mac),
+        &body,
+    )
 }

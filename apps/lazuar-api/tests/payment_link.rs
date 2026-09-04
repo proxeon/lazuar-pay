@@ -3,8 +3,9 @@
 mod support;
 
 use rust_decimal::Decimal;
+use lazuar_api::publicpay::occupancy;
 use support::{
-    allow_org, auth_get, auth_post, call, member_one, owner_one, put_chip, put_gateway,
+    allow_org, auth_get, auth_post, auth_put, call, member_one, owner_one, put_chip, put_gateway,
     seed_payment_link, start_pay, TestApp,
 };
 
@@ -463,6 +464,199 @@ fn billplz_localhost_callback_400_frees_the_seat() {
 }
 
 #[test]
+fn concurrent_start_on_one_person_link_admits_one_psp() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    app.psp.respond_with(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(120));
+        lazuar_api::transport::OutResponse {
+            status: 200,
+            body: r#"{"id":"purch_race","checkout_url":"https://gate.chip-in.asia/p/x"}"#.into(),
+        }
+    });
+    let put = put_chip(&app);
+    assert!(put.status() < 300, "{}", put.into_string().unwrap_or_default());
+    let (token, _) = seed_payment_link(&app, "chip", Some(1));
+    let base = app.base_url.clone();
+    let email = r#"{"name":"Ada","email":"ada@acme.test","slot_key":"SLOT"}"#;
+    let (first, second) = std::thread::scope(|scope| {
+        let a = scope.spawn(|| {
+            support::start_pay_at(
+                &base,
+                &token,
+                &email.replace("SLOT", "slot-race-a1"),
+            )
+        });
+        let b = scope.spawn(|| {
+            support::start_pay_at(
+                &base,
+                &token,
+                &email.replace("SLOT", "slot-race-b2"),
+            )
+        });
+        (a.join().unwrap().status(), b.join().unwrap().status())
+    });
+    let codes = [first, second];
+    assert!(codes.contains(&200), "expected one 200, got {codes:?}");
+    assert!(codes.contains(&409), "expected one 409, got {codes:?}");
+    assert_eq!(app.psp.send_count(), 1);
+    let mut db = app.pool.get().expect("pool");
+    let docs: i64 = db.query_one("SELECT count(*) FROM public.documents", &[]).unwrap().get(0);
+    assert_eq!(docs, 0);
+    let open: i64 = db
+        .query_one("SELECT count(*) FROM public.checkouts WHERE \"Status\" = 'open'", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(open, 1);
+}
+
+#[test]
+fn concurrent_test_start_on_one_person_link_mints_one_receipt() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let (token, _) = seed_payment_link(&app, "test", Some(1));
+    let base = app.base_url.clone();
+    let (first, second) = std::thread::scope(|scope| {
+        let a = scope.spawn(|| {
+            support::start_pay_at(&base, &token, r#"{"name":"Ada","slot_key":"slot-t-race-a"}"#)
+        });
+        let b = scope.spawn(|| {
+            support::start_pay_at(&base, &token, r#"{"name":"Ada","slot_key":"slot-t-race-b"}"#)
+        });
+        (a.join().unwrap().status(), b.join().unwrap().status())
+    });
+    let codes = [first, second];
+    assert!(codes.contains(&200), "expected one 200, got {codes:?}");
+    assert!(codes.contains(&409), "expected one 409, got {codes:?}");
+    let mut db = app.pool.get().expect("pool");
+    let docs: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.documents WHERE \"Title\" = 'Official Receipt'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(docs, 1);
+    let paid: i64 = db
+        .query_one("SELECT count(*) FROM public.checkouts WHERE \"Status\" = 'paid'", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(paid, 1);
+}
+
+#[test]
+fn abandoned_open_reservation_expires_and_second_slot_can_start() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    app.psp.respond_with(|_| lazuar_api::transport::OutResponse {
+        status: 200,
+        body: r#"{"id":"purch_old","checkout_url":"https://gate.chip-in.asia/p/x"}"#.into(),
+    });
+    let put = put_chip(&app);
+    assert!(put.status() < 300, "{}", put.into_string().unwrap_or_default());
+    let (token, link_id) = seed_payment_link(&app, "chip", Some(1));
+    let start = start_pay(
+        &app,
+        &token,
+        r#"{"name":"Ada","email":"ada@acme.test","slot_key":"slot-stale-1"}"#,
+    );
+    assert_eq!(start.status(), 200, "{}", start.into_string().unwrap_or_default());
+
+    let mut db = app.pool.get().expect("pool");
+    let expired_id: String = db
+        .query_one(
+            "SELECT \"Id\" FROM public.checkouts WHERE \"PaymentLinkId\" = $1 AND \"SlotKey\" = $2",
+            &[&link_id, &"slot-stale-1"],
+        )
+        .unwrap()
+        .get(0);
+    db.execute(
+        "UPDATE public.checkouts SET \"CreatedAt\" = $1 WHERE \"Id\" = $2",
+        &[&(chrono::Utc::now() - chrono::Duration::minutes(31)), &expired_id],
+    )
+    .unwrap();
+    drop(db);
+
+    let stale_get = call(ureq::get(&format!(
+        "{}/v1/pay/{token}?slot_key=slot-stale-1",
+        app.base_url
+    )));
+    let stale_doc: serde_json::Value = stale_get.into_json().unwrap();
+    assert_eq!(stale_doc["status"], "expired");
+
+    let next = start_pay(
+        &app,
+        &token,
+        r#"{"name":"Bob","email":"bob@acme.test","slot_key":"slot-fresh-2"}"#,
+    );
+    assert_eq!(next.status(), 200, "{}", next.into_string().unwrap_or_default());
+
+    let mut db = app.pool.get().expect("pool");
+    let mut tx = db.transaction().unwrap();
+    let gates = lazuar_api::money::fulfillment::CheckoutGates::default();
+    lazuar_api::money::fulfillment::fulfill_paid(&mut tx, &gates, &expired_id, "chip", Some("purch_old"))
+        .unwrap();
+    tx.commit().unwrap();
+    let docs: i64 = db.query_one("SELECT count(*) FROM public.documents", &[]).unwrap().get(0);
+    assert_eq!(docs, 0);
+}
+
+#[test]
+fn second_fulfill_on_max_one_link_does_not_mint_a_second_receipt() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let (_, link_id) = seed_payment_link(&app, "test", Some(1));
+    let first_id = uuid::Uuid::new_v4().to_string();
+    let extra_id = uuid::Uuid::new_v4().to_string();
+    let mut db = app.pool.get().expect("pool");
+    for (id, slot) in [(&first_id, "slot-over-a"), (&extra_id, "slot-over-b")] {
+        db.execute(
+            "INSERT INTO public.checkouts \
+             (\"Id\",\"OrgId\",\"Provider\",\"PaymentLinkId\",\"SlotKey\",\"PublicToken\",\
+             \"Amount\",\"Currency\",\"Status\",\"Interval\",\"CreatedAt\") \
+             VALUES ($1,'t1','test',$2,$3,$4,$5,'MYR','open','one_off',$6)",
+            &[
+                id,
+                &link_id,
+                &slot,
+                &format!("tok_{slot}"),
+                &Decimal::from(10),
+                &chrono::Utc::now(),
+            ],
+        )
+        .unwrap();
+    }
+    let gates = lazuar_api::money::fulfillment::CheckoutGates::default();
+    {
+        let mut tx = db.transaction().unwrap();
+        lazuar_api::money::fulfillment::fulfill_paid(&mut tx, &gates, &first_id, "test", Some("ref-a"))
+            .unwrap();
+        tx.commit().unwrap();
+    }
+    {
+        let mut tx = db.transaction().unwrap();
+        lazuar_api::money::fulfillment::fulfill_paid(&mut tx, &gates, &extra_id, "test", Some("ref-b"))
+            .unwrap();
+        tx.commit().unwrap();
+    }
+    let docs: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.documents WHERE \"Title\" = 'Official Receipt'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(docs, 1);
+    let charges: i64 = db.query_one("SELECT count(*) FROM public.charges", &[]).unwrap().get(0);
+    assert_eq!(charges, 1);
+    let extra_status: String = db
+        .query_one("SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1", &[&extra_id])
+        .unwrap()
+        .get(0);
+    assert_eq!(extra_status, "expired");
+}
+
+#[test]
 fn list_over_admit_is_over_capacity_not_silent_full() {
     let app = TestApp::spawn();
     owner_one(&app);
@@ -492,4 +686,226 @@ fn list_over_admit_is_over_capacity_not_silent_full() {
     assert_eq!(doc["items"][0]["max_payers"], 1);
     assert_eq!(doc["items"][0]["remaining"], -1);
     assert_eq!(doc["items"][0]["status"], "over_capacity");
+}
+
+fn seed_race_link(app: &TestApp, link_id: &str, token: &str, max_payers: Option<i32>) {
+    let mut db = app.pool.get().expect("pool");
+    db.execute(
+        "INSERT INTO public.payment_links \
+         (\"Id\",\"OrgId\",\"PublicToken\",\"Provider\",\"Amount\",\"Currency\",\"MaxPayers\",\"CreatedAt\") \
+         VALUES ($1,'t1',$2,'test',$3,'MYR',$4,$5)",
+        &[
+            &link_id,
+            &token,
+            &Decimal::from(10),
+            &max_payers,
+            &chrono::Utc::now(),
+        ],
+    )
+    .expect("seed payment link");
+}
+
+fn seed_race_child(
+    app: &TestApp,
+    id: &str,
+    link_id: &str,
+    slot: &str,
+    created_at: chrono::DateTime<chrono::Utc>,
+) {
+    let mut db = app.pool.get().expect("pool");
+    db.execute(
+        "INSERT INTO public.checkouts \
+         (\"Id\",\"OrgId\",\"PublicToken\",\"PaymentLinkId\",\"SlotKey\",\"Amount\",\"Currency\",\
+         \"Status\",\"Provider\",\"Interval\",\"CreatedAt\") \
+         VALUES ($1,'t1',$2,$3,$4,$5,'MYR','open','test','one_off',$6)",
+        &[
+            &id,
+            &format!("tok_{id}"),
+            &link_id,
+            &slot,
+            &Decimal::from(10),
+            &created_at,
+        ],
+    )
+    .expect("seed child checkout");
+}
+
+#[test]
+fn sweep_cannot_overwrite_a_committed_paid_checkout() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let checkout_id = uuid::Uuid::new_v4().to_string();
+    seed_race_link(&app, "lk_002", "tok_lk_002", Some(1));
+    seed_race_child(
+        &app,
+        &checkout_id,
+        "lk_002",
+        "slot-002-aaaa",
+        chrono::Utc::now() - chrono::Duration::minutes(31),
+    );
+
+    let paid = support::test_webhook_paid(&app, "evt_002_pay", &checkout_id);
+    assert_eq!(paid.status(), 200, "{}", paid.into_string().unwrap_or_default());
+
+    let mut db = app.pool.get().expect("pool");
+    let mut tx = db.transaction().unwrap();
+    let expired = occupancy::expire_stale(
+        &mut tx,
+        "lk_002",
+        occupancy::reservation_ttl(Some(30)),
+    )
+    .unwrap();
+    assert_eq!(expired.len(), 0, "a paid checkout must not be expired by the sweep");
+
+    let marked = occupancy::mark_expired(&mut tx, vec![checkout_id.clone()], "ttl").unwrap();
+    assert_eq!(
+        marked.len(),
+        0,
+        "the CAS write must refuse a row that left 'open'"
+    );
+    tx.commit().unwrap();
+
+    let status: String = db
+        .query_one(
+            "SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1",
+            &[&checkout_id],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(status, "paid");
+    let charges: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.charges WHERE \"CheckoutId\" = $1",
+            &[&checkout_id],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(charges, 1);
+    let expired_hooks: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.org_webhook_deliveries WHERE \"EventType\" = 'checkout.expired'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(
+        expired_hooks, 0,
+        "no expiry webhook may fire for a fulfilled checkout"
+    );
+}
+
+#[test]
+fn concurrent_late_captures_on_a_full_link_admit_one_and_refund_the_loser() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let a_id = uuid::Uuid::new_v4().to_string();
+    let b_id = uuid::Uuid::new_v4().to_string();
+    seed_race_link(&app, "lk_008", "tok_lk_008", Some(1));
+    let stale = chrono::Utc::now() - chrono::Duration::minutes(31);
+    seed_race_child(&app, &a_id, "lk_008", "slot-008-aaaa", stale);
+    seed_race_child(&app, &b_id, "lk_008", "slot-008-bbbb", stale);
+
+    let base = app.base_url.clone();
+    let secret = app.config.test_webhook_secret.clone();
+    let (status_a, status_b) = std::thread::scope(|scope| {
+        let a = {
+            let base = base.clone();
+            let secret = secret.clone();
+            let id = a_id.clone();
+            scope.spawn(move || support::test_webhook_paid_at(&base, &secret, "evt_008_a", &id).status())
+        };
+        let b = {
+            let base = base.clone();
+            let secret = secret.clone();
+            let id = b_id.clone();
+            scope.spawn(move || support::test_webhook_paid_at(&base, &secret, "evt_008_b", &id).status())
+        };
+        (a.join().unwrap(), b.join().unwrap())
+    });
+    assert_eq!(status_a, 200, "webhook a");
+    assert_eq!(status_b, 200, "webhook b");
+
+    let mut db = app.pool.get().expect("pool");
+    let rows = db
+        .query(
+            "SELECT \"Id\",\"Status\" FROM public.checkouts WHERE \"PaymentLinkId\" = 'lk_008'",
+            &[],
+        )
+        .unwrap();
+    let paid = rows
+        .iter()
+        .filter(|r| r.get::<_, String>("Status") == "paid")
+        .count();
+    let expired = rows
+        .iter()
+        .filter(|r| r.get::<_, String>("Status") == "expired")
+        .count();
+    assert_eq!(paid, 1, "only one payer may be admitted");
+    assert_eq!(expired, 1, "the loser is expired, not silently dropped");
+    let charges: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.charges WHERE \"CheckoutId\" = $1 OR \"CheckoutId\" = $2",
+            &[&a_id, &b_id],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(charges, 1, "exactly one charge for the admitted payer");
+    let late_status: String = db
+        .query_one(
+            "SELECT \"Status\" FROM public.refunds WHERE \"Reason\" = 'late_pay'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(late_status, "succeeded", "the test rail settles the late refund");
+}
+
+#[test]
+fn sweep_expires_stale_open_rows_and_notifies() {
+    let app = TestApp::spawn();
+    owner_one(&app);
+    let put = auth_put(
+        &app,
+        "/v1/orgs/t1/webhooks",
+        r#"{"url":"http://127.0.0.1:9/hook"}"#,
+    );
+    assert!(put.status() < 300, "{}", put.into_string().unwrap_or_default());
+
+    let checkout_id = uuid::Uuid::new_v4().to_string();
+    seed_race_link(&app, "lk_stale", "tok_stale", Some(1));
+    seed_race_child(
+        &app,
+        &checkout_id,
+        "lk_stale",
+        "slot-stale-aaaa",
+        chrono::Utc::now() - chrono::Duration::minutes(31),
+    );
+
+    let mut db = app.pool.get().expect("pool");
+    let mut tx = db.transaction().unwrap();
+    let expired = occupancy::expire_stale(
+        &mut tx,
+        "lk_stale",
+        occupancy::reservation_ttl(Some(30)),
+    )
+    .unwrap();
+    assert_eq!(expired.len(), 1);
+    tx.commit().unwrap();
+
+    let status: String = db
+        .query_one(
+            "SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1",
+            &[&checkout_id],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(status, "expired");
+    let hooks: i64 = db
+        .query_one(
+            "SELECT count(*) FROM public.org_webhook_deliveries WHERE \"EventType\" = 'checkout.expired'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(hooks, 1);
 }
