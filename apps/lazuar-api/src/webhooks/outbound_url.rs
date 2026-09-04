@@ -20,6 +20,8 @@ pub fn is_loopback(ip: IpAddr) -> bool {
 }
 
 /// Private, loopback, link-local, and the cloud metadata ranges.
+/// IPv6 matches C# `OutboundUrl.IsPrivateOrLoopback` (unique-local fc00::/7,
+/// link-local fe80::/10, multicast ff00::/8, v4-mapped unwrap).
 pub fn is_private_or_loopback(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => {
@@ -31,7 +33,20 @@ pub fn is_private_or_loopback(ip: IpAddr) -> bool {
                 // 169.254.169.254 sits in link-local; 100.64/10 carrier NAT also blocked.
                 || (v4.octets()[0] == 100 && (v4.octets()[1] & 0xC0) == 64)
         }
-        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified() || (v6.segments()[0] & 0xffc0) == 0xfc00,
+        IpAddr::V6(v6) => {
+            let b = v6.octets();
+            // ::ffff:a.b.c.d — judge the embedded IPv4, not the wrapper.
+            if b[..10].iter().all(|&x| x == 0) && b[10] == 0xff && b[11] == 0xff {
+                return is_private_or_loopback(IpAddr::V4(std::net::Ipv4Addr::new(
+                    b[12], b[13], b[14], b[15],
+                )));
+            }
+            v6.is_loopback()
+                || v6.is_unspecified()
+                || v6.is_multicast()
+                || (b[0] == 0xfe && (b[1] & 0xc0) == 0x80)
+                || (b[0] & 0xfe) == 0xfc
+        }
     }
 }
 
@@ -101,4 +116,21 @@ pub fn connect_validated(host: &str, port: u16, environment: &str) -> Result<Tcp
     let allowed = resolve_allowed(host, port, environment);
     let first = allowed.first().ok_or(OutboundUrlError::NoAllowedAddress)?;
     TcpStream::connect(first).map_err(|e| OutboundUrlError::Connect(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ipv6_unique_local_link_local_and_mapped_private_are_blocked() {
+        let fd: IpAddr = "fd12:3456:789a::1".parse().unwrap();
+        assert!(is_private_or_loopback(fd), "unique-local fd00::/8");
+        let fe80: IpAddr = "fe80::1".parse().unwrap();
+        assert!(is_private_or_loopback(fe80), "link-local fe80::/10");
+        let mapped: IpAddr = "::ffff:192.168.1.1".parse().unwrap();
+        assert!(is_private_or_loopback(mapped), "v4-mapped RFC1918");
+        let public: IpAddr = "2001:4860:4860::8888".parse().unwrap();
+        assert!(!is_private_or_loopback(public), "public unicast");
+    }
 }
