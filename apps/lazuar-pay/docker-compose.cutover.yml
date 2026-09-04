@@ -1,0 +1,19 @@
+# Human-gated Phase 8 overlay. Do not apply until apps/lazuar-api/CUTOVER.md
+# pre-flight is signed. This file does not pause charges or stop C# by itself.
+#
+#   docker compose -f apps/lazuar-pay/docker-compose.pay.yml \
+#     -f apps/lazuar-pay/docker-compose.cutover.yml --profile rust up -d
+#
+# Publishes Rust on host :8081 (container still LISTEN_ADDR=0.0.0.0:8081).
+# Stop the C# `pay` process/container first so the port is free.
+# Keep the C# image for 30 days. Single replica — do not scale pay-api.
+
+services:
+  pay-api:
+    ports:
+      - "8081:8081"
+    environment:
+      LISTEN_ADDR: 0.0.0.0:8081
+      Pay__PublicBaseUrl: ${Pay__PublicBaseUrl:-http://localhost:8081}
+    deploy:
+      replicas: 1

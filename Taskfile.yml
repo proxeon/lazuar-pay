@@ -55,6 +55,11 @@ tasks:
     cmds:
       - dotnet ef database update --project src/Lazuar.Pay/Lazuar.Pay.csproj --context PayDbContext
 
+  pay:cutover:preflight:
+    desc: Phase 8 code gates only — does not swap :8081
+    cmds:
+      - bash scripts/pay-cutover-preflight.sh
+
   pay:spec:
     desc: Compile focused Pay TypeSpec to OpenAPI (packages/pay-spec, not api-spec)
     dir: packages/pay-spec

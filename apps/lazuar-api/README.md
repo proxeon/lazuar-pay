@@ -63,5 +63,10 @@ the sample does not enforce it.
 
 ## Cutover
 
-Follow `plans/027-checklist/00-index.md` Phase 8. Rollback is stop Rust, start
-C# on the same database and WrapKey.
+Human-gated. See [`CUTOVER.md`](CUTOVER.md). Do not bind this process to `:8081`
+until every pre-flight box there is signed. Rollback is stop Rust, start C# on
+the same database and WrapKey.
+
+```sh
+bash scripts/pay-cutover-preflight.sh
+```

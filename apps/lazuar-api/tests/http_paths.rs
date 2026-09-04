@@ -59,3 +59,29 @@ fn ready_body_is_csharp_shape() {
     assert_eq!(resp.status(), 200);
     assert_eq!(resp.into_string().unwrap(), r#"{"status":"ready"}"#);
 }
+
+#[test]
+fn cutover_gates_hold_in_source() {
+    let app = include_str!("../src/app.rs");
+    assert!(
+        !app.contains(r#"["v1", "public", "pay""#),
+        "buyer surface must stay /v1/pay"
+    );
+    assert!(
+        app.contains("LiveRefunder::load"),
+        "refunds/webhooks must load LiveRefunder"
+    );
+    assert!(
+        !app.contains("NoopRefunder"),
+        "NoopRefunder must not ship on HTTP routes"
+    );
+    assert!(
+        app.contains("VaultedRail"),
+        "start must mint from the org vault when the pool exists"
+    );
+    let razorpay = include_str!("../src/rails/razorpay_webhook.rs");
+    assert!(
+        razorpay.contains("captured:{payment_id}"),
+        "issue 018: body-derived captured: id"
+    );
+}

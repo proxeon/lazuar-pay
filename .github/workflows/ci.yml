@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, rust-parity]
 
 jobs:
   rust-api:
@@ -32,6 +32,8 @@ jobs:
         run: cargo test --manifest-path apps/lazuar-api/Cargo.toml -- --test-threads=4
       - name: Rust routes ⊆ OpenAPI
         run: node scripts/check-rust-routes.mjs
+      - name: Phase 8 cutover code gates
+        run: bash scripts/pay-cutover-preflight.sh
 
   pay:
     runs-on: ubuntu-latest
@@ -70,3 +72,5 @@ jobs:
           git diff --exit-code -- packages/pay-types-ts
       - name: Pay OpenAPI ↔ C# Map* ↔ Rust router honesty
         run: node scripts/check-pay-openapi-honesty.mjs
+      - name: Phase 8 cutover code gates
+        run: bash scripts/pay-cutover-preflight.sh
