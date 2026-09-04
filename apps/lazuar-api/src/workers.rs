@@ -12,7 +12,7 @@ use crate::secrets::SecretBox;
 use crate::transport::UreqTransport;
 
 fn connect(conn_string: &str) -> Result<postgres::Client, postgres::Error> {
-    postgres::Client::connect(conn_string, postgres::NoTls)
+    crate::db::connect(conn_string)
 }
 
 fn connect_retry(conn_string: &str) -> postgres::Client {

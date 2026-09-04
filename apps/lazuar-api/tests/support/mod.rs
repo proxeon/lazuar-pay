@@ -151,7 +151,7 @@ impl TestApp {
         test_db_config.dbname(&db_name);
         let manager = r2d2_postgres::PostgresConnectionManager::new(
             test_db_config.clone(),
-            postgres::NoTls,
+            lazuar_api::db::tls_connector(),
         );
         let pool = r2d2::Pool::builder()
             .max_size(8)

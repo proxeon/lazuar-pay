@@ -11,7 +11,7 @@ use crate::identity::one_client::OneClient;
 use crate::money::refunds;
 use crate::transport::Transport;
 
-pub type PgPool = r2d2::Pool<r2d2_postgres::PostgresConnectionManager<postgres::NoTls>>;
+pub type PgPool = crate::db::PgPool;
 
 pub struct State {
     pub config: Config,

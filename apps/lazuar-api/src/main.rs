@@ -29,13 +29,7 @@ fn main() {
     }
 
     let pool = config.connection_string.as_deref().map(|cs| {
-        let manager = r2d2_postgres::PostgresConnectionManager::new(
-            cs.parse().expect("invalid ConnectionStrings__Pay"),
-            postgres::NoTls,
-        );
-        r2d2::Pool::builder()
-            .build(manager)
-            .expect("failed to build db pool")
+        lazuar_api::db::pool(cs).expect("failed to build db pool")
     });
 
     // Real transports. Timeouts mirror Program.cs: rails 10s, One 2s — the
