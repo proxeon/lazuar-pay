@@ -7,6 +7,7 @@ mod support;
 use lazuar_api::identity::member_gate::{require_member, require_writer};
 use lazuar_api::identity::one_client::OneClient;
 use lazuar_api::identity::whoami::whoami;
+use lazuar_api::identity::whoami_cache::OneWhoamiCache;
 use support::FakeTransport;
 use std::sync::Arc;
 
@@ -32,6 +33,28 @@ fn whoami_maps_me_response() {
         }
         other => panic!("unexpected {other:?}"),
     }
+}
+
+#[test]
+fn whoami_does_not_cache_human_jwts() {
+    let (client, one) = one();
+    let cache = OneWhoamiCache::new();
+    let me = me_json(r#"{"id":"org_1","role":"owner","status":"active"}"#);
+    one.respond_with(move |_| lazuar_api::transport::OutResponse { status: 200, body: me.clone() });
+    whoami(&client, one.as_ref(), Some(&cache), Some("Bearer jwt_1"), None);
+    whoami(&client, one.as_ref(), Some(&cache), Some("Bearer jwt_1"), None);
+    assert_eq!(one.send_count(), 2, "human JWT must re-hit One /me");
+}
+
+#[test]
+fn whoami_caches_machine_keys() {
+    let (client, one) = one();
+    let cache = OneWhoamiCache::new();
+    let me = me_json(r#"{"id":"org_1","role":"admin","status":"active"}"#);
+    one.respond_with(move |_| lazuar_api::transport::OutResponse { status: 200, body: me.clone() });
+    whoami(&client, one.as_ref(), Some(&cache), Some("Bearer lzr_sk_machine"), None);
+    whoami(&client, one.as_ref(), Some(&cache), Some("Bearer lzr_sk_machine"), None);
+    assert_eq!(one.send_count(), 1, "machine keys are cached 60s");
 }
 
 #[test]

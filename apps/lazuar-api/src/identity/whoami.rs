@@ -46,9 +46,13 @@ pub fn whoami(
         return WhoamiOutcome::Error(wrong);
     }
 
-    if let Some(cache) = cache {
-        if let Some(cached) = cache.try_get(&authorization) {
-            return WhoamiOutcome::Ok(cached);
+    // C# OneClient caches machine keys only — human JWTs must re-hit /me.
+    let machine = bearer::is_machine_key(&authorization);
+    if machine {
+        if let Some(cache) = cache {
+            if let Some(cached) = cache.try_get(&authorization) {
+                return WhoamiOutcome::Ok(cached);
+            }
         }
     }
 
@@ -74,8 +78,10 @@ pub fn whoami(
                     })
                     .collect(),
             };
-            if let Some(cache) = cache {
-                cache.set(&authorization, &resp, bearer::is_machine_key(&authorization));
+            if machine {
+                if let Some(cache) = cache {
+                    cache.set(&authorization, &resp, true);
+                }
             }
             WhoamiOutcome::Ok(resp)
         }
