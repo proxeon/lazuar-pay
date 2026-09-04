@@ -11,6 +11,7 @@ pub mod domain;
 pub mod hosting;
 pub mod identity;
 pub mod links;
+pub mod merchant;
 pub mod money;
 pub mod publicpay;
 pub mod rails;
