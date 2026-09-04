@@ -11,4 +11,4 @@ pnpm --filter @repo/pay-spec build
 node scripts/check-pay-openapi-honesty.mjs
 ```
 
-OpenAPI lands in `dist/openapi.yaml` (gitignored; compile before reading). Grow `main.tsp` when a Pay `/v1` door exists. Honesty scrape is `scripts/check-pay-openapi-honesty.mjs` in CI job `pay` — not Hub `task gen` / `honesty-allowlist.yaml`. Unversioned `/health` and `/ready` stay host-only.
+OpenAPI lands in `dist/openapi.yaml` (gitignored; compile before reading). Grow `main.tsp` when a Pay `/v1` door exists. Honesty scrape is `scripts/check-pay-openapi-honesty.mjs` in CI job `pay` — C# `Map*` **and** the Rust router in `apps/lazuar-api/src/app.rs`. Not Hub `task gen` / `honesty-allowlist.yaml`. Unversioned `/health` and `/ready` stay host-only.

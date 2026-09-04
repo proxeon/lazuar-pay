@@ -68,5 +68,5 @@ jobs:
         run: |
           pnpm --filter @repo/pay-types-ts generate
           git diff --exit-code -- packages/pay-types-ts
-      - name: Pay OpenAPI ↔ Map* honesty
+      - name: Pay OpenAPI ↔ C# Map* ↔ Rust router honesty
         run: node scripts/check-pay-openapi-honesty.mjs

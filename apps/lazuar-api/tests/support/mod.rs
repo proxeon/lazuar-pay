@@ -1,4 +1,5 @@
 //! Test support — the Rust analogue of `PayApiFactory` + `FakePspHandler`.
+#![allow(dead_code)]
 //!
 //! Differences from C#, both deliberate:
 //! - D008: there is no InMemory provider. Every test runs against a real,
@@ -327,4 +328,118 @@ fn wait_healthy(url: &str) {
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
     panic!("server at {url} never became healthy");
+}
+
+/// Owner/admin One responder used by C# `PayTest.Owner`.
+pub fn owner_one(app: &TestApp) {
+    role_one(app, "owner");
+}
+
+/// Member One responder — writer routes 403, member routes 200.
+pub fn member_one(app: &TestApp) {
+    role_one(app, "member");
+}
+
+pub fn role_one(app: &TestApp, role: &str) {
+    let role = role.to_string();
+    app.one.respond_with(move |req| {
+        if req.url.contains("/me") {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: format!(
+                    r#"{{"user_id":"u1","email":"ada@acme.test","name":"Ada","is_platform_admin":false,"tenants":[{{"id":"t1","role":"{role}","status":"active"}}]}}"#
+                ),
+            }
+        } else {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: r#"{"allowed":true}"#.into(),
+            }
+        }
+    });
+}
+
+/// CHIP vault PUT needs a ≥2048-bit RSA SubjectPublicKeyInfo PEM.
+pub fn chip_pem() -> String {
+    use rsa::pkcs8::EncodePublicKey;
+    use rsa::{RsaPrivateKey, RsaPublicKey};
+    static PEM: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    PEM.get_or_init(|| {
+        let mut rng = rand::thread_rng();
+        let key = RsaPrivateKey::new(&mut rng, 2048).expect("rsa 2048");
+        RsaPublicKey::from(&key)
+            .to_public_key_pem(rsa::pkcs8::LineEnding::LF)
+            .expect("chip pem")
+    })
+    .clone()
+}
+
+pub fn call(req: ureq::Request) -> ureq::Response {
+    match req.call() {
+        Ok(r) => r,
+        Err(ureq::Error::Status(_, r)) => r,
+        Err(e) => panic!("{e}"),
+    }
+}
+
+pub fn send(req: ureq::Request, body: &str) -> ureq::Response {
+    match req.send_string(body) {
+        Ok(r) => r,
+        Err(ureq::Error::Status(_, r)) => r,
+        Err(e) => panic!("{e}"),
+    }
+}
+
+pub fn auth_get(app: &TestApp, path: &str) -> ureq::Response {
+    call(ureq::get(&format!("{}{path}", app.base_url)).set("Authorization", "Bearer jwt"))
+}
+
+pub fn auth_put(app: &TestApp, path: &str, body: &str) -> ureq::Response {
+    send(
+        ureq::put(&format!("{}{path}", app.base_url)).set("Authorization", "Bearer jwt"),
+        body,
+    )
+}
+
+pub fn auth_post(app: &TestApp, path: &str, body: &str) -> ureq::Response {
+    send(
+        ureq::post(&format!("{}{path}", app.base_url)).set("Authorization", "Bearer jwt"),
+        body,
+    )
+}
+
+pub fn put_gateway(app: &TestApp, body: &str) -> ureq::Response {
+    auth_put(app, "/v1/orgs/t1/gateway", body)
+}
+
+pub fn put_chip(app: &TestApp) -> ureq::Response {
+    let pem = chip_pem();
+    let body = serde_json::json!({
+        "provider": "chip",
+        "secret": "chip_sk",
+        "webhook_secret": pem,
+        "public_merchant_id": "brand_1",
+    });
+    put_gateway(app, &body.to_string())
+}
+
+/// C# `PayTest.SeedCheckout` — mint a checkout, return `(public_token, id)`.
+pub fn seed_checkout(app: &TestApp, provider: &str, currency: Option<&str>) -> (String, String) {
+    let mut body = serde_json::json!({
+        "org_id": "t1",
+        "amount": 10,
+        "provider": provider,
+    });
+    if let Some(currency) = currency {
+        body["currency"] = serde_json::Value::String(currency.to_string());
+    }
+    let resp = auth_post(app, "/v1/checkouts", &body.to_string());
+    let status = resp.status();
+    let raw = resp.into_string().unwrap_or_default();
+    assert_eq!(status, 201, "{raw}");
+    let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+    (
+        v["public_token"].as_str().unwrap().to_string(),
+        v["id"].as_str().unwrap().to_string(),
+    )
 }

@@ -77,6 +77,8 @@ impl HostedRail for VaultedRail<'_> {
             p if p == providers::STRIPE => mint_stripe(self.transport, &secret, checkout_id, org_id, &currency, minor, &success, &cancel),
             p if p == providers::BILLPLZ => {
                 let collection: String = cred.get("PublicMerchantId");
+                let vault_env: String = cred.get("Environment");
+                let live = vault_env.eq_ignore_ascii_case("live");
                 mint_billplz(
                     self.transport,
                     &secret,
@@ -86,6 +88,7 @@ impl HostedRail for VaultedRail<'_> {
                     minor,
                     self.public_base_url,
                     &success,
+                    live,
                 )
             }
             p if p == providers::CHIP => {
@@ -163,6 +166,7 @@ fn mint_billplz(
     minor: i64,
     public_base: &str,
     success: &str,
+    live: bool,
 ) -> Result<HostedSession, StartRailError> {
     if !public_base.starts_with("https://") {
         return Err(StartRailError::BadRequest("callback base must be public https".into()));
@@ -182,10 +186,15 @@ fn mint_billplz(
         urlencoding::encode(success),
         urlencoding::encode(checkout_id)
     );
+    let host = if live {
+        "https://www.billplz.com/api/v3/bills"
+    } else {
+        "https://www.billplz-sandbox.com/api/v3/bills"
+    };
     let resp = transport
         .send(OutRequest {
             method: "POST".into(),
-            url: "https://www.billplz.com/api/v3/bills".into(),
+            url: host.into(),
             headers: vec![
                 ("Authorization".into(), format!("Basic {auth}")),
                 ("Idempotency-Key".into(), format!("lazuar-checkout:{checkout_id}")),
@@ -440,9 +449,15 @@ mod tests {
             990,
             "https://pay.example",
             "https://ok",
+            false,
         )
         .unwrap();
         assert!(billplz.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
+        assert!(
+            billplz.last().url.contains("billplz-sandbox"),
+            "{}",
+            billplz.last().url
+        );
 
         let razorpay = Capture::new(r#"{"id":"pl_1","short_url":"https://rzp.test/l"}"#);
         mint_razorpay(&razorpay, "rzp_id:rzp_sec", "co_1", "INR", 990, "https://ok", "https://cancel")
@@ -467,13 +482,42 @@ mod tests {
             "https://cancel",
         )
         .unwrap();
-        let v: serde_json::Value = serde_json::from_str(cap.last().body.as_deref().unwrap()).unwrap();
+        let last = cap.last();
+        let raw = last.body.as_deref().unwrap();
+        assert!(!raw.contains("force_recurring"), "{raw}");
+        let v: serde_json::Value = serde_json::from_str(raw).unwrap();
         assert_eq!(v["client"]["email"], "ada@acme.test");
         assert_eq!(v["client"]["full_name"], "Ada");
         assert_eq!(v["brand_id"], "brand_1");
+        assert_eq!(v["purchase"]["currency"], "MYR");
+        assert_eq!(v["purchase"]["products"][0]["price"], 990);
         assert_eq!(v["purchase"]["metadata"]["checkout_id"], "co_1");
         assert_eq!(v["purchase"]["metadata"]["org_id"], "org_1");
         assert_ne!(v["client"]["email"], "payer@example.com");
+    }
+
+    #[test]
+    fn stripe_mint_sends_checkout_session_payment_mode() {
+        let cap = Capture::new(r#"{"id":"cs_1","url":"https://checkout.stripe.com/c"}"#);
+        mint_stripe(
+            &cap,
+            "sk_test",
+            "co_1",
+            "org_1",
+            "MYR",
+            1000,
+            "https://ok",
+            "https://cancel",
+        )
+        .unwrap();
+        let last = cap.last();
+        assert!(last.url.contains("/v1/checkout/sessions"), "{}", last.url);
+        let body = last.body.as_deref().unwrap_or("");
+        assert!(body.contains("mode=payment"), "{body}");
+        assert!(body.contains("metadata[checkout_id]=co_1"), "{body}");
+        assert!(body.contains("metadata[org_id]=org_1"), "{body}");
+        assert!(body.contains("unit_amount]=1000"), "{body}");
+        assert!(cap.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
     }
 
     #[test]

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * Pay OpenAPI ↔ Minimal API path honesty (packages/pay-spec, not Hub api-spec).
+ * Pay OpenAPI ↔ host path honesty (packages/pay-spec, not Hub api-spec).
  *
  * Asserts:
- *   1. OpenAPI paths ⊆ MapGet|Post|Put under apps/lazuar-pay/src
- *   2. Map* ⊆ OpenAPI ∪ host-only allowlist (unversioned /health /ready)
+ *   1. OpenAPI paths ⊆ C# Map* under apps/lazuar-pay/src
+ *   2. C# Map* ⊆ OpenAPI ∪ host-only allowlist (unversioned /health /ready)
+ *   3. Same two checks against the Rust router in apps/lazuar-api/src/app.rs
+ *   4. C# Map* and Rust match arms are the same set
  *
  * Usage (after `task pay:spec` / `pnpm --filter @repo/pay-spec exec tsp compile .`):
  *   node scripts/check-pay-openapi-honesty.mjs
@@ -64,6 +66,41 @@ function loadMapRoutes() {
   return routes;
 }
 
+/** Rust `org_id` is C#/OpenAPI `{orgId}`; other identifiers stay `{name}`. */
+function rustSegToPathPart(seg) {
+  const quoted = seg.match(/^"([^"]*)"$/);
+  if (quoted) return quoted[1];
+  if (seg === "org_id") return "{orgId}";
+  return `{${seg}}`;
+}
+
+function loadRustRoutes() {
+  const file = path.join(ROOT, "apps/lazuar-api/src/app.rs");
+  if (!fs.existsSync(file)) {
+    fail([`Missing Rust router: ${path.relative(ROOT, file)}`]);
+  }
+  const text = fs.readFileSync(file, "utf8");
+  const start = text.indexOf("pub fn router(");
+  if (start < 0) {
+    fail(["apps/lazuar-api/src/app.rs has no pub fn router"]);
+  }
+  const end = text.indexOf("\nfn health(", start);
+  const body = text.slice(start, end < 0 ? undefined : end);
+  const armRe = /\("(GET|POST|PUT|DELETE|PATCH)",\s*\[([^\]]+)\]\)/g;
+  const routes = new Map();
+  let m;
+  while ((m = armRe.exec(body)) !== null) {
+    const method = m[1].toUpperCase();
+    const segs = m[2]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const p = `/${segs.map(rustSegToPathPart).join("/")}`;
+    routes.set(routeKey(method, p), { method, path: normalizeRoute(p), file });
+  }
+  return routes;
+}
+
 function loadOpenApiPaths(filePath) {
   if (!fs.existsSync(filePath)) {
     console.error(
@@ -107,6 +144,7 @@ function fail(lines) {
 }
 
 const maps = loadMapRoutes();
+const rust = loadRustRoutes();
 const { paths: spec, text: yaml } = loadOpenApiPaths(OPENAPI_PATH);
 
 const extraSpec = [...spec.keys()].filter((k) => !maps.has(k)).sort();
@@ -114,15 +152,34 @@ const missingSpec = [...maps.keys()]
   .filter((k) => !spec.has(k) && !IMPL_ONLY.has(k))
   .sort();
 const allowlistedButMappedInSpec = [...IMPL_ONLY].filter((k) => spec.has(k)).sort();
+const extraSpecRust = [...spec.keys()].filter((k) => !rust.has(k)).sort();
+const missingSpecRust = [...rust.keys()]
+  .filter((k) => !spec.has(k) && !IMPL_ONLY.has(k))
+  .sort();
+const onlyCsharp = [...maps.keys()].filter((k) => !rust.has(k)).sort();
+const onlyRust = [...rust.keys()].filter((k) => !maps.has(k)).sort();
 
 const errors = [];
 if (extraSpec.length) {
-  errors.push("OpenAPI paths not mapped on the Pay host:");
+  errors.push("OpenAPI paths not mapped on the C# Pay host:");
   for (const k of extraSpec) errors.push(`  + ${k}`);
 }
 if (missingSpec.length) {
-  errors.push("Pay Map* paths missing from OpenAPI (not in host-only allowlist):");
+  errors.push("C# Map* paths missing from OpenAPI (not in host-only allowlist):");
   for (const k of missingSpec) errors.push(`  - ${k}`);
+}
+if (extraSpecRust.length) {
+  errors.push("OpenAPI paths not mapped on the Rust Pay host:");
+  for (const k of extraSpecRust) errors.push(`  + ${k}`);
+}
+if (missingSpecRust.length) {
+  errors.push("Rust router paths missing from OpenAPI (not in host-only allowlist):");
+  for (const k of missingSpecRust) errors.push(`  - ${k}`);
+}
+if (onlyCsharp.length || onlyRust.length) {
+  errors.push("C# Map* and Rust router have drifted:");
+  for (const k of onlyCsharp) errors.push(`  csharp-only ${k}`);
+  for (const k of onlyRust) errors.push(`  rust-only ${k}`);
 }
 if (allowlistedButMappedInSpec.length) {
   errors.push("Host-only probes should stay out of pay-spec:");
@@ -153,9 +210,9 @@ for (const [ok, label] of fieldChecks) {
 }
 
 if (errors.length) {
-  fail(["Pay OpenAPI ↔ Map* honesty failed.", "", ...errors]);
+  fail(["Pay OpenAPI ↔ host honesty failed.", "", ...errors]);
 }
 
 console.log(
-  `Pay OpenAPI honesty: ${spec.size} spec ops, ${maps.size} Map* (${IMPL_ONLY.size} host-only probes).`,
+  `Pay OpenAPI honesty: ${spec.size} spec ops, ${maps.size} C# Map*, ${rust.size} Rust arms (${IMPL_ONLY.size} host-only probes).`,
 );
