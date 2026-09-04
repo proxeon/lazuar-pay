@@ -63,6 +63,7 @@ struct CheckoutLight {
     currency: String,
     status: String,
     provider: Option<String>,
+    provider_session_id: Option<String>,
 }
 
 pub fn handle(
@@ -186,7 +187,7 @@ pub fn handle(
     };
 
     let Some(checkout) = conn.query_opt(
-        "SELECT \"Id\",\"OrgId\",\"Amount\",\"Currency\",\"Status\",\"Provider\" \
+        "SELECT \"Id\",\"OrgId\",\"Amount\",\"Currency\",\"Status\",\"Provider\",\"ProviderSessionId\" \
          FROM public.checkouts WHERE \"Id\" = $1",
         &[&checkout_id],
     )?
@@ -197,6 +198,7 @@ pub fn handle(
         currency: row.get("Currency"),
         status: row.get("Status"),
         provider: row.get("Provider"),
+        provider_session_id: row.get("ProviderSessionId"),
     })
     else {
         return Ok(IngestOutcome::CheckoutNotFound);
@@ -285,7 +287,14 @@ pub fn handle(
         let refunded = if already_reserved {
             false
         } else {
-            settle_late(remote, &refund_id, parsed.provider_ref.as_deref(), parsed.amount_minor)
+            settle_late(
+                conn,
+                remote,
+                &refund_id,
+                &checkout,
+                parsed.provider_ref.as_deref(),
+                parsed.amount_minor,
+            )
         };
         return Ok(IngestOutcome::LateRefunded { refunded });
     }
@@ -349,37 +358,49 @@ pub fn handle(
     // Settle the over-capacity late refund only after commit: the pending row is
     // durable and its id (the processor idempotency key) is stable across retries.
     if let Some(late_id) = outcome.pending_late_refund_id {
-        settle_late(remote, &late_id, parsed.provider_ref.as_deref(), outcome.late_refund_amount_minor);
+        settle_late(
+            conn,
+            remote,
+            &late_id,
+            &checkout,
+            parsed.provider_ref.as_deref(),
+            outcome.late_refund_amount_minor,
+        );
     }
 
     Ok(IngestOutcome::PaidOk)
 }
 
 /// Processor-side settle of a booked late_pay refund (C# `SettlePendingRefundAsync`).
-/// The real rail call lands with Phase 4; the pending row remains the ops marker
-/// for rails with no refund API.
+/// Loads the checkout snapshot so Stripe/CHIP can actually refund; rails with no
+/// refund API return false and the pending row stays the ops marker.
 fn settle_late(
+    conn: &mut postgres::Client,
     remote: &dyn Refunder,
     refund_id: &str,
+    checkout: &CheckoutLight,
     provider_ref: Option<&str>,
     amount_minor: Option<i64>,
 ) -> bool {
-    use rust_decimal::Decimal;
     let amount = amount_minor
-        .map(|m| crate::domain::currency::from_minor(Decimal::from(m)))
-        .unwrap_or(Decimal::ZERO);
+        .filter(|m| *m > 0)
+        .map(|m| currency::from_minor(Decimal::from(m)))
+        .unwrap_or(checkout.amount);
     let charge = crate::rails::remote::ChargeRef {
-        id: refund_id.to_string(),
-        org_id: String::new(),
-        checkout_id: String::new(),
-        provider: None,
-        provider_ref: provider_ref.map(str::to_string),
+        id: checkout.id.clone(),
+        org_id: checkout.org_id.clone(),
+        checkout_id: checkout.id.clone(),
+        provider: checkout.provider.clone(),
+        provider_ref: provider_ref
+            .map(str::to_string)
+            .filter(|s| !s.is_empty())
+            .or_else(|| checkout.provider_session_id.clone()),
         amount,
-        currency: String::new(),
-        status: "succeeded".into(),
-        provider_session_id: None,
+        currency: checkout.currency.clone(),
+        status: checkout.status.clone(),
+        provider_session_id: checkout.provider_session_id.clone(),
     };
-    remote.refund_charge(&charge, amount, refund_id).is_ok()
+    crate::rails::remote::settle_pending(conn, remote, refund_id, &charge, amount)
 }
 
 fn handle_failed(

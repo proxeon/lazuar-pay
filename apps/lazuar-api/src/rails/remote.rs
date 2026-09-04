@@ -108,11 +108,14 @@ impl Refunder for LiveRefunder {
                     "stripe is not configured; cannot refund".into(),
                 ));
             };
-            let body = format!(
-                "charge={}&amount={}",
-                urlencoding::encode(charge.provider_ref.as_deref().unwrap_or("")),
-                minor
+            let payment_intent = stripe_payment_intent(self.transport.as_ref(), secret, charge)?;
+            let mut body = format!(
+                "payment_intent={}",
+                urlencoding::encode(&payment_intent)
             );
+            if minor > 0 {
+                body.push_str(&format!("&amount={minor}"));
+            }
             let req = OutRequest {
                 method: "POST".into(),
                 url: "https://api.stripe.com/v1/refunds".into(),
@@ -158,6 +161,81 @@ impl Refunder for LiveRefunder {
     }
 }
 
+/// C# `RefundStripeAsync`: `cs_…` is a Checkout Session — GET it for
+/// `payment_intent`, then refund that. A `pi_…` ref is already the intent.
+fn stripe_payment_intent(
+    transport: &dyn crate::transport::Transport,
+    secret: &str,
+    charge: &ChargeRef,
+) -> Result<String, RefundRemoteError> {
+    use crate::transport::OutRequest;
+
+    let session_id = charge
+        .provider_session_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            charge
+                .provider_ref
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+        })
+        .ok_or_else(|| {
+            RefundRemoteError::UnsupportedRail(
+                "no stripe session or payment intent to refund".into(),
+            )
+        })?;
+
+    if session_id.starts_with("pi_") {
+        return Ok(session_id.to_string());
+    }
+
+    let req = OutRequest {
+        method: "GET".into(),
+        url: format!(
+            "https://api.stripe.com/v1/checkout/sessions/{}",
+            urlencoding::encode(session_id)
+        ),
+        headers: vec![("Authorization".into(), format!("Bearer {secret}"))],
+        body: None,
+    };
+    let resp = match transport.send(req) {
+        Err(crate::transport::TransportError::Timeout { .. })
+        | Err(crate::transport::TransportError::Transport(_)) => {
+            return Err(RefundRemoteError::OutcomeUnknown("stripe transport loss".into()));
+        }
+        Ok(resp) => resp,
+    };
+    if resp.status >= 500 {
+        return Err(RefundRemoteError::OutcomeUnknown(format!(
+            "stripe refund status {}",
+            resp.status
+        )));
+    }
+    if resp.status >= 400 {
+        return Err(RefundRemoteError::ProcessorRejected(resp.body));
+    }
+    let v: serde_json::Value = serde_json::from_str(&resp.body).unwrap_or(serde_json::json!({}));
+    let pi = v
+        .get("payment_intent")
+        .and_then(|p| {
+            p.as_str()
+                .map(str::to_string)
+                .or_else(|| {
+                    p.get("id")
+                        .and_then(|id| id.as_str())
+                        .map(str::to_string)
+                })
+        })
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    pi.ok_or_else(|| {
+        RefundRemoteError::UnsupportedRail("stripe capture has no payment intent to refund".into())
+    })
+}
+
 fn map_stripe(
     result: Result<crate::transport::OutResponse, crate::transport::TransportError>,
 ) -> Result<(), RefundRemoteError> {
@@ -184,7 +262,10 @@ fn map_chip(
         | Err(crate::transport::TransportError::Transport(_)) => {
             Err(RefundRemoteError::OutcomeUnknown("chip transport loss".into()))
         }
-        Ok(resp) if !(200..300).contains(&resp.status) => {
+        Ok(resp) if resp.status >= 500 => {
+            Err(RefundRemoteError::OutcomeUnknown(format!("chip refund status {}", resp.status)))
+        }
+        Ok(resp) if resp.status >= 400 => {
             Err(RefundRemoteError::ProcessorRejected(format!("chip status {}", resp.status)))
         }
         Ok(_) => Ok(()),

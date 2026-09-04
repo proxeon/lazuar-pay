@@ -41,6 +41,7 @@ type Responder = Box<dyn Fn(&RecordedRequest) -> OutResponse + Send + Sync>;
 struct Recordings {
     count: usize,
     last: Option<RecordedRequest>,
+    all: Vec<RecordedRequest>,
 }
 
 /// Records every send; delegates to the installed responder; defaults to 404
@@ -68,6 +69,10 @@ impl FakeTransport {
     pub fn last(&self) -> Option<RecordedRequest> {
         self.recordings.lock().unwrap().last.clone()
     }
+
+    pub fn all(&self) -> Vec<RecordedRequest> {
+        self.recordings.lock().unwrap().all.clone()
+    }
 }
 
 impl Transport for FakeTransport {
@@ -75,12 +80,14 @@ impl Transport for FakeTransport {
         {
             let mut r = self.recordings.lock().unwrap();
             r.count += 1;
-            r.last = Some(RecordedRequest {
+            let rec = RecordedRequest {
                 method: request.method.clone(),
                 url: request.url.clone(),
                 headers: request.headers.clone(),
                 body: request.body.clone(),
-            });
+            };
+            r.last = Some(rec.clone());
+            r.all.push(rec);
         }
         let responder = self.responder.lock().unwrap();
         match responder.as_ref() {

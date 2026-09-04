@@ -233,9 +233,11 @@ fn mint_xendit(
     success: &str,
 ) -> Result<HostedSession, StartRailError> {
     let auth = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, format!("{secret}:"));
+    // C# XenditHosted: amount is major units (FromMinor(ToMinor)), not sen.
+    let major = crate::domain::currency::from_minor(rust_decimal::Decimal::from(minor));
     let body = json!({
         "external_id": checkout_id,
-        "amount": minor,
+        "amount": crate::hosting::decimal_json(major),
         "currency": currency,
         "success_redirect_url": success,
     });
@@ -328,4 +330,33 @@ fn mint_solana(
         urlencoding::encode(checkout_id)
     );
     Ok(HostedSession { provider_session_id: reference, url: uri })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::transport::{OutRequest, OutResponse, Transport, TransportError};
+    use std::sync::Mutex;
+
+    struct Capture(Mutex<Option<OutRequest>>);
+    impl Transport for Capture {
+        fn send(&self, request: OutRequest) -> Result<OutResponse, TransportError> {
+            *self.0.lock().unwrap() = Some(request);
+            Ok(OutResponse {
+                status: 200,
+                body: r#"{"id":"inv_1","invoice_url":"https://xendit.test/i"}"#.into(),
+            })
+        }
+    }
+
+    #[test]
+    fn xendit_mint_sends_major_units_not_sen() {
+        let cap = Capture(Mutex::new(None));
+        mint_xendit(&cap, "xnd_key", "co_1", "MYR", 990, "https://ok.example/c/t").unwrap();
+        let req = cap.0.lock().unwrap().clone().expect("xendit POST");
+        let v: serde_json::Value = serde_json::from_str(req.body.as_deref().unwrap()).unwrap();
+        assert!(v["amount"].is_number(), "amount must be a JSON number: {v}");
+        assert_eq!(v["amount"].to_string(), "9.90");
+        assert_ne!(v["amount"], 990);
+    }
 }

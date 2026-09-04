@@ -6,7 +6,7 @@ use lazuar_api::money::fulfillment::CheckoutGates;
 use lazuar_api::secrets::SecretBox;
 use support::TestApp;
 use lazuar_api::rails::solana::cluster;
-use lazuar_api::rails::solana::confirm::{confirm, ConfirmDeps, ConfirmOutcome};
+use lazuar_api::rails::solana::confirm::{confirm, ConfirmDeps, ConfirmOutcome, Watcher};
 use lazuar_api::rails::solana::rpc::SolanaRpc;
 use lazuar_api::rails::solana::tx::{validate, ValidateInput};
 use rust_decimal::Decimal;
@@ -330,4 +330,76 @@ fn cluster_mismatch_is_rejected() {
     };
     let outcome = confirm(&mut db, &deps, &checkout, &signature).unwrap();
     assert!(matches!(outcome, ConfirmOutcome::ClusterMismatch));
+}
+
+#[test]
+fn watcher_loads_vault_receive_address_and_fulfills() {
+    let app = TestApp::spawn();
+    let mut db = app.db();
+    let (checkout_id, _token, reference) = solana_checkout(&app, "open");
+    let merchant = merchant_address();
+    db.execute(
+        "UPDATE public.gateway_credentials SET \"PublicMerchantId\" = $1 WHERE \"OrgId\" = $2",
+        &[&merchant, &"org_1"],
+    )
+    .unwrap();
+
+    let signature = real_signature();
+    let fixture = rpc_fixture(
+        &signature,
+        &[
+            "payer".to_string(),
+            reference.clone(),
+            merchant.clone(),
+            "token_acct".to_string(),
+        ],
+        "token_acct",
+        &merchant,
+        10_000_000,
+        cluster::DEVNET_MINT,
+        &checkout_id,
+    );
+    let fake = FakeTransport::new("solana-rpc");
+    let payload = fixture.clone();
+    let sig = signature.clone();
+    fake.respond_with(move |req| {
+        let body = req.body.clone().unwrap_or_default();
+        if body.contains("getSignaturesForAddress") {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: serde_json::json!({ "result": [{ "signature": sig }] }).to_string(),
+            }
+        } else {
+            lazuar_api::transport::OutResponse {
+                status: 200,
+                body: payload.clone(),
+            }
+        }
+    });
+    let rpc = SolanaRpc {
+        rpc_url: Some("http://solana.test/".into()),
+        transport: Box::new(fake),
+    };
+    let box_one = SecretBox::from_env_testing(None).unwrap();
+    let gates = CheckoutGates::default();
+    let deps = ConfirmDeps {
+        box_one: &box_one,
+        gates: &gates,
+        rpc: &rpc,
+        environment: "Testing",
+        config_cluster: "devnet",
+    };
+    let mut watcher = Watcher {
+        conn: &mut db,
+        deps: &deps,
+        ttl: chrono::Duration::minutes(30),
+    };
+    let n = watcher.run_once().unwrap();
+    assert!(n >= 1, "claimed open solana checkout");
+    assert_eq!(
+        db.query_one("SELECT \"Status\" FROM public.checkouts WHERE \"Id\" = $1", &[&checkout_id])
+            .unwrap()
+            .get::<_, String>(0),
+        "paid"
+    );
 }

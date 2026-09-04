@@ -7,7 +7,6 @@ use hmac::{Hmac, Mac};
 use lazuar_api::rails::remote::Refunder;
 use lazuar_api::secrets::SecretBox;
 use lazuar_api::webhooks::ingest::{handle, IngestInput, IngestOutcome};
-use lazuar_api::webhooks::psp_parse::Headers;
 use rust_decimal::Decimal;
 use sha2::Sha256;
 use std::str::FromStr;
@@ -199,5 +198,58 @@ fn late_pay_books_exactly_one_pending_refund_across_events() {
     let count: i64 = refund_row.get(0);
     let status: String = refund_row.get(1);
     assert_eq!(count, 1);
-    assert_eq!(status, "pending");
+    // OkRemote settles after commit (C# SettlePendingRefundAsync + test rail).
+    assert_eq!(status, "succeeded");
+}
+
+struct RecordingRemote {
+    last: std::sync::Mutex<Option<lazuar_api::rails::remote::ChargeRef>>,
+}
+impl Refunder for RecordingRemote {
+    fn refund_charge(
+        &self,
+        charge: &lazuar_api::rails::remote::ChargeRef,
+        _: Decimal,
+        _: &str,
+    ) -> Result<(), lazuar_api::rails::remote::RefundRemoteError> {
+        *self.last.lock().unwrap() = Some(charge.clone());
+        Ok(())
+    }
+}
+
+#[test]
+fn late_pay_settle_passes_checkout_provider_not_an_empty_charge() {
+    let app = TestApp::spawn();
+    let mut db = app.db();
+    let checkout = support::insert_charged_checkout(&mut db, "org_1", Decimal::from_str("10.00").unwrap());
+    db.execute("UPDATE public.checkouts SET \"Status\" = 'expired', \"ProviderSessionId\" = 'cs_late'", &[])
+        .unwrap();
+
+    let remote = RecordingRemote { last: std::sync::Mutex::new(None) };
+    let box_one = SecretBox::from_env_testing(None).unwrap();
+    let gates = lazuar_api::money::fulfillment::CheckoutGates::default();
+    let body = signed_body("evt_late_ctx", &checkout, 1000, "MYR");
+    let sig = hmac_hex(&app.config.test_webhook_secret, &body);
+    let input = IngestInput {
+        provider_raw: "test",
+        org_id: "org_1",
+        raw_body: &body,
+        headers: &headers_vec(&sig),
+        environment: "Testing",
+        test_webhook_secret: &app.config.test_webhook_secret,
+        stripe_webhook_secret: &app.config.stripe_webhook_secret,
+    };
+    let outcome = handle(&mut db, &box_one, &gates, &remote, &input).unwrap();
+    assert!(matches!(outcome, IngestOutcome::LateRefunded { refunded: true }));
+
+    let charge = remote.last.lock().unwrap().clone().expect("settle called");
+    assert_eq!(charge.org_id, "org_1");
+    assert_eq!(charge.checkout_id, checkout);
+    assert_eq!(charge.provider.as_deref(), Some("test"));
+    assert!(!charge.provider.as_deref().unwrap_or("").is_empty());
+    let status: String = db
+        .query_one("SELECT \"Status\" FROM public.refunds WHERE \"Reason\" = 'late_pay'", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(status, "succeeded");
 }

@@ -284,6 +284,15 @@ impl Watcher<'_> {
                 continue;
             }
 
+            let public_merchant_id = self
+                .conn
+                .query_opt(
+                    "SELECT COALESCE(\"PublicMerchantId\",'') FROM public.gateway_credentials \
+                     WHERE \"OrgId\" = $1 AND \"Provider\" = $2",
+                    &[&row.org_id, &providers::SOLANA],
+                )?
+                .map(|r| r.get::<_, String>(0))
+                .unwrap_or_default();
             let checkout = CheckoutForSolana {
                 id: row.id.clone(),
                 org_id: row.org_id.clone(),
@@ -292,7 +301,7 @@ impl Watcher<'_> {
                 status: row.status.clone(),
                 provider: row.provider.clone(),
                 provider_session_id: row.provider_session_id.clone(),
-                public_merchant_id: String::new(),
+                public_merchant_id,
             };
             let outcome = match confirm(
                 self.conn,
