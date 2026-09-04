@@ -1,12 +1,11 @@
-import { WebStorageStateStore } from 'oidc-client-ts'
+import { WebStorageStateStore, type UserManagerSettings } from 'oidc-client-ts'
 import type { AuthProviderProps } from 'react-oidc-context'
 
 /**
- * Public SPA: authorization code + PKCE.
- * Login UI is One :5175 (issuer is Zitadel :8085). Homepage is :5178.
- * Tokens in sessionStorage — not cookies (localhost cookies are not port-scoped).
+ * Shared UserManager settings. Silent-renew must use this object, not
+ * AuthProviderProps (that type is a union and has no `.authority`).
  */
-export function getOidcConfig(): AuthProviderProps {
+export function getOidcSettings(): UserManagerSettings {
   const authority =
     import.meta.env.VITE_ZITADEL_AUTHORITY || 'http://localhost:8085'
   const client_id = import.meta.env.VITE_ZITADEL_CLIENT_ID || ''
@@ -29,8 +28,19 @@ export function getOidcConfig(): AuthProviderProps {
     post_logout_redirect_uri,
     scope,
     response_type: 'code',
-    automaticSilentRenew: true,
     userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+  }
+}
+
+/**
+ * Public SPA: authorization code + PKCE.
+ * Login UI is One :5175 (issuer is Zitadel :8085). Homepage is :5178.
+ * Tokens in sessionStorage — not cookies (localhost cookies are not port-scoped).
+ */
+export function getOidcConfig(): AuthProviderProps {
+  return {
+    ...getOidcSettings(),
+    automaticSilentRenew: true,
     onSigninCallback: () => {
       window.history.replaceState({}, document.title, window.location.pathname)
     },
