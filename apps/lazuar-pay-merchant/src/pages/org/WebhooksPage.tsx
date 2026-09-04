@@ -61,8 +61,9 @@ export function WebhooksPage() {
   const [copied, setCopied] = useState(false)
   const secretInputRef = useRef<HTMLInputElement>(null)
 
-  async function refresh() {
+  async function refresh(opts?: { ignore?: () => boolean }) {
     const body = await payJson<OrgWebhookView>(token, `/v1/orgs/${orgId}/webhooks`, { orgHint: orgId })
+    if (opts?.ignore?.()) return
     setConfigured(body.webhook_configured)
     setUrl(body.url ?? '')
     setPrefix(body.secret_prefix ?? null)
@@ -73,7 +74,7 @@ export function WebhooksPage() {
     let stop = false
     setLoaded(false)
     setError(null)
-    void refresh().catch((err: unknown) => {
+    void refresh({ ignore: () => stop }).catch((err: unknown) => {
       if (stop) return
       setError(err instanceof Error ? err.message : 'Pay unreachable')
       setLoaded(true)

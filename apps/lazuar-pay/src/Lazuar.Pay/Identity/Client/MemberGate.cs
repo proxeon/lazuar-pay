@@ -121,8 +121,7 @@ internal static class MemberGate
             return PayErrors.Status(403, "Forbidden", "Not a member of this org");
         }
 
-        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(tenant.Status))
+        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase))
         {
             return PayErrors.Status(403, "Forbidden", "Tenant is suspended.");
         }
@@ -161,8 +160,7 @@ internal static class MemberGate
             return PayErrors.Status(403, "Forbidden", "Not a member of this org");
         }
 
-        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(tenant.Status))
+        if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase))
         {
             return PayErrors.Status(403, "Forbidden", "Tenant is suspended.");
         }

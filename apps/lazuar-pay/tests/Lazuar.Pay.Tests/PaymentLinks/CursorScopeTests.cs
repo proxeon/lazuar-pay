@@ -73,4 +73,55 @@ public class CursorScopeTests
         Assert.That(PayTest.Items(foreignDoc.RootElement).GetArrayLength(), Is.EqualTo(2),
             "the foreign row's timestamp must not truncate t1's list");
     }
+
+    [Test]
+    public async Task Foreign_org_subscription_cursor_id_is_treated_as_unknown()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK,
+                    """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"owner","status":"active"},{"id":"t2","role":"owner","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        var baseTime = DateTimeOffset.UtcNow;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Subscriptions.AddRange(
+                new SubscriptionRow
+                {
+                    Id = "sub_t1_new", OrgId = "t1", CheckoutId = "c_new", Status = "incomplete",
+                    Interval = "mo", CreatedAt = baseTime
+                },
+                new SubscriptionRow
+                {
+                    Id = "sub_t1_old", OrgId = "t1", CheckoutId = "c_old", Status = "incomplete",
+                    Interval = "mo", CreatedAt = baseTime.AddMinutes(-5)
+                },
+                new SubscriptionRow
+                {
+                    Id = "sub_t2_mid", OrgId = "t2", CheckoutId = "c_mid", Status = "incomplete",
+                    Interval = "mo", CreatedAt = baseTime.AddMinutes(-2)
+                });
+            await db.SaveChangesAsync();
+        }
+
+        using var foreign = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/subscriptions?after=sub_t2_mid");
+        foreign.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var foreignResponse = await client.SendAsync(foreign);
+        using var foreignDoc = JsonDocument.Parse(await foreignResponse.Content.ReadAsStringAsync());
+        using var bogus = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/subscriptions?after=does-not-exist");
+        bogus.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var bogusResponse = await client.SendAsync(bogus);
+        using var bogusDoc = JsonDocument.Parse(await bogusResponse.Content.ReadAsStringAsync());
+        Assert.That(foreignDoc.RootElement.GetRawText(), Is.EqualTo(bogusDoc.RootElement.GetRawText()));
+        Assert.That(PayTest.Items(foreignDoc.RootElement).GetArrayLength(), Is.EqualTo(2));
+    }
 }

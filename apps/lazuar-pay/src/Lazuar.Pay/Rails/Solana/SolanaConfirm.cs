@@ -74,7 +74,9 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
 
         if (checkout.Status is "expired" or "failed")
         {
+            var refundId = Guid.NewGuid().ToString("N");
             await using var lateTx = await db.Database.BeginTransactionAsync(ct);
+            bool alreadyReserved;
             try
             {
                 db.PspWebhookEvents.Add(new PspWebhookEventRow
@@ -84,6 +86,26 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
                     EventId = signature,
                     ReceivedAt = DateTimeOffset.UtcNow
                 });
+
+                alreadyReserved = await db.Refunds.AsNoTracking()
+                    .AnyAsync(x => x.CheckoutId == checkout.Id && x.Reason == "late_pay", ct);
+                if (!alreadyReserved)
+                {
+                    db.Refunds.Add(new RefundRow
+                    {
+                        Id = refundId,
+                        OrgId = orgId,
+                        CheckoutId = checkout.Id,
+                        Amount = checkout.Amount,
+                        Currency = checkout.Currency,
+                        Status = "pending",
+                        Provider = PayProviders.Solana,
+                        ProviderRef = signature,
+                        Reason = "late_pay",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    });
+                }
+
                 await db.SaveChangesAsync(ct);
                 await lateTx.CommitAsync(ct);
             }
@@ -91,6 +113,11 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
             {
                 await lateTx.RollbackAsync(ct);
                 return Results.Ok(new { duplicate = true });
+            }
+
+            if (!alreadyReserved)
+            {
+                await remote.SettlePendingRefundAsync(refundId, checkout, signature, null, ct);
             }
 
             return Results.Json(new { refunded = false, reason = "late_pay_manual" }, OneClient.Json);

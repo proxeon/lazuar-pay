@@ -8,6 +8,6 @@ export function parseAmountInput(raw: string): number | null {
   const text = raw.trim()
   if (!/^\d+(\.\d{1,2})?$/.test(text)) return null
   const value = Number(text)
-  if (!Number.isFinite(value) || value <= 0) return null
+  if (!Number.isFinite(value) || value <= 0 || value > 99_999_999) return null
   return value
 }

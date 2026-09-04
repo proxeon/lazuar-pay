@@ -171,7 +171,7 @@ export function CheckoutsPage() {
       return
     }
     const limited = Number(maxPayers)
-    if (capacity === 'limited' && (!Number.isInteger(limited) || limited < 2)) {
+    if (capacity === 'limited' && (!Number.isInteger(limited) || limited < 2 || limited > 1_000_000)) {
       setError('Limited links need at least 2 people')
       return
     }

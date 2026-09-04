@@ -69,7 +69,7 @@ internal static class PaymentQueryEndpoints
         var names = productIds.Count == 0
             ? new Dictionary<string, string>()
             : await db.Products.AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
+                .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
 
         return Results.Json(new
@@ -149,7 +149,7 @@ internal static class PaymentQueryEndpoints
         var names = productIds.Count == 0
             ? new Dictionary<string, string>()
             : await db.Products.AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
+                .Where(p => p.OrgId == orgId && productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
 
         return Results.Json(new
@@ -199,7 +199,7 @@ internal static class PaymentQueryEndpoints
         if (!string.IsNullOrWhiteSpace(checkout?.ProductId))
         {
             label = await db.Products.AsNoTracking()
-                .Where(p => p.Id == checkout.ProductId)
+                .Where(p => p.OrgId == orgId && p.Id == checkout.ProductId)
                 .Select(p => p.Name)
                 .FirstOrDefaultAsync(ct);
         }

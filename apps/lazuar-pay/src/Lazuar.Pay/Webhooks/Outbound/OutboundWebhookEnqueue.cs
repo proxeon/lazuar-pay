@@ -23,7 +23,7 @@ internal static class OutboundWebhookEnqueue
             return;
         }
 
-        if (await db.OrgWebhookDeliveries.AnyAsync(x => x.EventId == eventId, ct))
+        if (await db.OrgWebhookDeliveries.AnyAsync(x => x.OrgId == orgId && x.EventId == eventId, ct))
         {
             return;
         }

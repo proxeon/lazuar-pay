@@ -1,6 +1,6 @@
 import { problemDetail } from './http'
 
-const payApi = import.meta.env.VITE_PAY_API_URL ?? 'http://localhost:8081'
+const payApi = (import.meta.env.VITE_PAY_API_URL || 'http://localhost:8081').trim().replace(/\/+$/, '')
 
 export type WhoamiTenant = {
   id: string

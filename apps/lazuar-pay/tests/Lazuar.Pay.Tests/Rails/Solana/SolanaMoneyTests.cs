@@ -58,7 +58,7 @@ public class SolanaMoneyTests
 
         var tooManyDecimals = await CreateCheckout(client, """{"org_id":"t1","amount":10.1234567,"provider":"solana","currency":"USDC"}""");
         Assert.That(tooManyDecimals.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That(await tooManyDecimals.Content.ReadAsStringAsync(), Does.Contain("USDC amount"));
+        Assert.That(await tooManyDecimals.Content.ReadAsStringAsync(), Does.Contain("2 decimal places"));
 
         // Amounts are stored numeric(18,2). A sub-cent mint would render a QR whose exact
         // payment can never confirm — rejected at mint so the QR always matches the booking.

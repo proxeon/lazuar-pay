@@ -16,6 +16,7 @@ public sealed class OneWhoamiCache(IMemoryCache memory)
     public static readonly TimeSpan Ttl = TimeSpan.FromSeconds(60);
 
     readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _byKeyId = new(StringComparer.Ordinal);
+    readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _byOrgId = new(StringComparer.Ordinal);
 
     public static string TokenHash(string authorization)
     {
@@ -32,17 +33,38 @@ public sealed class OneWhoamiCache(IMemoryCache memory)
     public void Set(string authorization, WhoamiResponse who, bool machineKey)
     {
         var hash = TokenHash(authorization);
-        memory.Set(CacheKey(hash), who, Ttl);
+        var options = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = Ttl
+        };
+        options.PostEvictionCallbacks.Add(new PostEvictionCallbackRegistration
+        {
+            EvictionCallback = (_, _, _, _) => ForgetHash(hash)
+        });
+        memory.Set(CacheKey(hash), who, options);
         if (machineKey && !string.IsNullOrWhiteSpace(who.UserId))
         {
             var set = _byKeyId.GetOrAdd(who.UserId, static _ => new ConcurrentDictionary<string, byte>(StringComparer.Ordinal));
             set[hash] = 1;
         }
+
+        foreach (var tenant in who.Tenants)
+        {
+            if (string.IsNullOrWhiteSpace(tenant.Id))
+            {
+                continue;
+            }
+
+            var orgSet = _byOrgId.GetOrAdd(tenant.Id, static _ => new ConcurrentDictionary<string, byte>(StringComparer.Ordinal));
+            orgSet[hash] = 1;
+        }
     }
 
     public void RemoveToken(string authorization)
     {
-        memory.Remove(CacheKey(TokenHash(authorization)));
+        var hash = TokenHash(authorization);
+        memory.Remove(CacheKey(hash));
+        ForgetHash(hash);
     }
 
     public void InvalidateKey(string keyId)
@@ -60,6 +82,47 @@ public sealed class OneWhoamiCache(IMemoryCache memory)
         foreach (var hash in hashes.Keys)
         {
             memory.Remove(CacheKey(hash));
+            ForgetHash(hash);
+        }
+    }
+
+    public void InvalidateOrg(string orgId)
+    {
+        if (string.IsNullOrWhiteSpace(orgId))
+        {
+            return;
+        }
+
+        if (!_byOrgId.TryRemove(orgId, out var hashes))
+        {
+            return;
+        }
+
+        foreach (var hash in hashes.Keys)
+        {
+            memory.Remove(CacheKey(hash));
+            ForgetHash(hash);
+        }
+    }
+
+    void ForgetHash(string hash)
+    {
+        foreach (var pair in _byKeyId)
+        {
+            pair.Value.TryRemove(hash, out _);
+            if (pair.Value.IsEmpty)
+            {
+                _byKeyId.TryRemove(pair.Key, out _);
+            }
+        }
+
+        foreach (var pair in _byOrgId)
+        {
+            pair.Value.TryRemove(hash, out _);
+            if (pair.Value.IsEmpty)
+            {
+                _byOrgId.TryRemove(pair.Key, out _);
+            }
         }
     }
 

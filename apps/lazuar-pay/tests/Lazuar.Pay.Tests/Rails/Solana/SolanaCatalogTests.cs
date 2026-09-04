@@ -79,7 +79,7 @@ public class SolanaCatalogTests
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var body = await response.Content.ReadAsStringAsync();
-        Assert.That(body, Does.Contain("solana does not use inbound PSP webhooks").Or.Contain("rail not configured"));
+        Assert.That(body, Does.Contain("solana does not use inbound PSP webhooks").Or.Contain("invalid signature"));
     }
 
     sealed class NamedEnv(string name) : IHostEnvironment

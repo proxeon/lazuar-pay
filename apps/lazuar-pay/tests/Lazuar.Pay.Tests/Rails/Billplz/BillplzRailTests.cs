@@ -55,6 +55,38 @@ public class BillplzRailTests
     }
 
     [Test]
+    public async Task Billplz_paid_form_without_currency_field_fulfills()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"id":"bill_1","url":"https://www.billplz-sandbox.com/bills/bill_1"}""", Encoding.UTF8, "application/json")
+        };
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"billplz","secret":"bp_sk","webhook_secret":"xsig","public_merchant_id":"col_1","environment":"test"}""");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "billplz");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).IsSuccessStatusCode);
+
+        var unsigned = "id=bill_1&paid=true&state=paid&paid_amount=1000&x_signature=pending&reference_1=" + checkoutId;
+        var fields = BillplzWebhook.ParseForm(unsigned);
+        var mac = BillplzWebhook.ComputeHmac(fields, "xsig", excludeExtra: false);
+        var form = "id=bill_1&paid=true&state=paid&paid_amount=1000&x_signature=" + mac + "&reference_1=" + checkoutId;
+        using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/billplz/t1")
+        {
+            Content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded")
+        };
+        var paid = await client.SendAsync(wh);
+        Assert.That(paid.StatusCode, Is.EqualTo(HttpStatusCode.OK), await paid.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Billplz_unsigned_query_cannot_redirect_binding()
     {
         await using var factory = new PayApiFactory();

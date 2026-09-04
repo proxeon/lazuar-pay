@@ -52,8 +52,9 @@ export function ApiKeysPage() {
   const [copied, setCopied] = useState(false)
   const secretInputRef = useRef<HTMLInputElement>(null)
 
-  async function refresh() {
+  async function refresh(opts?: { ignore?: () => boolean }) {
     const rows = await listApiKeys(token, orgId)
+    if (opts?.ignore?.()) return
     setItems(rows)
     setLoaded(true)
   }
@@ -62,7 +63,7 @@ export function ApiKeysPage() {
     let stop = false
     setLoaded(false)
     setError(null)
-    void refresh().catch((err: unknown) => {
+    void refresh({ ignore: () => stop }).catch((err: unknown) => {
       if (stop) return
       setError(err instanceof Error ? err.message : 'One unreachable')
       setLoaded(true)

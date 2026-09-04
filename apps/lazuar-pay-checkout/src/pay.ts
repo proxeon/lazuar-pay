@@ -44,7 +44,14 @@ export function slotKey(token: string, stores: SlotStore[] = defaultStores()): s
 export function tokenFromPath(pathname?: string): string | null {
   const path = pathname ?? (typeof window === 'undefined' ? '' : window.location.pathname)
   const m = path.match(/^\/c\/([^/]+)\/?$/)
-  return m ? decodeURIComponent(m[1]) : null
+  if (!m) return null
+  try {
+    const token = decodeURIComponent(m[1])
+    if (!token || token.includes('/') || token.includes('..')) return null
+    return token
+  } catch {
+    return null
+  }
 }
 
 export function verifyingQuery(search?: string): boolean {
@@ -58,7 +65,7 @@ export function usableEmail(value: string): boolean {
 }
 
 export function payPath(token: string): string {
-  return `${payApi}/v1/pay/${token}?slot_key=${encodeURIComponent(slotKey(token))}`
+  return `${payApi}/v1/pay/${encodeURIComponent(token)}?slot_key=${encodeURIComponent(slotKey(token))}`
 }
 
 function defaultStores(): SlotStore[] {

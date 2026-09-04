@@ -36,24 +36,20 @@ internal static class CheckoutEndpoints
             return denied;
         }
 
-        var settings = orgId is null ? null : await db.OrgSettings.FindAsync([orgId], cancellationToken);
-        if (settings is null && orgId is not null)
-        {
-            settings = new OrgSettingsRow { OrgId = orgId };
-            db.OrgSettings.Add(settings);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        var settings = orgId is null ? null : await OrgSettingsStore.GetOrCreateAsync(db, orgId, cancellationToken);
 
         if (settings?.ChargesPaused == true)
         {
             return PayErrors.Status(403, "Forbidden", "Org charges are paused");
         }
 
-        if (body?.Amount is null || body.Amount <= 0)
+        var amountErr = MoneyMath.QuotedAmountError(body?.Amount);
+        if (amountErr is not null || body is null)
         {
-            return PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
+            return amountErr ?? PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
         }
 
+        var quoted = body.Amount!.Value;
         if (!PayProviders.TryNormalize(body.Provider, out var provider))
         {
             return PayErrors.Status(400, "Bad Request", "unknown provider");
@@ -104,14 +100,25 @@ internal static class CheckoutEndpoints
             idempotency = body.IdempotencyKey;
         }
 
+        var productId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim();
+        if (productId is not null)
+        {
+            var product = await db.Products.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == productId && p.OrgId == orgId, cancellationToken);
+            if (product is null)
+            {
+                return PayErrors.Status(404, "Not Found", "product not found");
+            }
+        }
+
         var session = new CheckoutSession
         {
             Id = Guid.NewGuid().ToString("N"),
             OrgId = orgId!,
             Provider = provider,
-            ProductId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim(),
+            ProductId = productId,
             PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
-            Amount = body.Amount.Value,
+            Amount = quoted,
             Currency = currency,
             Status = "open",
             Interval = interval,

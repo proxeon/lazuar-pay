@@ -17,6 +17,13 @@ public class SolanaVaultTests
     }
 
     [Test]
+    public void LooksLikeSecret_is_pem_not_bare_end_substring()
+    {
+        Assert.That(SolanaAddress.LooksLikeSecret("-----BEGIN PRIVATE KEY-----"), Is.True);
+        Assert.That(SolanaAddress.LooksLikeSecret("VendorENDWalletNotAPem"), Is.False);
+    }
+
+    [Test]
     public async Task Put_solana_address_without_secret()
     {
         await using var factory = new PayApiFactory();

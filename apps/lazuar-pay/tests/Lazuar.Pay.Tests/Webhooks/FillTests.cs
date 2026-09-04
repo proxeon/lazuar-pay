@@ -116,7 +116,7 @@ public class FillTests
         };
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("rail not configured"));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("invalid signature"));
     }
 
     [Test]

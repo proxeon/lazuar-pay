@@ -30,8 +30,8 @@ public static class SolanaAddress
 
     public static bool LooksLikeSecret(string raw)
     {
-        if (raw.Contains("BEGIN", StringComparison.OrdinalIgnoreCase)
-            || raw.Contains("END", StringComparison.OrdinalIgnoreCase)
+        if (raw.Contains("-----BEGIN", StringComparison.OrdinalIgnoreCase)
+            || raw.Contains("-----END", StringComparison.OrdinalIgnoreCase)
             || raw.Contains("-----", StringComparison.Ordinal)
             || raw.Contains(' ')
             || raw.Contains(':')

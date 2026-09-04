@@ -27,15 +27,13 @@ internal static class OneWebhookEndpoints
         using var reader = new StreamReader(request.Body);
         var json = await reader.ReadToEndAsync(ct);
         var secret = await ResolveSecretAsync(json, db, config, box, ct);
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            return PayErrors.Status(503, "Service Unavailable", "One webhook secret missing");
-        }
-
         var provided = request.Headers["X-Lazuar-Signature"].ToString().Trim();
         var timestamp = request.Headers["X-Lazuar-Timestamp"].ToString().Trim();
-        if (!OneWebhookSignature.TryVerify(secret, json, provided, timestamp))
+        if (string.IsNullOrWhiteSpace(secret)
+            || !OneWebhookSignature.TryVerify(secret, json, provided, timestamp))
         {
+            // Same 401 whether the secret is missing or the HMAC is wrong — do not
+            // leak whether an org has a stored One webhook secret (002/012).
             return PayErrors.Status(401, "Unauthorized", "Invalid HMAC");
         }
 
@@ -110,7 +108,14 @@ internal static class OneWebhookEndpoints
             At = DateTimeOffset.UtcNow
         });
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+        }
         return Results.Json(View(orgId, configured: true), OneClient.Json);
     }
 
@@ -139,26 +144,35 @@ internal static class OneWebhookEndpoints
         SecretBox box,
         CancellationToken ct)
     {
-        var orgId = PeekOrgId(json);
-        if (!string.IsNullOrWhiteSpace(orgId))
+        // Process secret wins when set so an org cannot replace One's control channel
+        // with a self-chosen HMAC key (002/003).
+        var process = config["Pay:OneWebhookSecret"];
+        if (!string.IsNullOrWhiteSpace(process))
         {
-            var settings = await db.OrgSettings.FindAsync([orgId], ct);
-            if (!string.IsNullOrWhiteSpace(settings?.OneWebhookCiphertext))
-            {
-                try
-                {
-                    var stored = box.Unprotect(settings.OneWebhookCiphertext);
-                    return string.IsNullOrWhiteSpace(stored) ? null : stored;
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
-            }
+            return process;
         }
 
-        var process = config["Pay:OneWebhookSecret"];
-        return string.IsNullOrWhiteSpace(process) ? null : process;
+        var orgId = PeekOrgId(json);
+        if (string.IsNullOrWhiteSpace(orgId))
+        {
+            return null;
+        }
+
+        var settings = await db.OrgSettings.FindAsync([orgId], ct);
+        if (string.IsNullOrWhiteSpace(settings?.OneWebhookCiphertext))
+        {
+            return null;
+        }
+
+        try
+        {
+            var stored = box.Unprotect(settings.OneWebhookCiphertext);
+            return string.IsNullOrWhiteSpace(stored) ? null : stored;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     static string? PeekOrgId(string json)
@@ -220,6 +234,8 @@ internal static class OneWebhookEndpoints
             {
                 settings.ChargesPaused = true;
             }
+
+            cache.InvalidateOrg(orgId);
         }
 
         if (type == "tenant.reactivated" && !string.IsNullOrWhiteSpace(orgId))
@@ -237,7 +253,15 @@ internal static class OneWebhookEndpoints
             }
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            return Results.Ok(new { duplicate = true });
+        }
         return Results.Json(new { ok = true }, OneClient.Json);
     }
 

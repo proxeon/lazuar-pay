@@ -139,7 +139,7 @@ public class OneWebhookTests
     }
 
     [Test]
-    public async Task Missing_secret_is_503()
+    public async Task Missing_secret_is_401()
     {
         await using var factory = new PayApiFactory { OneWebhookSecret = "" };
         var client = factory.CreateClient();
@@ -148,7 +148,7 @@ public class OneWebhookTests
             Content = new StringContent("""{"id":"x"}""", Encoding.UTF8, "application/json")
         };
         var response = await client.SendAsync(req);
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -391,15 +391,15 @@ public class OneWebhookTests
     }
 
     [Test]
-    public async Task Stored_secret_wins_over_process_fallback()
+    public async Task Process_secret_wins_over_stored()
     {
         await using var factory = new PayApiFactory { OneWebhookSecret = Secret };
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PutSecret(client, "t1", "whsec_stored");
         var body = """{"id":"del_stored","type":"tenant.suspended","org_id":"t1"}""";
-        Assert.That((await PostOne(client, body, Secret)).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        Assert.That((await PostOne(client, body, "whsec_stored")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PostOne(client, body, Secret)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PostOne(client, body, "whsec_stored")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         using var scope = factory.Services.CreateScope();
         Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused, Is.True);
     }

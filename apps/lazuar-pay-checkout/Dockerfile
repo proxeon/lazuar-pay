@@ -22,6 +22,7 @@ RUN npm install -g serve@14.2.4 \
   && addgroup -g 1001 web \
   && adduser -D -u 1001 -G web web
 COPY --from=build --chown=web:web /app/apps/lazuar-pay-checkout/dist ./dist
+COPY --chown=web:web apps/lazuar-pay-checkout/serve.json ./serve.json
 USER web
 EXPOSE 5179
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

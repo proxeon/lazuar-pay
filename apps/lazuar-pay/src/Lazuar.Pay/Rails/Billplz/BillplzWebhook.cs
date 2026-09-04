@@ -67,8 +67,15 @@ internal static class BillplzWebhook
         var checkoutId = form.GetValueOrDefault("reference_1", "");
 
         // Form paid_amount is sen (minor). RM10.00 → 1000.
+        // Billplz callbacks have no currency field (MYR-only rail). Do not require one.
         var paidCents = long.TryParse(form.GetValueOrDefault("paid_amount", "0"), out var pac) ? pac : 0L;
-        if (!MoneyMath.TryNormalizeCurrency(form.GetValueOrDefault("currency", ""), out var currency))
+        var rawCurrency = form.GetValueOrDefault("currency", "");
+        string currency;
+        if (string.IsNullOrWhiteSpace(rawCurrency))
+        {
+            currency = "MYR";
+        }
+        else if (!MoneyMath.TryNormalizeCurrency(rawCurrency, out currency))
         {
             throw new PspVerifyException("missing currency");
         }

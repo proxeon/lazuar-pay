@@ -172,7 +172,7 @@ function App() {
     }
     setBusy(true)
     try {
-      const response = await fetch(`${payApi}/v1/pay/${token}/start`, {
+      const response = await fetch(`${payApi}/v1/pay/${encodeURIComponent(token)}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, slot_key: slotKey(token) }),

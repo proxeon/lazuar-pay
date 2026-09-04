@@ -169,10 +169,7 @@ internal static class GatewayEndpoints
             row.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
-        if (await db.OrgSettings.FindAsync([orgId], ct) is null)
-        {
-            db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId });
-        }
+        await OrgSettingsStore.GetOrCreateAsync(db, orgId, ct);
 
         db.AuditEvents.Add(new AuditEventRow
         {
@@ -181,8 +178,15 @@ internal static class GatewayEndpoints
             Action = "gateway.credentials.upsert",
             At = DateTimeOffset.UtcNow
         });
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+        }
 
-        await db.SaveChangesAsync(ct);
         return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
     }
 

@@ -217,12 +217,14 @@ internal static class PublicPayEndpoints
 
             if (!string.IsNullOrWhiteSpace(body?.Name))
             {
-                row.PayerName = body.Name.Trim();
+                var payerName = body.Name.Trim();
+                row.PayerName = payerName.Length > 200 ? payerName[..200] : payerName;
             }
 
             if (!string.IsNullOrWhiteSpace(body?.Email))
             {
-                row.PayerEmail = body.Email.Trim();
+                var email = body.Email.Trim();
+                row.PayerEmail = email.Length > 254 ? email[..254] : email;
             }
 
             var provider = row.Provider ?? link?.Provider;
@@ -431,17 +433,24 @@ internal static class PublicPayEndpoints
                     x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
                 if (existing is not null)
                 {
-                    if (existing.Status is "paid" or "expired" or "failed")
+                    if (existing.Status == "paid")
                     {
                         return ((CheckoutRow?)null, PayErrors.Status(409, "Conflict", "Checkout is not open"));
                     }
 
-                    if (tx is not null)
+                    if (existing.Status is "expired" or "failed")
                     {
-                        await tx.CommitAsync(ct);
+                        existing.SlotKey = existing.SlotKey + ":burned:" + existing.Id;
                     }
+                    else
+                    {
+                        if (tx is not null)
+                        {
+                            await tx.CommitAsync(ct);
+                        }
 
-                    return (existing, (IResult?)null);
+                        return (existing, (IResult?)null);
+                    }
                 }
 
                 var taken = await db.Checkouts.CountAsync(

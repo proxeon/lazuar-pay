@@ -81,12 +81,18 @@ export async function listApiKeys(
   accessToken: string,
   tenantId: string,
 ): Promise<OneApiKey[]> {
-  const page = await oneJson<{ data?: OneApiKey[] }>(
-    accessToken,
-    `/tenants/${encodeURIComponent(tenantId)}/api-keys?page=1&page_size=50`,
-    { orgHint: tenantId },
-  )
-  return page?.data ?? []
+  const rows: OneApiKey[] = []
+  for (let page = 1; page <= 20; page++) {
+    const body = await oneJson<{ data?: OneApiKey[] }>(
+      accessToken,
+      `/tenants/${encodeURIComponent(tenantId)}/api-keys?page=${page}&page_size=50`,
+      { orgHint: tenantId },
+    )
+    const chunk = body?.data ?? []
+    rows.push(...chunk)
+    if (chunk.length < 50) break
+  }
+  return rows
 }
 
 /** Mint a One lzr_sk_ that can call Pay. Scopes are not caller-chosen. */

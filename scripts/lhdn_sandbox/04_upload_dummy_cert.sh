@@ -15,7 +15,8 @@ echo "🔑 Generating self-signed dummy.p12..."
 openssl genrsa -out dummy.key 2048 2>/dev/null
 openssl req -new -key dummy.key -out dummy.csr -subj "/C=MY/O=Lazuar Test Org/CN=Lazuar Dummy Cert" 2>/dev/null
 openssl x509 -req -days 365 -in dummy.csr -signkey dummy.key -out dummy.crt 2>/dev/null
-openssl pkcs12 -export -out dummy.p12 -inkey dummy.key -in dummy.crt -password pass:LhdnTest123! 2>/dev/null
+P12_PASSWORD="${P12_PASSWORD:?set P12_PASSWORD}"
+openssl pkcs12 -export -out dummy.p12 -inkey dummy.key -in dummy.crt -password "pass:$P12_PASSWORD" 2>/dev/null
 
 # 2. Base64 encode (cross-platform compatible: Linux & macOS)
 CERT_BASE64=$(base64 < dummy.p12 | tr -d '\n' | tr -d '\r')

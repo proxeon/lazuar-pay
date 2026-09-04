@@ -34,24 +34,20 @@ internal static class PaymentLinkEndpoints
             return denied;
         }
 
-        var settings = orgId is null ? null : await db.OrgSettings.FindAsync([orgId], cancellationToken);
-        if (settings is null && orgId is not null)
-        {
-            settings = new OrgSettingsRow { OrgId = orgId };
-            db.OrgSettings.Add(settings);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        var settings = orgId is null ? null : await OrgSettingsStore.GetOrCreateAsync(db, orgId, cancellationToken);
 
         if (settings?.ChargesPaused == true)
         {
             return PayErrors.Status(403, "Forbidden", "Org charges are paused");
         }
 
-        if (body?.Amount is null || body.Amount <= 0)
+        var amountErr = MoneyMath.QuotedAmountError(body?.Amount);
+        if (amountErr is not null || body is null)
         {
-            return PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
+            return amountErr ?? PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
         }
 
+        var quoted = body.Amount!.Value;
         if (!PayProviders.TryNormalize(body.Provider, out var provider))
         {
             return PayErrors.Status(400, "Bad Request", "unknown provider");
@@ -82,7 +78,7 @@ internal static class PaymentLinkEndpoints
         else
         {
             maxPayers = body.MaxPayers ?? 1;
-            if (maxPayers < 1)
+            if (maxPayers < 1 || maxPayers > 1_000_000)
             {
                 return PayErrors.Status(400, "Bad Request", "max_payers must be at least 1");
             }
@@ -117,7 +113,7 @@ internal static class PaymentLinkEndpoints
             var price = await db.Prices.AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProductId == productId, cancellationToken);
             if (price is not null
-                && (price.Amount != body.Amount.Value
+                && (price.Amount != quoted
                     || !string.Equals(price.Currency, currency, StringComparison.OrdinalIgnoreCase)))
             {
                 return PayErrors.Status(400, "Bad Request", "amount must match the catalog price");
@@ -131,7 +127,7 @@ internal static class PaymentLinkEndpoints
             Provider = provider,
             ProductId = productId,
             PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
-            Amount = body.Amount.Value,
+            Amount = quoted,
             Currency = currency,
             MaxPayers = maxPayers,
             CreatedAt = DateTimeOffset.UtcNow

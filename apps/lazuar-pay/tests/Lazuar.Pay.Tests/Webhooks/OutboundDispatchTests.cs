@@ -92,7 +92,10 @@ public class OutboundDispatchTests
         // Issue 017: the dialed address is re-validated at connect time. A rebinding DNS
         // cannot pass the dispatcher's check and then dial 127.0.0.1/10.x/169.254.169.254 —
         // the connect itself refuses.
-        foreach (var host in new[] { "127.0.0.1", "169.254.169.254", "10.1.2.3", "192.168.0.10" })
+        Assert.That(OutboundUrl.IsPrivateOrLoopback(IPAddress.IPv6Loopback), Is.True);
+        Assert.That(OutboundUrl.IsPrivateOrLoopback(IPAddress.Parse("::ffff:127.0.0.1")), Is.True);
+
+        foreach (var host in new[] { "127.0.0.1", "169.254.169.254", "10.1.2.3", "192.168.0.10", "::1" })
         {
             Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await OutboundUrl.ConnectValidatedAsync(new DnsEndPoint(host, 443), allowLoopback: false, CancellationToken.None),

@@ -55,14 +55,14 @@ public sealed class RazorpayHosted(PayDbContext db, SecretBox box, IHttpClientFa
                 ["org_id"] = checkout.OrgId
             },
             ["callback_url"] = CheckoutUrls.Success(checkout, config, env),
-            ["callback_method"] = "get"
+            ["callback_method"] = "get",
+            ["reference_id"] = checkout.Id
         };
 
         var client = http.CreateClient("razorpay");
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + "payment_links");
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(keyId + ":" + keySecret)));
-        request.Headers.TryAddWithoutValidation("X-Razorpay-Idempotency", "lazuar-checkout:" + checkout.Id);
         request.Content = JsonContent.Create(payload);
         using var response = await client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);

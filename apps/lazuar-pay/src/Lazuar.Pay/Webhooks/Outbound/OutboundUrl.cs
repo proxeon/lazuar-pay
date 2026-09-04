@@ -147,9 +147,20 @@ internal static class OutboundUrl
     {
         if (ip.AddressFamily == AddressFamily.InterNetworkV6)
         {
+            if (IPAddress.IsLoopback(ip))
+            {
+                return true;
+            }
+
             var b = ip.GetAddressBytes();
             // ::ffff:a.b.c.d — judge the embedded IPv4, not the wrapper.
             if (b.Length == 16 && b[..10].All(x => x == 0) && b[10] == 0xFF && b[11] == 0xFF)
+            {
+                return IsPrivateOrLoopback(new IPAddress(b[12..]));
+            }
+
+            // Deprecated IPv4-compatible ::a.b.c.d (not unspecified ::).
+            if (b.Length == 16 && b[..12].All(x => x == 0) && b.Any(x => x != 0))
             {
                 return IsPrivateOrLoopback(new IPAddress(b[12..]));
             }

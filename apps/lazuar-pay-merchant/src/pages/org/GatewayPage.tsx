@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payFetch, payJson } from '../../lib/payApi'
@@ -51,14 +51,20 @@ export function GatewayPage() {
 
   const selected = editing ? processors.find((p) => p.provider === editing) : undefined
 
+  const refreshEpoch = useRef(0)
+
   async function refresh() {
+    const epoch = ++refreshEpoch.current
+    const capturedOrg = orgId
     try {
-      const body = await payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${orgId}/gateways`, {
-        orgHint: orgId,
+      const body = await payJson<{ processors?: Processor[] }>(token, `/v1/orgs/${capturedOrg}/gateways`, {
+        orgHint: capturedOrg,
       })
+      if (epoch !== refreshEpoch.current) return
       setProcessors(body.processors ?? [])
       setListError(null)
     } catch (err: unknown) {
+      if (epoch !== refreshEpoch.current) return
       setListError(err instanceof Error ? err.message : 'Pay unreachable')
     }
   }

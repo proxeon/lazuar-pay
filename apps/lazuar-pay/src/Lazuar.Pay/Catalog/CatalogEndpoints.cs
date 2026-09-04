@@ -1,6 +1,7 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Money;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Catalog;
@@ -35,9 +36,16 @@ internal static class CatalogEndpoints
             return PayErrors.Status(400, "Bad Request", "Bar B currency is MYR");
         }
 
-        if (body?.Amount is null || body.Amount <= 0)
+        var amountErr = MoneyMath.QuotedAmountError(body?.Amount);
+        if (amountErr is not null)
         {
-            return PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
+            return amountErr;
+        }
+
+        var interval = string.IsNullOrWhiteSpace(body!.Interval) ? "one_off" : body.Interval.Trim();
+        if (interval is not ("one_off" or "mo" or "yr"))
+        {
+            return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
         }
 
         var product = new ProductRow
@@ -53,8 +61,8 @@ internal static class CatalogEndpoints
             Id = Guid.NewGuid().ToString("N"),
             ProductId = product.Id,
             Currency = currency,
-            Amount = body.Amount.Value,
-            Interval = string.IsNullOrWhiteSpace(body.Interval) ? "one_off" : body.Interval.Trim()
+            Amount = body.Amount!.Value,
+            Interval = interval
         };
         db.Products.Add(product);
         db.Prices.Add(price);

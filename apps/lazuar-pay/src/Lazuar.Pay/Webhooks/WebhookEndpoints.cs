@@ -64,7 +64,7 @@ internal static class WebhookEndpoints
                 .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
             if (cred is null)
             {
-                return PayErrors.Status(400, "Bad Request", "rail not configured");
+                return PayErrors.Status(400, "Bad Request", "invalid signature");
             }
         }
 
@@ -86,6 +86,18 @@ internal static class WebhookEndpoints
         catch (PspVerifyException ex)
         {
             return PayErrors.Status(400, "Bad Request", ex.Message);
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
+        }
+        catch (FormatException)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("webhook secret", StringComparison.Ordinal))
         {

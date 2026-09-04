@@ -31,7 +31,8 @@ internal static class SubscriptionEndpoints
         var q = db.Subscriptions.AsNoTracking().Where(x => x.OrgId == orgId);
         if (!string.IsNullOrWhiteSpace(after))
         {
-            var cursor = await db.Subscriptions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == after, ct);
+            var cursor = await db.Subscriptions.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Id == after, ct);
             if (cursor is not null)
             {
                 q = q.Where(x => x.CreatedAt < cursor.CreatedAt

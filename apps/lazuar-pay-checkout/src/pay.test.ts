@@ -51,6 +51,11 @@ describe('tokenFromPath', () => {
     expect(tokenFromPath('/c/tok/extra')).toBeNull()
     expect(tokenFromPath('/pay/tok')).toBeNull()
   })
+
+  it('treats malformed percent-escapes as missing', () => {
+    expect(tokenFromPath('/c/%E0%A4%A')).toBeNull()
+    expect(tokenFromPath('/c/%ZZ')).toBeNull()
+  })
 })
 
 describe('usableEmail', () => {

@@ -3,6 +3,7 @@ using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.Secrets;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Webhooks.Outbound;
 
@@ -80,7 +81,15 @@ internal static class OrgWebhookEndpoints
             Action = "org.webhook.upsert",
             At = DateTimeOffset.UtcNow
         });
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            row = await db.OrgWebhookEndpoints.FindAsync([orgId], ct) ?? row;
+        }
         return Results.Json(new
         {
             org_id = orgId,

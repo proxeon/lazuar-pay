@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lazuar_pay
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - pay-db:/var/lib/postgresql/data
     healthcheck:
@@ -30,7 +30,7 @@ services:
       dockerfile: apps/lazuar-pay/Dockerfile
     image: ghcr.io/proxeon/lazuar-pay:local
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__Pay: Host=pay-db;Port=5432;Database=lazuar_pay;Username=postgres;Password=postgres
@@ -59,7 +59,7 @@ services:
         VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI: ${VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI:-http://localhost:5178/}
     image: ghcr.io/proxeon/lazuar-pay-merchant:local
     ports:
-      - "5178:5178"
+      - "127.0.0.1:5178:5178"
     depends_on:
       - pay
 
@@ -72,7 +72,7 @@ services:
         VITE_PAY_API_URL: ${VITE_PAY_API_URL:-http://localhost:8081}
     image: ghcr.io/proxeon/lazuar-pay-checkout:local
     ports:
-      - "5179:5179"
+      - "127.0.0.1:5179:5179"
     depends_on:
       - pay
 
