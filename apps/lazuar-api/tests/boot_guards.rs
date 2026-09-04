@@ -83,6 +83,15 @@ fn production_checkout_origin_must_be_in_cors() {
 }
 
 #[test]
+fn staging_http_cors_does_not_cover_https_checkout() {
+    let mut c = production_ok();
+    c.environment = "Staging".into();
+    c.cors_origins = vec!["http://checkout.example".into()];
+    let err = boot::run(&c).unwrap_err();
+    assert!(err.0.contains("CorsOrigins"), "{err}");
+}
+
+#[test]
 fn production_http_cors_origin_throws() {
     let mut c = production_ok();
     c.cors_origins = vec!["http://checkout.example".into()];

@@ -90,21 +90,12 @@ pub fn run(config: &Config) -> Result<(), BootError> {
     }
 
     // B9: the checkout origin must be covered by a CORS origin.
-    let origin = config
-        .checkout_base_url
-        .split("//")
-        .nth(1)
-        .and_then(|rest| rest.split('/').next())
-        .unwrap_or("")
-        .to_string();
-    if !origin.is_empty() {
+    // C# `checkoutUri.GetLeftPart(Authority)` is scheme://host[:port] — scheme-sensitive.
+    if let Some(origin) = left_part_authority(&config.checkout_base_url) {
         let covered = config.cors_origins.iter().any(|o| {
-            let authority = o
-                .split("//")
-                .nth(1)
-                .and_then(|rest| rest.split('/').next())
-                .unwrap_or("");
-            authority.eq_ignore_ascii_case(&origin)
+            left_part_authority(o)
+                .map(|a| a.eq_ignore_ascii_case(&origin))
+                .unwrap_or(false)
         });
         check(strict, covered, "Pay:CheckoutBaseUrl origin must be in Pay:CorsOrigins")?;
     }
@@ -173,4 +164,16 @@ pub fn probe_solana_rpc(config: &Config) -> Result<(), BootError> {
         return Err(BootError("Pay:Solana:RpcUrl genesis hash mismatch".into()));
     }
     Ok(())
+}
+
+/// C# `Uri.GetLeftPart(UriPartial.Authority)` — `scheme://host[:port]`, no path.
+fn left_part_authority(raw: &str) -> Option<String> {
+    let u = url::Url::parse(raw).ok()?;
+    let host = u.host_str()?;
+    let mut s = format!("{}://{}", u.scheme(), host);
+    if let Some(port) = u.port() {
+        s.push(':');
+        s.push_str(&port.to_string());
+    }
+    Some(s)
 }
