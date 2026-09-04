@@ -30,7 +30,10 @@ impl PayError {
         Self::new(409, "Conflict", detail)
     }
     pub fn too_many_requests() -> Self {
-        Self::new(429, "Too Many Requests", "Too many start attempts")
+        Self::too_many_requests_detail("Too many start attempts")
+    }
+    pub fn too_many_requests_detail(detail: impl Into<String>) -> Self {
+        Self::new(429, "Too Many Requests", detail)
     }
     pub fn unavailable(detail: impl Into<String>) -> Self {
         Self::new(503, "Service Unavailable", detail)
@@ -41,6 +44,14 @@ impl PayError {
     pub fn bad_gateway(detail: impl Into<String>) -> Self {
         Self::new(502, "Bad Gateway", detail)
     }
+}
+
+/// JSON number for a Decimal (C# emits bare numbers, not strings).
+pub fn decimal_json(amount: rust_decimal::Decimal) -> serde_json::Value {
+    use std::str::FromStr as _;
+    serde_json::Value::Number(
+        serde_json::Number::from_str(&amount.to_string()).unwrap_or_else(|_| serde_json::Number::from(0)),
+    )
 }
 
 /// Port of `Hosting/PayList.cs:5-16` — default 50, max 100, `limit < 1` → default.

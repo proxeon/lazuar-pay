@@ -24,6 +24,7 @@ fn new_checkout(org: &str, amount: &str) -> NewCheckout {
         interval: None,
         success_url: Some("https://app.test/success".into()),
         cancel_url: Some("https://app.test/cancel".into()),
+        public_token: None,
     }
 }
 

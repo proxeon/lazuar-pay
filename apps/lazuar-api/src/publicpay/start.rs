@@ -99,6 +99,7 @@ pub enum StartOutcome {
     EmailRequired,
     SlotKeyRequired,
     RailNotConfigured,
+    Rejected(String),
     BadRequest(String),
 }
 
@@ -302,7 +303,7 @@ fn start_gated(
         .create_hosted_url(&row.id, &row.public_token, &row.org_id)
         .map_err(|err| match err {
             StartRailError::BadRequest(message) => StartOutcome::BadRequest(message),
-            StartRailError::Rejected(message) => StartOutcome::RailNotConfigured,
+            StartRailError::Rejected(message) => StartOutcome::Rejected(message),
         });
 
     let hosted = match hosted {

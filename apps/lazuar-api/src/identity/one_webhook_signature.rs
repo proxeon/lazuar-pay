@@ -15,24 +15,36 @@ pub fn compute(secret: &str, body: &str, unix_seconds: i64) -> String {
 }
 
 fn parse(signature_header: &str, timestamp_header: Option<&str>) -> Option<(i64, String)> {
-    if let Some(ts) = timestamp_header.map(str::trim).filter(|s| !s.is_empty()) {
-        // Separate headers: X-Lazuar-Timestamp + `v1=<hex>`. Raw hex (no v1=
-        // prefix) is rejected per the One dialect.
-        let timestamp: i64 = ts.parse().ok()?;
-        let v1 = signature_header.trim().strip_prefix("v1=")?.to_string();
-        return Some((timestamp, v1));
-    }
-    // Combined header: t=<unix>,v1=<hex>
+    // Combined header first: `t=` in the signature wins over X-Lazuar-Timestamp (S3).
     let mut timestamp = None;
     let mut v1 = None;
     for part in signature_header.split(',') {
-        let mut kv = part.trim().splitn(2, '=');
-        let key = kv.next()?.trim();
-        let value = kv.next()?.trim();
-        match key {
-            "t" => timestamp = value.parse().ok(),
-            "v1" => v1 = Some(value.to_string()),
+        let part = part.trim();
+        // S1: comma-part without `=` is skipped, not fatal (`t=123,junk,v1=abc`).
+        let Some((key, value)) = part.split_once('=') else {
+            continue;
+        };
+        match key.trim().to_ascii_lowercase().as_str() {
+            // S2: t/v1 keys matched case-insensitively.
+            "t" => timestamp = value.trim().parse().ok(),
+            "v1" => v1 = Some(value.trim().to_string()),
             _ => {}
+        }
+    }
+    if timestamp.is_some() && v1.is_some() {
+        return Some((timestamp?, v1?));
+    }
+    // Fallback: separate X-Lazuar-Timestamp + `v1=<hex>` only when combined header has no `t`.
+    if timestamp.is_none() {
+        if let Some(ts) = timestamp_header.map(str::trim).filter(|s| !s.is_empty()) {
+            let parsed: i64 = ts.parse().ok()?;
+            let v1_hex = v1.or_else(|| {
+                signature_header
+                    .trim()
+                    .strip_prefix("v1=")
+                    .map(str::to_string)
+            })?;
+            return Some((parsed, v1_hex));
         }
     }
     Some((timestamp?, v1?))
@@ -63,6 +75,48 @@ pub fn try_verify(
     }
     let expected = compute(secret, body, timestamp);
     fixed_time_equals_hex(&v1_hex, &expected)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn junk_comma_part_is_skipped() {
+        let secret = "whsec_test";
+        let body = "{}";
+        let ts = 1_700_000_000i64;
+        let v1 = compute(secret, body, ts);
+        let combined = format!("t={ts},junk,v1={v1}");
+        assert!(try_verify(secret, body, Some(&combined), None, 0, Some(ts)));
+    }
+
+    #[test]
+    fn keys_are_case_insensitive() {
+        let secret = "whsec_test";
+        let body = "{}";
+        let ts = 1_700_000_000i64;
+        let v1 = compute(secret, body, ts);
+        let combined = format!("T={ts},V1={v1}");
+        assert!(try_verify(secret, body, Some(&combined), None, 0, Some(ts)));
+    }
+
+    #[test]
+    fn combined_t_wins_over_timestamp_header() {
+        let secret = "whsec_test";
+        let body = "{}";
+        let ts = 1_700_000_000i64;
+        let v1 = compute(secret, body, ts);
+        let combined = format!("t={ts},v1={v1}");
+        assert!(try_verify(
+            secret,
+            body,
+            Some(&combined),
+            Some("111"),
+            0,
+            Some(ts),
+        ));
+    }
 }
 
 fn fixed_time_equals_hex(provided: &str, expected: &str) -> bool {

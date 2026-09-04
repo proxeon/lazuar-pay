@@ -115,6 +115,10 @@ scripts/lhdn_sandbox/**/cookies.txt
 # Local tooling captures
 mitm_mcp_traffic.db
 
+# Rust
+target/
+/apps/lazuar-api/target/
+
 *.tsbuildinfo
 
 # pnpm local store

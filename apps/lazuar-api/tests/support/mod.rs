@@ -175,6 +175,7 @@ impl TestApp {
             start_gates: Default::default(),
             link_gates: Default::default(),
             limiter: Default::default(),
+            whoami_cache: Arc::new(lazuar_api::identity::whoami_cache::OneWhoamiCache::new()),
         });
 
         let port = reserve_port();

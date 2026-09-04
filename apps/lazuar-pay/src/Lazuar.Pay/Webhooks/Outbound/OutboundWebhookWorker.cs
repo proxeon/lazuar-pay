@@ -1,6 +1,10 @@
+using Microsoft.Extensions.Logging;
+
 namespace Lazuar.Pay.Webhooks.Outbound;
 
-internal sealed class OutboundWebhookWorker(IServiceScopeFactory scopes) : BackgroundService
+internal sealed class OutboundWebhookWorker(
+    IServiceScopeFactory scopes,
+    ILogger<OutboundWebhookWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -15,9 +19,11 @@ internal sealed class OutboundWebhookWorker(IServiceScopeFactory scopes) : Backg
             {
                 return;
             }
-            catch
+            catch (Exception ex)
             {
-                // next loop
+                // B2 (plans/023-evals/02): a batch failure must be visible —
+                // swallowing it meant a wedged delivery pipeline was undetectable.
+                logger.LogError(ex, "webhook dispatch pass failed");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);

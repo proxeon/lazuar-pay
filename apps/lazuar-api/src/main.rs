@@ -19,10 +19,18 @@ fn main() {
         .init();
 
     let config = Config::from_env();
+    if let Err(err) = lazuar_api::boot::run(&config) {
+        eprintln!("{err}");
+        std::process::exit(1);
+    }
+    if let Err(err) = lazuar_api::boot::probe_solana_rpc(&config) {
+        eprintln!("{err}");
+        std::process::exit(1);
+    }
 
     let pool = config.connection_string.as_deref().map(|cs| {
         let manager = r2d2_postgres::PostgresConnectionManager::new(
-            cs.parse().expect("invalid Pay__ConnectionString"),
+            cs.parse().expect("invalid ConnectionStrings__Pay"),
             postgres::NoTls,
         );
         r2d2::Pool::builder()
@@ -56,6 +64,7 @@ fn main() {
         start_gates: Default::default(),
         link_gates: Default::default(),
         limiter: Default::default(),
+        whoami_cache: Arc::new(lazuar_api::identity::whoami_cache::OneWhoamiCache::new()),
     });
 
     // Background workers: outbound webhook dispatch + Solana reference watcher.
@@ -76,6 +85,11 @@ fn main() {
             let ttl_minutes = config.reservation_ttl_minutes;
             std::thread::spawn(move || {
                 lazuar_api::workers::solana_watcher(cs, box_one, environment, cluster, rpc_url, ttl_minutes);
+            });
+        }
+        if let Some(cs) = config.connection_string.clone() {
+            std::thread::spawn(move || {
+                lazuar_api::workers::refund_reconciliation_worker(cs);
             });
         }
     }

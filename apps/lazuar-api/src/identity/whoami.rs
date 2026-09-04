@@ -35,6 +35,7 @@ pub enum WhoamiOutcome {
 pub fn whoami(
     one: &OneClient,
     transport: &dyn crate::transport::Transport,
+    cache: Option<&crate::identity::whoami_cache::OneWhoamiCache>,
     auth_header: Option<&str>,
     tenant_hint: Option<&str>,
 ) -> WhoamiOutcome {
@@ -45,27 +46,39 @@ pub fn whoami(
         return WhoamiOutcome::Error(wrong);
     }
 
+    if let Some(cache) = cache {
+        if let Some(cached) = cache.try_get(&authorization) {
+            return WhoamiOutcome::Ok(cached);
+        }
+    }
+
     match one.get_whoami(transport, &authorization, tenant_hint) {
-        Ok(me) => WhoamiOutcome::Ok(WhoamiResponse {
-            user_id: me.user_id.clone().unwrap_or_default(),
-            email: me.email,
-            name: me.name,
-            is_platform_admin: me.is_platform_admin,
-            active_org_id: me.active_tenant_id,
-            tenants: me
-                .tenants
-                .into_iter()
-                .filter_map(|t| {
-                    t.id.map(|id| WhoamiTenant {
-                        id,
-                        slug: t.slug,
-                        name: t.name,
-                        role: t.role,
-                        status: t.status,
+        Ok(me) => {
+            let resp = WhoamiResponse {
+                user_id: me.user_id.clone().unwrap_or_default(),
+                email: me.email,
+                name: me.name,
+                is_platform_admin: me.is_platform_admin,
+                active_org_id: me.active_tenant_id,
+                tenants: me
+                    .tenants
+                    .into_iter()
+                    .filter_map(|t| {
+                        t.id.map(|id| WhoamiTenant {
+                            id,
+                            slug: t.slug,
+                            name: t.name,
+                            role: t.role,
+                            status: t.status,
+                        })
                     })
-                })
-                .collect(),
-        }),
+                    .collect(),
+            };
+            if let Some(cache) = cache {
+                cache.set(&authorization, &resp, bearer::is_machine_key(&authorization));
+            }
+            WhoamiOutcome::Ok(resp)
+        }
         // Mapper parity: unparsable/absent identity reads surface as 503.
         Err(call) => WhoamiOutcome::Error(if call.timed_out || call.transport_failed {
             PayError::unavailable("Identity provider unreachable")

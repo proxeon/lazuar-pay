@@ -1,8 +1,6 @@
 //! Port of `Rails/Razorpay/RazorpayWebhook.cs`.
-//! Issue 018: the rotating `X-Razorpay-Event-Id` header is the dedupe id when
-//! present — replaying a captured event with a fresh header id must NOT book a
-//! second fulfillment, and the header id (not the payment id) is what the
-//! `(Org, Provider, EventId)` dedupe sees.
+//! Issue 018: the unsigned `X-Razorpay-Event-Id` header must not displace the
+//! body-derived `"captured:" + payment_id` dedupe key.
 
 use hmac::{Hmac, Mac};
 use serde_json::Value;
@@ -52,9 +50,13 @@ pub fn parse(
     let header_event_id = header(headers, EVENT_ID_HEADER).map(str::to_string);
 
     if event_type == Some("payment.failed") {
-        let failed_id = header_event_id.clone().or_else(|| {
-            payment_id.as_deref().filter(|p| !p.trim().is_empty()).map(|p| format!("failed:{p}"))
-        });
+        // Issue 018: body-derived id wins when a payment id is present; the
+        // unsigned X-Razorpay-Event-Id header is only used as a fallback.
+        let failed_id = payment_id
+            .as_deref()
+            .filter(|p| !p.trim().is_empty())
+            .map(|p| format!("failed:{p}"))
+            .or(header_event_id.clone());
         let Some(failed_id) = failed_id else {
             return Err(WebhookParseError::verify_error("missing event id"));
         };
@@ -120,10 +122,8 @@ pub fn parse(
         .and_then(Value::as_str)
         .map(str::to_string);
 
-    let event_id = match header_event_id {
-        Some(id) if !id.trim().is_empty() => id,
-        _ => format!("captured:{payment_id}"),
-    };
+    // Issue 018: never let the unsigned header displace the signed-body id.
+    let event_id = format!("captured:{payment_id}");
 
     Ok(ParsedWebhook {
         event_id,

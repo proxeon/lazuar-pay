@@ -27,6 +27,7 @@ pub struct LinkRow {
     pub public_token: String,
     pub provider: String,
     pub product_id: Option<String>,
+    #[serde(with = "rust_decimal::serde::arbitrary_precision")]
     pub amount: Decimal,
     pub currency: String,
     pub max_payers: Option<i32>,
@@ -109,4 +110,61 @@ pub fn list(
     }
 
     Ok(LinkPage { items, next_cursor })
+}
+
+/// Full PaymentLinkView used by GET /v1/orgs/{orgId}/payment-links.
+pub fn list_views(
+    conn: &mut Client,
+    org_id: &str,
+    checkout_base_url: &str,
+    limit: Option<i64>,
+    after: Option<&str>,
+) -> Result<serde_json::Value, postgres::Error> {
+    use crate::publicpay::occupancy;
+    let page = list(conn, org_id, limit, after)?;
+    let mut items = Vec::new();
+    for link in &page.items {
+        let counts = conn.query(
+            "SELECT \"Status\" FROM public.checkouts WHERE \"PaymentLinkId\" = $1",
+            &[&link.id],
+        )?;
+        let mut taken = 0i64;
+        let mut paid = 0i64;
+        for row in &counts {
+            let status: String = row.get(0);
+            if occupancy::counts_toward_capacity(&status) {
+                taken += 1;
+            }
+            if status == "paid" {
+                paid += 1;
+            }
+        }
+        let label = match link.product_id.as_deref().filter(|s| !s.is_empty()) {
+            Some(pid) => conn
+                .query_opt(
+                    "SELECT \"Name\" FROM public.products WHERE \"OrgId\" = $1 AND \"Id\" = $2",
+                    &[&org_id, &pid],
+                )?
+                .map(|r| r.get::<_, String>(0)),
+            None => None,
+        };
+        items.push(serde_json::json!({
+            "id": link.id,
+            "org_id": link.org_id,
+            "provider": link.provider,
+            "amount": crate::hosting::decimal_json(link.amount),
+            "currency": link.currency,
+            "status": occupancy::merchant_status(link.max_payers, taken),
+            "public_token": link.public_token,
+            "pay_url": format!("{checkout_base_url}/c/{}", link.public_token),
+            "created_at": link.created_at,
+            "max_payers": link.max_payers,
+            "unlimited": link.max_payers.is_none(),
+            "paid_count": paid,
+            "taken_count": taken,
+            "remaining": occupancy::remaining_unclamped(link.max_payers, taken),
+            "label": label,
+        }));
+    }
+    Ok(serde_json::json!({ "items": items, "next_cursor": page.next_cursor }))
 }

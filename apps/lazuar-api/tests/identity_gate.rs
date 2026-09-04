@@ -24,7 +24,7 @@ fn whoami_maps_me_response() {
     let me = me_json(r#"{"id":"org_1","slug":"acme","name":"Acme","role":"owner","status":"active"}"#);
     one.respond_with(move |_| lazuar_api::transport::OutResponse { status: 200, body: me.clone() });
 
-    match whoami(&client, one.as_ref(), Some("Bearer jwt_1"), None) {
+    match whoami(&client, one.as_ref(), None, Some("Bearer jwt_1"), None) {
         lazuar_api::identity::whoami::WhoamiOutcome::Ok(resp) => {
             assert_eq!(resp.user_id, "user_1");
             assert_eq!(resp.tenants[0].id, "org_1");
@@ -37,7 +37,7 @@ fn whoami_maps_me_response() {
 #[test]
 fn whoami_rejects_wrong_key_family_before_touching_one() {
     let (client, one) = one();
-    let outcome = whoami(&client, one.as_ref(), Some("Bearer sk_live_realkey"), None);
+    let outcome = whoami(&client, one.as_ref(), None, Some("Bearer sk_live_realkey"), None);
     assert!(matches!(outcome, lazuar_api::identity::whoami::WhoamiOutcome::Error(ref e) if e.status == 401));
     // The request never left: no One calls recorded.
     assert_eq!(one.send_count(), 0);

@@ -48,6 +48,8 @@ pub struct NewCheckout {
     pub interval: Option<String>,
     pub success_url: Option<String>,
     pub cancel_url: Option<String>,
+    /// When set (checkout HTTP mint), 64 uppercase hex. Store fallback is 32 hex.
+    pub public_token: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -201,7 +203,11 @@ impl InsertRow {
             product_id: session.product_id.clone(),
             payment_link_id: session.payment_link_id.clone(),
             slot_key: session.slot_key.clone(),
-            public_token: new_public_token(),
+            public_token: session
+                .public_token
+                .clone()
+                .filter(|t| !t.trim().is_empty())
+                .unwrap_or_else(new_public_token),
             amount: session.amount,
             currency: session.currency.clone(),
             status: session.status.clone(),

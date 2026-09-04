@@ -144,8 +144,13 @@ pub fn create_link(
         }
     }
 
-    let id = Uuid::new_v4().to_string();
-    let public_token = Uuid::new_v4().simple().to_string();
+    let id = Uuid::new_v4().simple().to_string();
+    // C# PaymentLink mint: 64 uppercase hex (two GUIDs).
+    let public_token = format!(
+        "{}{}",
+        hex::encode_upper(*Uuid::new_v4().as_bytes()),
+        hex::encode_upper(*Uuid::new_v4().as_bytes())
+    );
     conn.execute(
         "INSERT INTO public.payment_links \
          (\"Id\",\"OrgId\",\"PublicToken\",\"Provider\",\"ProductId\",\"Amount\",\"Currency\",\"MaxPayers\",\"CreatedAt\") \

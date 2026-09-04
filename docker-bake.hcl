@@ -43,7 +43,7 @@ variable "VITE_ZITADEL_POST_LOGOUT_REDIRECT_URI" {
 }
 
 group "default" {
-  targets = ["lazuar-pay", "lazuar-pay-merchant", "lazuar-pay-checkout"]
+  targets = ["lazuar-pay", "lazuar-pay-api", "lazuar-pay-merchant", "lazuar-pay-checkout"]
 }
 
 target "docker-metadata-action" {}
@@ -54,6 +54,19 @@ target "_common" {
     "org.opencontainers.image.source"      = "https://github.com/proxeon/lazuar-pay"
     "org.opencontainers.image.vendor"      = "Lazuar"
     "org.opencontainers.image.description" = "Lazuar Pay CaaS"
+  }
+}
+
+target "lazuar-pay-api" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "apps/lazuar-api/Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-pay-api:${TAG}",
+    "${REGISTRY}/lazuar-pay-api:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-pay-api"
   }
 }
 

@@ -3,8 +3,7 @@
 
 use std::sync::Arc;
 
-use serde_json::json;
-use std::str::FromStr as _;
+use serde_json::{json, Value};
 
 use crate::config::Config;
 use crate::hosting::PayError;
@@ -26,6 +25,7 @@ pub struct State {
     pub start_gates: crate::publicpay::gates::GateMap,
     pub link_gates: crate::publicpay::gates::GateMap,
     pub limiter: crate::publicpay::limiter::PublicPayLimiter,
+    pub whoami_cache: Arc<crate::identity::whoami_cache::OneWhoamiCache>,
 }
 
 pub fn router(request: &rouille::Request, state: &State) -> rouille::Response {
@@ -52,9 +52,39 @@ pub fn router(request: &rouille::Request, state: &State) -> rouille::Response {
             link_list_route(request, state, org_id)
         }
 
-        ("GET", ["v1", "public", "pay", token]) => public_view_route(state, token),
-        ("POST", ["v1", "public", "pay", token, "start"]) => {
-            public_start_route(request, state, token)
+        ("GET", ["v1", "pay", token]) => public_view_route(request, state, token),
+        ("POST", ["v1", "pay", token, "start"]) => public_start_route(request, state, token),
+        ("POST", ["v1", "pay", token, "confirm"]) => public_confirm_route(request, state, token),
+
+        ("GET", ["v1", "orgs", org_id, "ready"]) => org_ready_route(request, state, org_id),
+
+        ("POST", ["v1", "checkouts"]) => checkout_create_route(request, state),
+        ("GET", ["v1", "checkouts", id]) => checkout_get_route(request, state, id),
+        ("GET", ["v1", "orgs", org_id, "checkouts"]) => checkout_list_route(request, state, org_id),
+
+        ("POST", ["v1", "orgs", org_id, "products"]) => catalog_create_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "products"]) => catalog_list_route(request, state, org_id),
+
+        ("PUT", ["v1", "orgs", org_id, "gateway"]) => gateway_put_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "gateway"]) => gateway_get_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "gateways"]) => gateway_list_route(request, state, org_id),
+
+        ("GET", ["v1", "orgs", org_id, "payments"]) => payments_list_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "receipts", id]) => receipt_get_route(request, state, org_id, id),
+        ("GET", ["v1", "orgs", org_id, "receipts"]) => receipts_list_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "subscriptions"]) => subscriptions_list_route(request, state, org_id),
+
+        ("POST", ["v1", "one", "webhooks"]) => one_webhook_route(request, state),
+        ("PUT", ["v1", "orgs", org_id, "one-webhook"]) => one_webhook_put_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "one-webhook"]) => one_webhook_get_route(request, state, org_id),
+
+        ("PUT", ["v1", "orgs", org_id, "webhooks"]) => org_webhook_put_route(request, state, org_id),
+        ("GET", ["v1", "orgs", org_id, "webhooks"]) => org_webhook_get_route(request, state, org_id),
+        ("POST", ["v1", "orgs", org_id, "webhooks", "rotate"]) => {
+            org_webhook_rotate_route(request, state, org_id)
+        }
+        ("POST", ["v1", "orgs", org_id, "webhooks", "test"]) => {
+            org_webhook_test_route(request, state, org_id)
         }
 
         _ => not_found(),
@@ -71,21 +101,23 @@ fn health() -> rouille::Response {
 
 fn ready(state: &State) -> rouille::Response {
     let db_ok = match &state.pool {
-        Some(pool) => pool
-            .get()
-            .ok()
-            .map(|mut conn| conn.query_one("SELECT 1", &[]).is_ok())
-            .unwrap_or(false),
+        Some(pool) => pool.get().ok().map(|mut conn| {
+            conn.query_one("SELECT 1", &[]).is_ok()
+                && conn
+                    .query_one(
+                        "SELECT to_regclass('public.checkouts') IS NOT NULL \
+                         AND to_regclass('public.org_settings') IS NOT NULL",
+                        &[],
+                    )
+                    .map(|row| row.get::<_, bool>(0))
+                    .unwrap_or(false)
+        }).unwrap_or(false),
         None => false,
     };
     if db_ok {
         rouille::Response::json(&serde_json::json!({ "status": "ready" }))
     } else {
-        rouille::Response::json(&serde_json::json!({
-            "status": "not_ready",
-            "checks": { "database": { "ok": false } },
-        }))
-        .with_status_code(503)
+        rouille::Response::json(&serde_json::json!({ "status": "not_ready" })).with_status_code(503)
     }
 }
 
@@ -137,6 +169,7 @@ fn whoami_route(request: &rouille::Request, state: &State) -> rouille::Response 
     match crate::identity::whoami::whoami(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         bearer(request).as_deref(),
         tenant_hint(request).as_deref(),
     ) {
@@ -178,7 +211,18 @@ fn webhook_route(
         test_webhook_secret: &state.config.test_webhook_secret,
         stripe_webhook_secret: &state.config.stripe_webhook_secret,
     };
-    let remote = crate::money::refunds::NoopRefunder;
+    let remote = crate::rails::remote::LiveRefunder::load(
+        &mut conn,
+        &state.secret_box,
+        state.psp.clone(),
+        org_id,
+        None,
+    )
+    .unwrap_or_else(|_| crate::rails::remote::LiveRefunder {
+        transport: state.psp.clone(),
+        secrets: Default::default(),
+        chip_session_id: None,
+    });
     match crate::webhooks::ingest::handle(&mut conn, &state.secret_box, &state.fulfill_gates, &remote, &input)
     {
         Ok(outcome) => match outcome {
@@ -278,13 +322,7 @@ fn refund_create_route(
         .and_then(serde_json::Value::as_str)
         .unwrap_or("")
         .to_string();
-    let amount = parsed
-        .get("amount")
-        .and_then(serde_json::Value::as_str)
-        .and_then(|v| rust_decimal::Decimal::from_str(v).ok())
-        .or_else(|| {
-            parsed.get("amount").and_then(serde_json::Value::as_i64).map(rust_decimal::Decimal::from)
-        });
+    let amount = parse_decimal(parsed.get("amount"));
     let idempotency = request
         .header("Idempotency-Key")
         .map(str::to_string)
@@ -297,7 +335,18 @@ fn refund_create_route(
         });
 
     let input = refunds::CreateRefund { checkout_id, amount, idempotency_key: idempotency };
-    let remote = refunds::NoopRefunder;
+    let remote = crate::rails::remote::LiveRefunder::load(
+        &mut conn,
+        &state.secret_box,
+        state.psp.clone(),
+        org_id,
+        None,
+    )
+    .unwrap_or_else(|_| crate::rails::remote::LiveRefunder {
+        transport: state.psp.clone(),
+        secrets: Default::default(),
+        chip_session_id: None,
+    });
     match refunds::create_refund(&mut conn, org_id, &input, &remote) {
         Ok(refunds::CreateRefundOutcome::Created { refund, number }) => {
             rouille::Response::json(&serde_json::json!({
@@ -305,7 +354,7 @@ fn refund_create_route(
                 "org_id": refund.org_id,
                 "checkout_id": refund.checkout_id,
                 "charge_id": refund.charge_id,
-                "amount": refund.amount,
+                "amount": crate::hosting::decimal_json(refund.amount),
                 "currency": refund.currency,
                 "status": refund.status,
                 "provider": refund.provider,
@@ -321,7 +370,7 @@ fn refund_create_route(
                 "org_id": refund.org_id,
                 "checkout_id": refund.checkout_id,
                 "charge_id": refund.charge_id,
-                "amount": refund.amount,
+                "amount": crate::hosting::decimal_json(refund.amount),
                 "currency": refund.currency,
                 "status": refund.status,
                 "provider": refund.provider,
@@ -484,7 +533,13 @@ fn link_list_route(request: &rouille::Request, state: &State, org_id: &str) -> r
     }
     let limit: Option<i64> = request.get_param("limit").and_then(|v| v.parse().ok());
     let after: Option<String> = request.get_param("after").map(|v| v.to_string());
-    match crate::links::list::list(&mut conn, org_id, limit, after.as_deref()) {
+    match crate::links::list::list_views(
+        &mut conn,
+        org_id,
+        &state.config.checkout_base_url,
+        limit,
+        after.as_deref(),
+    ) {
         Ok(page) => rouille::Response::json(&page),
         Err(err) => {
             log::error!("link list error: {err}");
@@ -497,20 +552,21 @@ fn link_list_route(request: &rouille::Request, state: &State, org_id: &str) -> r
 // Public pay
 // ---------------------------------------------------------------------------
 
-fn public_view_route(state: &State, token: &str) -> rouille::Response {
+fn public_view_route(request: &rouille::Request, state: &State, token: &str) -> rouille::Response {
     let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
         return error_response(&PayError::unavailable("database unavailable"));
     };
-    match crate::domain::checkout_store::get_by_public_token(&mut conn, token) {
-        Ok(Some(session)) => rouille::Response::json(&serde_json::json!({
-            "token": session.public_token,
-            "amount": session.amount,
-            "currency": session.currency,
-            "status": session.status,
-            "provider": session.provider,
-            "pay_url": session.pay_url,
-        })),
-        Ok(None) => error_response(&PayError::not_found("Checkout not found")),
+    let slot_key = request.get_param("slot_key");
+    match crate::publicpay::view::get(
+        &mut conn,
+        &state.config.checkout_base_url,
+        &state.config.solana_cluster,
+        state.config.reservation_ttl_minutes,
+        token,
+        slot_key.as_deref(),
+    ) {
+        Ok(Ok(view)) => rouille::Response::json(&view),
+        Ok(Err(err)) => error_response(&err),
         Err(err) => {
             log::error!("public view error: {err}");
             error_response(&PayError::internal("public view failed"))
@@ -534,10 +590,21 @@ fn public_start_route(
     };
     let parsed: serde_json::Value = serde_json::from_str(&raw_body).unwrap_or(serde_json::Value::Null);
 
-    // The hosted rail resolves from config (test rail in dev/testing; real rails
-    // register per-environment). Buyer limits ride the shared limiter.
-    let rail = crate::publicpay::start::TestRail {
+    let test_rail = crate::publicpay::start::TestRail {
         checkout_base_url: state.config.checkout_base_url.clone(),
+    };
+    let vaulted = state.pool.clone().map(|pool| crate::rails::hosted::VaultedRail {
+        pool,
+        box_one: &state.secret_box,
+        transport: state.psp.as_ref(),
+        environment: &state.config.environment,
+        public_base_url: &state.config.public_base_url,
+        checkout_base_url: &state.config.checkout_base_url,
+        solana_cluster: &state.config.solana_cluster,
+    });
+    let rail: &dyn crate::publicpay::start::HostedRail = match vaulted.as_ref() {
+        Some(v) => v,
+        None => &test_rail,
     };
     let deps = crate::publicpay::start::StartDeps {
         environment: &state.config.environment,
@@ -546,7 +613,7 @@ fn public_start_route(
         start_gates: &state.start_gates,
         link_gates: &state.link_gates,
         fulfill_gates: &state.fulfill_gates,
-        rail: &rail,
+        rail,
     };
     let req = crate::publicpay::start::StartRequest {
         name: parsed.get("name").and_then(serde_json::Value::as_str),
@@ -568,10 +635,548 @@ fn public_start_route(
         Ok(StartOutcome::RailNotConfigured) => {
             error_response(&PayError::unavailable("rail not configured"))
         }
+        Ok(StartOutcome::Rejected(message)) => error_response(&PayError::unavailable(message)),
         Ok(StartOutcome::BadRequest(message)) => error_response(&PayError::bad_request(message)),
         Err(err) => {
             log::error!("public start error: {err}");
             error_response(&PayError::internal("start failed"))
+        }
+    }
+}
+
+fn public_confirm_route(request: &rouille::Request, state: &State, token: &str) -> rouille::Response {
+    if state.config.start_max_per_minute > 0
+        && !state.limiter.try_acquire(
+            &format!("confirm:{token}"),
+            state.config.start_max_per_minute as i32,
+            60,
+        )
+    {
+        return error_response(&PayError::too_many_requests_detail("Too many confirm attempts"));
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let parsed = read_json(request);
+    let signature = parsed
+        .get("signature")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    if conn
+        .query_opt(
+            "SELECT 1 FROM public.payment_links WHERE \"PublicToken\" = $1",
+            &[&token],
+        )
+        .ok()
+        .flatten()
+        .is_some()
+    {
+        return error_response(&PayError::bad_request("confirm a started checkout token"));
+    }
+    let Some(session) = crate::domain::checkout_store::get_by_public_token(&mut conn, token)
+        .ok()
+        .flatten()
+    else {
+        return error_response(&PayError::not_found("Checkout not found"));
+    };
+    let checkout = crate::rails::solana::confirm::CheckoutForSolana {
+        id: session.id.clone(),
+        org_id: session.org_id.clone(),
+        amount: session.amount,
+        currency: session.currency.clone(),
+        status: session.status.clone(),
+        provider: session.provider.clone(),
+        provider_session_id: conn
+            .query_opt(
+                "SELECT COALESCE(\"ProviderSessionId\",'') FROM public.checkouts WHERE \"Id\" = $1",
+                &[&session.id],
+            )
+            .ok()
+            .flatten()
+            .map(|r| r.get::<_, String>(0))
+            .unwrap_or_default(),
+        public_merchant_id: conn
+            .query_opt(
+                "SELECT COALESCE(\"PublicMerchantId\",'') FROM public.gateway_credentials \
+                 WHERE \"OrgId\" = $1 AND \"Provider\" = $2",
+                &[&session.org_id, &crate::rails::providers::SOLANA],
+            )
+            .ok()
+            .flatten()
+            .map(|r| r.get::<_, String>(0))
+            .unwrap_or_default(),
+    };
+    let rpc = crate::rails::solana::rpc::SolanaRpc {
+        rpc_url: Some(state.config.solana_rpc_url.clone()),
+        transport: Box::new(crate::transport::UreqTransport::new_no_redirects(10)),
+    };
+    let deps = crate::rails::solana::confirm::ConfirmDeps {
+        box_one: &state.secret_box,
+        gates: &state.fulfill_gates,
+        rpc: &rpc,
+        environment: &state.config.environment,
+        config_cluster: &state.config.solana_cluster,
+    };
+    match crate::rails::solana::confirm::confirm(&mut conn, &deps, &checkout, &signature) {
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Ok)
+        | Ok(crate::rails::solana::confirm::ConfirmOutcome::Duplicate) => {
+            rouille::Response::json(&json!({ "ok": true }))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::LatePayManual { refunded }) => {
+            rouille::Response::json(&json!({ "refunded": refunded }))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::ProviderMismatch) => {
+            error_response(&PayError::bad_request("not a solana checkout"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::SignatureRequired) => {
+            error_response(&PayError::bad_request("signature is required"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::RailNotConfigured) => {
+            error_response(&PayError::unavailable("rail not configured"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::ClusterMismatch) => {
+            error_response(&PayError::bad_request("solana cluster mismatch"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Paused) => {
+            error_response(&PayError::forbidden("Org charges are paused"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::NotOpen) => {
+            error_response(&PayError::conflict("Checkout is not open"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::ValidationFailed(m)) => {
+            error_response(&PayError::bad_request(m))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::FulfillConflict) => {
+            error_response(&PayError::internal("fulfill conflict"))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Unavailable(m)) => {
+            error_response(&PayError::unavailable(m))
+        }
+        Ok(crate::rails::solana::confirm::ConfirmOutcome::Throttled) => {
+            error_response(&PayError::internal("solana rpc throttled"))
+        }
+        Err(err) => {
+            log::error!("confirm error: {err}");
+            error_response(&PayError::internal("confirm failed"))
+        }
+    }
+}
+
+fn read_json(request: &rouille::Request) -> Value {
+    let mut buf = String::new();
+    use std::io::Read as _;
+    let _ = request.data().map(|mut r| r.read_to_string(&mut buf));
+    serde_json::from_str(&buf).unwrap_or(Value::Null)
+}
+
+fn gate_writer(request: &rouille::Request, state: &State, org_id: &str) -> Result<(), PayError> {
+    crate::identity::member_gate::require_writer(
+        &state.one_client,
+        state.one.as_ref(),
+        bearer(request).as_deref(),
+        tenant_hint(request).as_deref(),
+        org_id,
+    )
+}
+
+fn gate_member(request: &rouille::Request, state: &State, org_id: &str) -> Result<(), PayError> {
+    crate::identity::member_gate::require_member(
+        &state.one_client,
+        state.one.as_ref(),
+        bearer(request).as_deref(),
+        tenant_hint(request).as_deref(),
+        org_id,
+    )
+}
+
+fn org_ready_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::identity::org_ready::handle(&mut conn, org_id, &state.config.environment) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("org ready: {err}");
+            error_response(&PayError::internal("ready failed"))
+        }
+    }
+}
+
+fn checkout_create_route(request: &rouille::Request, state: &State) -> rouille::Response {
+    let parsed = read_json(request);
+    let org_id = parsed.get("org_id").and_then(Value::as_str).unwrap_or("");
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let idem = request.header("Idempotency-Key").map(str::trim).filter(|s| !s.is_empty());
+    let idem = idem.or_else(|| parsed.get("idempotency_key").and_then(Value::as_str));
+    match crate::merchant::checkout_create(
+        &mut conn,
+        &state.config.environment,
+        &state.config.checkout_base_url,
+        org_id,
+        &parsed,
+        idem,
+    ) {
+        Ok(Ok((status, body))) => rouille::Response::json(&body).with_status_code(status),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("checkout create: {err}");
+            error_response(&PayError::internal("checkout create failed"))
+        }
+    }
+}
+
+fn checkout_get_route(request: &rouille::Request, state: &State, id: &str) -> rouille::Response {
+    if bearer(request).is_none() {
+        return error_response(&PayError::unauthorized("Missing bearer token"));
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::merchant::checkout_get(&mut conn, &state.config.checkout_base_url, id) {
+        Ok(Some(session)) => {
+            if let Err(err) = gate_member(request, state, &session.org_id) {
+                if err.status == 403 && !err.detail.to_lowercase().contains("suspend") {
+                    return error_response(&PayError::not_found("Checkout not found"));
+                }
+                return error_response(&err);
+            }
+            rouille::Response::json(&crate::merchant::checkout_view(&session, &state.config.checkout_base_url))
+        }
+        Ok(None) => error_response(&PayError::not_found("Checkout not found")),
+        Err(err) => {
+            log::error!("checkout get: {err}");
+            error_response(&PayError::internal("checkout get failed"))
+        }
+    }
+}
+
+fn checkout_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let limit = request.get_param("limit").and_then(|v| v.parse().ok());
+    let after = request.get_param("after");
+    match crate::merchant::checkout_list(&mut conn, &state.config.checkout_base_url, org_id, limit, after.as_deref()) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("checkout list: {err}");
+            error_response(&PayError::internal("checkout list failed"))
+        }
+    }
+}
+
+fn catalog_create_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::merchant::catalog_create(&mut conn, org_id, &read_json(request)) {
+        Ok(Ok((status, body))) => rouille::Response::json(&body).with_status_code(status),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("catalog create: {err}");
+            error_response(&PayError::internal("catalog create failed"))
+        }
+    }
+}
+
+fn catalog_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let limit = request.get_param("limit").and_then(|v| v.parse().ok());
+    let after = request.get_param("after");
+    match crate::merchant::catalog_list(&mut conn, org_id, limit, after.as_deref()) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("catalog list: {err}");
+            error_response(&PayError::internal("catalog list failed"))
+        }
+    }
+}
+
+fn gateway_put_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::merchant::gateway_put(
+        &mut conn,
+        &state.secret_box,
+        &state.config.solana_cluster,
+        org_id,
+        &read_json(request),
+    ) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("gateway put: {err}");
+            error_response(&PayError::internal("gateway put failed"))
+        }
+    }
+}
+
+fn gateway_get_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let provider = request.get_param("provider").unwrap_or_default();
+    match crate::merchant::gateway_get(&mut conn, &state.config.environment, org_id, &provider) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("gateway get: {err}");
+            error_response(&PayError::internal("gateway get failed"))
+        }
+    }
+}
+
+fn gateway_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::merchant::gateway_list(&mut conn, &state.config.environment, org_id) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("gateway list: {err}");
+            error_response(&PayError::internal("gateway list failed"))
+        }
+    }
+}
+
+fn payments_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let limit = request.get_param("limit").and_then(|v| v.parse().ok());
+    let after = request.get_param("after");
+    match crate::money::queries::list_payments(&mut conn, org_id, limit, after.as_deref()) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("payments: {err}");
+            error_response(&PayError::internal("payments list failed"))
+        }
+    }
+}
+
+fn receipts_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let limit = request.get_param("limit").and_then(|v| v.parse().ok());
+    let after = request.get_param("after");
+    match crate::money::queries::list_receipts(&mut conn, org_id, limit, after.as_deref()) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("receipts: {err}");
+            error_response(&PayError::internal("receipts list failed"))
+        }
+    }
+}
+
+fn receipt_get_route(request: &rouille::Request, state: &State, org_id: &str, id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::money::queries::get_receipt(&mut conn, org_id, id) {
+        Ok(Some(v)) => rouille::Response::json(&v),
+        Ok(None) => error_response(&PayError::not_found("Receipt not found")),
+        Err(err) => {
+            log::error!("receipt: {err}");
+            error_response(&PayError::internal("receipt get failed"))
+        }
+    }
+}
+
+fn subscriptions_list_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let limit = request.get_param("limit").and_then(|v| v.parse().ok());
+    let after = request.get_param("after");
+    match crate::money::queries::list_subscriptions(&mut conn, org_id, limit, after.as_deref()) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("subscriptions: {err}");
+            error_response(&PayError::internal("subscriptions list failed"))
+        }
+    }
+}
+
+fn one_webhook_route(request: &rouille::Request, state: &State) -> rouille::Response {
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let mut buf = String::new();
+    use std::io::Read as _;
+    let _ = request.data().map(|mut r| r.read_to_string(&mut buf));
+    let sig = request.header("X-Lazuar-Signature");
+    let ts = request.header("X-Lazuar-Timestamp");
+    let event_id = request.header("X-Lazuar-Event-Id");
+    match crate::identity::one_webhooks::handle(
+        &mut conn,
+        &state.secret_box,
+        state.whoami_cache.as_ref(),
+        &state.config.one_webhook_secret,
+        &buf,
+        sig,
+        ts,
+        event_id,
+    ) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("one webhook: {err}");
+            error_response(&PayError::internal("one webhook failed"))
+        }
+    }
+}
+
+fn one_webhook_put_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    let parsed = read_json(request);
+    let secret = parsed.get("webhook_secret").and_then(Value::as_str);
+    match crate::identity::one_webhooks::put_secret(&mut conn, &state.secret_box, org_id, secret) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("one webhook put: {err}");
+            error_response(&PayError::internal("one webhook put failed"))
+        }
+    }
+}
+
+fn one_webhook_get_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::identity::one_webhooks::get_secret(&mut conn, org_id) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("one webhook get: {err}");
+            error_response(&PayError::internal("one webhook get failed"))
+        }
+    }
+}
+
+fn org_webhook_put_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let parsed = read_json(request);
+    let url = match crate::webhooks::org_config::validate_url(
+        parsed.get("url").and_then(Value::as_str),
+        &state.config.environment,
+    ) {
+        Ok(u) => u,
+        Err(err) => return error_response(&err),
+    };
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::webhooks::org_config::put(&mut conn, &state.secret_box, org_id, &url) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("org webhook put: {err}");
+            error_response(&PayError::internal("org webhook put failed"))
+        }
+    }
+}
+
+fn org_webhook_get_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_member(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::webhooks::org_config::get(&mut conn, org_id) {
+        Ok(v) => rouille::Response::json(&v),
+        Err(err) => {
+            log::error!("org webhook get: {err}");
+            error_response(&PayError::internal("org webhook get failed"))
+        }
+    }
+}
+
+fn org_webhook_rotate_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::webhooks::org_config::rotate(&mut conn, &state.secret_box, org_id) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("org webhook rotate: {err}");
+            error_response(&PayError::internal("org webhook rotate failed"))
+        }
+    }
+}
+
+fn org_webhook_test_route(request: &rouille::Request, state: &State, org_id: &str) -> rouille::Response {
+    if let Err(err) = gate_writer(request, state, org_id) {
+        return error_response(&err);
+    }
+    let Some(mut conn) = state.pool.as_ref().and_then(|p| p.get().ok()) else {
+        return error_response(&PayError::unavailable("database unavailable"));
+    };
+    match crate::webhooks::org_config::test_ping(&mut conn, org_id) {
+        Ok(Ok(v)) => rouille::Response::json(&v),
+        Ok(Err(err)) => error_response(&err),
+        Err(err) => {
+            log::error!("org webhook test: {err}");
+            error_response(&PayError::internal("org webhook test failed"))
         }
     }
 }
@@ -589,8 +1194,29 @@ fn route_pattern(request: &rouille::Request) -> &'static str {
         ("GET", ["v1", "orgs", _o, "refunds"]) => "/v1/orgs/{orgId}/refunds",
         ("POST", ["v1", "payment-links"]) => "/v1/payment-links",
         ("GET", ["v1", "orgs", _o, "payment-links"]) => "/v1/orgs/{orgId}/payment-links",
-        ("GET", ["v1", "public", "pay", _t]) => "/v1/pay/{token}",
-        ("POST", ["v1", "public", "pay", _t, "start"]) => "/v1/pay/{token}/start",
+        ("GET", ["v1", "pay", _t]) => "/v1/pay/{token}",
+        ("POST", ["v1", "pay", _t, "start"]) => "/v1/pay/{token}/start",
+        ("POST", ["v1", "pay", _t, "confirm"]) => "/v1/pay/{token}/confirm",
+        ("GET", ["v1", "orgs", _o, "ready"]) => "/v1/orgs/{orgId}/ready",
+        ("POST", ["v1", "checkouts"]) => "/v1/checkouts",
+        ("GET", ["v1", "checkouts", _id]) => "/v1/checkouts/{id}",
+        ("GET", ["v1", "orgs", _o, "checkouts"]) => "/v1/orgs/{orgId}/checkouts",
+        ("POST", ["v1", "orgs", _o, "products"]) => "/v1/orgs/{orgId}/products",
+        ("GET", ["v1", "orgs", _o, "products"]) => "/v1/orgs/{orgId}/products",
+        ("PUT", ["v1", "orgs", _o, "gateway"]) => "/v1/orgs/{orgId}/gateway",
+        ("GET", ["v1", "orgs", _o, "gateway"]) => "/v1/orgs/{orgId}/gateway",
+        ("GET", ["v1", "orgs", _o, "gateways"]) => "/v1/orgs/{orgId}/gateways",
+        ("GET", ["v1", "orgs", _o, "payments"]) => "/v1/orgs/{orgId}/payments",
+        ("GET", ["v1", "orgs", _o, "receipts", _id]) => "/v1/orgs/{orgId}/receipts/{id}",
+        ("GET", ["v1", "orgs", _o, "receipts"]) => "/v1/orgs/{orgId}/receipts",
+        ("GET", ["v1", "orgs", _o, "subscriptions"]) => "/v1/orgs/{orgId}/subscriptions",
+        ("POST", ["v1", "one", "webhooks"]) => "/v1/one/webhooks",
+        ("PUT", ["v1", "orgs", _o, "one-webhook"]) => "/v1/orgs/{orgId}/one-webhook",
+        ("GET", ["v1", "orgs", _o, "one-webhook"]) => "/v1/orgs/{orgId}/one-webhook",
+        ("PUT", ["v1", "orgs", _o, "webhooks"]) => "/v1/orgs/{orgId}/webhooks",
+        ("GET", ["v1", "orgs", _o, "webhooks"]) => "/v1/orgs/{orgId}/webhooks",
+        ("POST", ["v1", "orgs", _o, "webhooks", "rotate"]) => "/v1/orgs/{orgId}/webhooks/rotate",
+        ("POST", ["v1", "orgs", _o, "webhooks", "test"]) => "/v1/orgs/{orgId}/webhooks/test",
         _ => "(unmatched)",
     }
 }

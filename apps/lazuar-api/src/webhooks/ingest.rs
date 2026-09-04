@@ -364,8 +364,22 @@ fn settle_late(
     provider_ref: Option<&str>,
     amount_minor: Option<i64>,
 ) -> bool {
-    let _ = (remote, refund_id, provider_ref, amount_minor);
-    false
+    use rust_decimal::Decimal;
+    let amount = amount_minor
+        .map(|m| crate::domain::currency::from_minor(Decimal::from(m)))
+        .unwrap_or(Decimal::ZERO);
+    let charge = crate::rails::remote::ChargeRef {
+        id: refund_id.to_string(),
+        org_id: String::new(),
+        checkout_id: String::new(),
+        provider: None,
+        provider_ref: provider_ref.map(str::to_string),
+        amount,
+        currency: String::new(),
+        status: "succeeded".into(),
+        provider_session_id: None,
+    };
+    remote.refund_charge(&charge, amount, refund_id).is_ok()
 }
 
 fn handle_failed(

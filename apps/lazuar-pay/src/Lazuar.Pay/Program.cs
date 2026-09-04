@@ -73,6 +73,7 @@ builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddHostedService<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookWorker>();
+    builder.Services.AddHostedService<Lazuar.Pay.Money.RefundReconciliationWorker>();
     builder.Services.AddHostedService<Lazuar.Pay.Rails.Solana.SolanaConfirmWorker>();
 }
 builder.Services.AddDataProtection();
@@ -113,16 +114,20 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 {
     await PayBoot.ProbeSolanaRpcAsync(app.Services, app.Configuration, default);
 }
-if (app.Environment.IsDevelopment())
+// Migrations: run in all non-Testing environments. In Testing the test factory
+// creates its own schema. A migration failure here is a hard startup failure —
+// a schema mismatch means the host cannot serve correctly.
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     try
     {
-        using var scope = app.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.MigrateAsync();
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-        app.Logger.LogError("pay-db schema mismatch; run task pay:db:migrate");
+        app.Logger.LogCritical(ex, "pay-db migration failed — refusing to start; run task pay:db:migrate");
+        throw;
     }
 }
 

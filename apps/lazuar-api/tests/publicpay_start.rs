@@ -280,7 +280,10 @@ fn start_rejection_expires_the_reservation() {
 
     let token: String = db.query_one("SELECT \"PublicToken\" FROM public.checkouts", &[]).unwrap().get(0);
     let outcome = start(&mut db, &deps, &token, &req("buyer@test", "slot-22222222")).unwrap();
-    assert!(matches!(outcome, StartOutcome::RailNotConfigured), "got {outcome:?}");
+    assert!(
+        matches!(outcome, StartOutcome::Rejected(_) | StartOutcome::RailNotConfigured),
+        "got {outcome:?}"
+    );
 
     // Issue 002: the expiry after a failed mint is a CAS — and it enqueues the
     // start_failed webhook.

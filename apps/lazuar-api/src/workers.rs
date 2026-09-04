@@ -44,12 +44,12 @@ pub fn solana_watcher(
     rpc_url: String,
     ttl_minutes: i64,
 ) -> ! {
+    let gates = CheckoutGates::default();
     loop {
         let result = (|| -> Result<usize, String> {
             let mut conn = connect(&conn_string);
             let transport = Box::new(UreqTransport::new_no_redirects(10));
             let rpc = SolanaRpc { rpc_url: Some(rpc_url.clone()), transport };
-            let gates = CheckoutGates::default();
             let deps = crate::rails::solana::confirm::ConfirmDeps {
                 box_one: &box_one,
                 gates: &gates,
@@ -63,11 +63,15 @@ pub fn solana_watcher(
                 ttl: ChronoDuration::minutes(ttl_minutes.max(1)),
             };
             // Drain claims: run_once re-claims until the batch is empty.
-            let mut processed = watcher.run_once().unwrap_or(0);
-            while processed > 0 {
-                processed = watcher.run_once().unwrap_or(0);
+            let mut total = 0usize;
+            loop {
+                match watcher.run_once() {
+                    Ok(0) => break,
+                    Ok(n) => total += n,
+                    Err(err) => return Err(format!("run_once: {err}")),
+                }
             }
-            Ok(0)
+            Ok(total)
         })();
         match result {
             Ok(0) => {}
@@ -75,5 +79,20 @@ pub fn solana_watcher(
             Err(message) => log::error!("solana watcher pass failed: {message}"),
         }
         std::thread::sleep(Duration::from_secs(2));
+    }
+}
+
+/// Stale pending-refund logger (027/1.6). Does not auto-retry.
+pub fn refund_reconciliation_worker(conn_string: String) -> ! {
+    loop {
+        match (|| -> Result<usize, String> {
+            let mut conn = connect(&conn_string);
+            crate::money::reconciliation::run_once(&mut conn).map_err(|e| e.to_string())
+        })() {
+            Ok(0) => {}
+            Ok(n) => log::warn!("refund reconciliation surfaced {n} stale pending refunds"),
+            Err(message) => log::error!("refund reconciliation pass failed: {message}"),
+        }
+        std::thread::sleep(Duration::from_secs(300));
     }
 }

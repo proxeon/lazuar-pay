@@ -41,6 +41,11 @@ pub fn remaining(max_payers: Option<i32>, taken: i64) -> Option<i64> {
     max_payers.map(|max| std::cmp::max(0, i64::from(max) - taken))
 }
 
+/// C# remaining_unclamped — can be negative when over capacity.
+pub fn remaining_unclamped(max_payers: Option<i32>, taken: i64) -> Option<i64> {
+    max_payers.map(|max| i64::from(max) - taken)
+}
+
 pub fn reservation_ttl(config_minutes: Option<i64>) -> chrono::Duration {
     chrono::Duration::minutes(std::cmp::max(1, config_minutes.unwrap_or(DEFAULT_RESERVATION_TTL_MINUTES)))
 }

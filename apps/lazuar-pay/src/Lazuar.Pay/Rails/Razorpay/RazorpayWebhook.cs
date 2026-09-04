@@ -48,7 +48,8 @@ internal static class RazorpayWebhook
 
         if (eventType == "payment.failed")
         {
-            var failedId = headerEventId ?? (string.IsNullOrWhiteSpace(paymentId) ? null : "failed:" + paymentId);
+            // Issue 018: body-derived id wins; unsigned X-Razorpay-Event-Id is fallback only.
+            var failedId = string.IsNullOrWhiteSpace(paymentId) ? headerEventId : "failed:" + paymentId;
             if (string.IsNullOrWhiteSpace(failedId))
             {
                 throw new PspVerifyException("missing event id");
@@ -112,7 +113,9 @@ internal static class RazorpayWebhook
             hostedSessionId = linkId.GetString();
         }
 
-        var eventId = !string.IsNullOrWhiteSpace(headerEventId) ? headerEventId : "captured:" + paymentId;
+        // Issue 018: always prefer the signed-body payment id. The unsigned
+        // X-Razorpay-Event-Id header must not displace it (rotating-header replay).
+        var eventId = "captured:" + paymentId;
         return new PspParseResult
         {
             EventId = eventId,

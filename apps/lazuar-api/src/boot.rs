@@ -118,10 +118,11 @@ pub fn run(config: &Config) -> Result<(), BootError> {
         check(strict, valid, "Pay:Solana:Cluster must be mainnet-beta or devnet")?;
     }
 
-    // B12: Production requires the mainnet cluster.
-    if env == "Production" {
+    // B12: Production requires the mainnet cluster — only when an RPC is set
+    // (C# PayBoot returns early when RpcUrl is blank).
+    if env == "Production" && !config.solana_rpc_url.trim().is_empty() {
         check(
-            env == "Production",
+            true,
             config.solana_cluster == "mainnet-beta",
             "Pay:Solana:Cluster must be mainnet-beta in Production",
         )?;

@@ -12,8 +12,6 @@
 //! - 009/010/012: filtered unique index, settle-time recompute, unique-violation
 //!   replay — the concurrency armor on the reserve and settle phases.
 
-use std::str::FromStr;
-
 use chrono::{DateTime, Utc};
 use postgres::error::SqlState;
 use rust_decimal::Decimal;
@@ -53,6 +51,7 @@ pub struct RefundView {
     pub org_id: String,
     pub checkout_id: String,
     pub charge_id: Option<String>,
+    #[serde(with = "rust_decimal::serde::arbitrary_precision")]
     pub amount: Decimal,
     pub currency: String,
     pub status: String,
@@ -146,6 +145,7 @@ fn charge_from_row(row: &postgres::Row) -> ChargeRef {
         amount: row.get("Amount"),
         currency: row.get("Currency"),
         status: row.get("Status"),
+        provider_session_id: None,
     }
 }
 
@@ -213,9 +213,15 @@ pub fn create_refund(
             &[&org_id, &checkout_id],
         )?
         .map(|row| charge_from_row(&row));
-    let Some(charge) = charge else {
+    let Some(mut charge) = charge else {
         return Ok(CreateRefundOutcome::ChargeNotFound);
     };
+    charge.provider_session_id = conn
+        .query_opt(
+            "SELECT \"ProviderSessionId\" FROM public.checkouts WHERE \"Id\" = $1",
+            &[&checkout_id],
+        )?
+        .and_then(|row| row.get::<_, Option<String>>(0));
 
     let checkout = conn.query_opt(
         "SELECT \"OrgId\" FROM public.checkouts WHERE \"Id\" = $1",
@@ -246,7 +252,13 @@ pub fn create_refund(
             &format!("{CHARGE_COLUMNS} WHERE \"Id\" = $1 FOR UPDATE"),
             &[&charge.id],
         )?;
-        let charge = charge_from_row(&locked);
+        let mut charge = charge_from_row(&locked);
+        charge.provider_session_id = reserve_tx
+            .query_opt(
+                "SELECT \"ProviderSessionId\" FROM public.checkouts WHERE \"Id\" = $1",
+                &[&checkout_id],
+            )?
+            .and_then(|row| row.get::<_, Option<String>>(0));
 
         if charge.status == "refunded" {
             reserve_tx.rollback()?;

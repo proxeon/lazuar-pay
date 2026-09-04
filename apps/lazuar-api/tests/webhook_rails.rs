@@ -194,7 +194,7 @@ fn razorpay_captured_with_header_event_id_parses() {
     let sig = hmac_hex("rzp_secret", body);
     let hs = headers(&[("X-Razorpay-Signature", &sig), ("X-Razorpay-Event-Id", "evt_hdr_1")]);
     let parsed = razorpay_webhook::parse(body, &Headers(&hs), Some(&wrapped), &box_one).unwrap();
-    assert_eq!(parsed.event_id, "evt_hdr_1", "header id wins as the dedupe id (issue 018)");
+    assert_eq!(parsed.event_id, "captured:pay_1", "issue 018: body-derived id wins over unsigned header");
     assert_eq!(parsed.checkout_id.as_deref(), Some("co_r"));
     assert_eq!(parsed.amount_minor, Some(99000));
 }
@@ -203,18 +203,15 @@ fn razorpay_captured_with_header_event_id_parses() {
 fn razorpay_replay_with_rotating_header_id_still_yields_dedupe_id() {
     let box_one = secret_box();
     let wrapped = box_one.protect("rzp_secret");
-    // A replayed capture (same body) presented with a DIFFERENT header event id:
-    // parse must surface that header id as event_id — the ingest dedupe then
-    // treats it as a brand-new event (matching C# semantics), which is why the
-    // issue-018 resolution routes through the same-key refund guards downstream.
+    // Issue 018: rotating unsigned X-Razorpay-Event-Id must NOT change the
+    // dedupe id when the body carries a payment id.
     let body = r#"{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1","amount":99000,"currency":"INR","notes":{"checkout_id":"co_r"}}}}}"#;
     for header_id in ["evt_hdr_1", "evt_hdr_2_rotated"] {
         let sig = hmac_hex("rzp_secret", body);
         let hs = headers(&[("X-Razorpay-Signature", &sig), ("X-Razorpay-Event-Id", header_id)]);
         let parsed = razorpay_webhook::parse(body, &Headers(&hs), Some(&wrapped), &box_one).unwrap();
-        assert_eq!(parsed.event_id, header_id);
+        assert_eq!(parsed.event_id, "captured:pay_1");
     }
-    // Without a header id, the derived id is stable (captured:<payment id>).
     let sig = hmac_hex("rzp_secret", body);
     let hs = headers(&[("X-Razorpay-Signature", &sig)]);
     let parsed = razorpay_webhook::parse(body, &Headers(&hs), Some(&wrapped), &box_one).unwrap();

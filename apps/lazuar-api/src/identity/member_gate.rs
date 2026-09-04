@@ -77,13 +77,28 @@ pub fn require_member(
         return Ok(());
     }
 
-    let allowed = one
-        .check_member(transport, &authorization, org_id, tenant_hint)
-        .map_err(|_| PayError::unavailable("Identity provider failed"))?;
-    if allowed {
-        Ok(())
-    } else {
-        Err(PayError::forbidden("Not a member of this org"))
+    match one.check_member(transport, &authorization, org_id, tenant_hint) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(PayError::forbidden("Not a member of this org")),
+        Err(call) => {
+            if call.timed_out || call.transport_failed {
+                return Err(PayError::unavailable("Identity provider unreachable"));
+            }
+            Err(match call.status_code {
+                401 => PayError::unauthorized("Identity provider rejected the token"),
+                403 => PayError::forbidden(
+                    forbidden_detail(call.detail.as_deref())
+                        .unwrap_or_else(|| "Not a member of this org".to_string()),
+                ),
+                400 => PayError::bad_request(
+                    call.detail
+                        .unwrap_or_else(|| "Identity provider rejected the request".into()),
+                ),
+                429 => PayError::new(429, "Too Many Requests", "Identity provider rate limited"),
+                200 => PayError::forbidden("Not a member of this org"),
+                _ => PayError::unavailable("Identity provider failed"),
+            })
+        }
     }
 }
 

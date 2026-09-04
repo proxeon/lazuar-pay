@@ -24,7 +24,7 @@ hex = "0.4"
 base64 = "0.22"
 aes-gcm = "0.10"
 rand = "0.8"
-rsa = "0.9"
+rsa = { version = "0.9", features = ["pem"] }
 urlencoding = "2"
 url = "2"
 log = "0.4"

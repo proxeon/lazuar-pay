@@ -6,3 +6,4 @@ pub mod outbound_url;
 pub mod envelope;
 pub mod ingest;
 pub mod psp_parse;
+pub mod org_config;

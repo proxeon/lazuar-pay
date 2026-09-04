@@ -9,11 +9,18 @@ use crate::rails::providers;
 /// Convert a USDC major-unit amount to atomic units (6 dp). `None` when the
 /// value has more precision than USDC supports.
 pub fn try_to_atomic(amount: Decimal) -> Option<i64> {
+    if amount <= Decimal::ZERO {
+        return None;
+    }
     let scaled = amount * Decimal::from(10u32.pow(USDC_DECIMALS as u32));
     if !scaled.fract().is_zero() {
         return None;
     }
-    scaled.to_i64_checked()
+    let value = scaled.to_i64_checked()?;
+    if value == i64::MAX {
+        return None;
+    }
+    Some(value)
 }
 
 trait DecimalExt {
@@ -64,6 +71,10 @@ pub fn mint_error(
     }
 
     if let Some(value) = amount {
+        let rounded = value.round_dp_with_strategy(2, rust_decimal::RoundingStrategy::AwayFromZero);
+        if rounded != value {
+            return Some("solana amounts support at most 2 decimal places".into());
+        }
         if try_to_atomic(value).is_none() {
             return Some("amount is not a valid USDC amount".into());
         }

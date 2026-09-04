@@ -2,6 +2,7 @@
 //! money conversion, JSON-RPC client, transaction validation, and the
 //! confirm/watch machinery.
 
+pub mod address;
 pub mod base58;
 pub mod cluster;
 pub mod confirm;

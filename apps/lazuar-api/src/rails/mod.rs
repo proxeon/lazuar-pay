@@ -5,6 +5,7 @@ pub mod chip_webhook;
 pub mod providers;
 pub mod razorpay_webhook;
 pub mod remote;
+pub mod hosted;
 pub mod solana;
 pub mod stripe_webhook;
 pub mod test_webhook;
