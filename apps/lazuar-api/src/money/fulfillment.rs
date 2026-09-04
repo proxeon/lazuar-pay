@@ -44,9 +44,11 @@ pub enum FulfillError {
 /// serialize same-checkout fulfills within one process; cross-process safety
 /// comes from the DB unique index on charges.CheckoutId. Scaling out keeps this
 /// correct — see the single-replica caveat in plans/023-evals/02.
-#[derive(Default)]
+///
+/// `Clone` shares the map (HTTP fulfill + Solana watcher must use one map).
+#[derive(Clone, Default)]
 pub struct CheckoutGates {
-    inner: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    inner: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
 }
 
 impl CheckoutGates {
@@ -60,6 +62,18 @@ impl CheckoutGates {
         };
         let _guard = arc.lock().expect("checkout gate");
         f()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clone_shares_the_in_process_map() {
+        let a = CheckoutGates::default();
+        let b = a.clone();
+        assert!(std::sync::Arc::ptr_eq(&a.inner, &b.inner));
     }
 }
 

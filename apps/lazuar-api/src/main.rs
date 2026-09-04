@@ -83,8 +83,17 @@ fn main() {
             let cluster = config.solana_cluster.clone();
             let rpc_url = config.solana_rpc_url.clone();
             let ttl_minutes = config.reservation_ttl_minutes;
+            let fulfill_gates = state.fulfill_gates.clone();
             std::thread::spawn(move || {
-                lazuar_api::workers::solana_watcher(cs, box_one, environment, cluster, rpc_url, ttl_minutes);
+                lazuar_api::workers::solana_watcher(
+                    cs,
+                    box_one,
+                    environment,
+                    cluster,
+                    rpc_url,
+                    ttl_minutes,
+                    fulfill_gates,
+                );
             });
         }
         if let Some(cs) = config.connection_string.clone() {

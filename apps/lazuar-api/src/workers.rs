@@ -43,8 +43,8 @@ pub fn solana_watcher(
     cluster: String,
     rpc_url: String,
     ttl_minutes: i64,
+    gates: CheckoutGates,
 ) -> ! {
-    let gates = CheckoutGates::default();
     loop {
         let result = (|| -> Result<usize, String> {
             let mut conn = connect(&conn_string);
