@@ -118,8 +118,8 @@ public class PostgresTxTests
     [Test]
     public async Task Refund_after_fulfill_books_refund_document_on_postgres()
     {
-        // InMemory does not enforce unique indexes — only Postgres catches a refund document
-        // colliding with the receipt on the same CheckoutId.
+        // Unique indexes on documents catch a refund number colliding with the receipt
+        // on the same CheckoutId.
         await using var factory = await PayPostgres.FactoryAsync();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();

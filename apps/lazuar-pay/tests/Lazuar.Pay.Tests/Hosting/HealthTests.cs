@@ -39,7 +39,7 @@ public class HealthTests
     }
 
     [Test]
-    public async Task Unversioned_ready_returns_200_on_inmemory()
+    public async Task Unversioned_ready_returns_200_when_database_is_up()
     {
         await using var factory = new PayApiFactory();
         factory.One.ThrowOnSend = true;

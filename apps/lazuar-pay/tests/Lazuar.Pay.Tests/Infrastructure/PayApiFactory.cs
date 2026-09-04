@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -16,7 +15,9 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 {
     public FakeOneHandler One { get; } = new();
     public FakePspHandler Psp { get; } = new();
-    readonly string _dbName = "pay-" + Guid.NewGuid().ToString("N");
+
+    string? _connectionString;
+    bool _ownsDatabase;
 
     public string StripeWebhookSecret { get; init; } = "whsec_test_local";
 
@@ -36,14 +37,29 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public int StartMaxPerMinute { get; init; } = 200;
 
-    /// <summary>When set, tests run against Npgsql. InMemory is not a transaction proof — see PostgresTxTests.</summary>
+    /// <summary>
+    /// Optional override. Default is a unique database cloned from the suite template
+    /// (<see cref="PayPostgres"/>). ThrowAfterSave is a TX rollback proof on that database.
+    /// </summary>
     public string? PostgresConnection { get; init; }
 
-    /// <summary>
-    /// InMemory BeginTransaction is a no-op. ThrowNext proves the probe path only.
-    /// ThrowAfterSave + PostgresConnection is the TX rollback proof.
-    /// </summary>
     public FulfillmentProbe Probe { get; } = new();
+
+    string ConnectionString()
+    {
+        if (!string.IsNullOrWhiteSpace(PostgresConnection))
+        {
+            return PostgresConnection;
+        }
+
+        if (_connectionString is null)
+        {
+            _connectionString = PayPostgres.CreateDatabase();
+            _ownsDatabase = true;
+        }
+
+        return _connectionString;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -89,16 +105,8 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
                 services.Remove(d);
             }
 
-            if (!string.IsNullOrWhiteSpace(PostgresConnection))
-            {
-                var cs = PostgresConnection;
-                services.AddDbContext<PayDbContext>(o => o.UseNpgsql(cs));
-            }
-            else
-            {
-                services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
-                    .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
-            }
+            var cs = ConnectionString();
+            services.AddDbContext<PayDbContext>(o => o.UseNpgsql(cs));
             services.AddSingleton(Probe);
             services.AddScoped<IFulfillPaid>(sp =>
                 new ProbingFulfillment(sp.GetRequiredService<Fulfillment>(), Probe));
@@ -122,18 +130,28 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        var host = base.CreateHost(builder);
-        using var scope = host.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
-        if (!string.IsNullOrWhiteSpace(PostgresConnection))
-        {
-            db.Database.Migrate();
-        }
-        else
-        {
-            db.Database.EnsureCreated();
-        }
+        // Schema comes from the pay_template clone. Do not Migrate per test.
+        _ = ConnectionString();
+        return base.CreateHost(builder);
+    }
 
-        return host;
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        if (_ownsDatabase && _connectionString is not null)
+        {
+            PayPostgres.DropDatabase(_connectionString);
+            _ownsDatabase = false;
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && _ownsDatabase && _connectionString is not null)
+        {
+            PayPostgres.DropDatabase(_connectionString);
+            _ownsDatabase = false;
+        }
     }
 }

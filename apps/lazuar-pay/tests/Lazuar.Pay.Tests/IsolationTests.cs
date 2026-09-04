@@ -36,7 +36,19 @@ public class IsolationTests
         var root = FindPayRoot();
         var csproj = Path.Combine(root, "tests", "Lazuar.Pay.Tests", "Lazuar.Pay.Tests.csproj");
         Assert.That(File.Exists(csproj), Is.True);
-        AssertNoBanned(File.ReadAllText(csproj));
+        var text = File.ReadAllText(csproj);
+        AssertNoBanned(text);
+        Assert.That(text, Does.Not.Contain("EntityFrameworkCore.InMemory"), csproj);
+    }
+
+    [Test]
+    public void Test_factory_does_not_use_ef_inmemory()
+    {
+        var root = FindPayRoot();
+        var factory = Path.Combine(root, "tests", "Lazuar.Pay.Tests", "Infrastructure", "PayApiFactory.cs");
+        var text = File.ReadAllText(factory);
+        Assert.That(text, Does.Not.Contain("UseInMemoryDatabase"));
+        Assert.That(text, Does.Contain("UseNpgsql"));
     }
 
     [Test]
