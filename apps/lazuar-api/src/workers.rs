@@ -11,16 +11,27 @@ use crate::rails::solana::rpc::SolanaRpc;
 use crate::secrets::SecretBox;
 use crate::transport::UreqTransport;
 
-fn connect(conn_string: &str) -> postgres::Client {
+fn connect(conn_string: &str) -> Result<postgres::Client, postgres::Error> {
     postgres::Client::connect(conn_string, postgres::NoTls)
-        .expect("worker cannot open a database connection")
+}
+
+fn connect_retry(conn_string: &str) -> postgres::Client {
+    loop {
+        match connect(conn_string) {
+            Ok(conn) => return conn,
+            Err(err) => {
+                log::error!("worker db connect failed: {err}");
+                std::thread::sleep(Duration::from_secs(5));
+            }
+        }
+    }
 }
 
 /// Outbound webhook dispatcher: claim → deliver → per-row persistence, every 5s.
 pub fn webhook_worker(conn_string: String, box_one: SecretBox, environment: String) -> ! {
     loop {
         let result = (|| -> Result<usize, String> {
-            let mut conn = connect(&conn_string);
+            let mut conn = connect_retry(&conn_string);
             let transport = crate::webhooks::dispatch::webhook_transport(&environment);
             crate::webhooks::dispatch::process_batch(&mut conn, &box_one, transport.as_ref(), &environment)
                 .map_err(|e| format!("batch: {e}"))
@@ -47,7 +58,7 @@ pub fn solana_watcher(
 ) -> ! {
     loop {
         let result = (|| -> Result<usize, String> {
-            let mut conn = connect(&conn_string);
+            let mut conn = connect_retry(&conn_string);
             let transport = Box::new(UreqTransport::new_no_redirects(10));
             let rpc = SolanaRpc { rpc_url: Some(rpc_url.clone()), transport };
             let deps = crate::rails::solana::confirm::ConfirmDeps {
@@ -86,7 +97,7 @@ pub fn solana_watcher(
 pub fn refund_reconciliation_worker(conn_string: String) -> ! {
     loop {
         match (|| -> Result<usize, String> {
-            let mut conn = connect(&conn_string);
+            let mut conn = connect_retry(&conn_string);
             crate::money::reconciliation::run_once(&mut conn).map_err(|e| e.to_string())
         })() {
             Ok(0) => {}
