@@ -265,7 +265,7 @@ pub fn handle(
             } else {
                 checkout.amount
             };
-            late_tx.execute(
+            let insert_refund = late_tx.execute(
                 "INSERT INTO public.refunds \
                  (\"Id\",\"OrgId\",\"CheckoutId\",\"ChargeId\",\"Amount\",\"Currency\",\"Status\",\
                  \"Provider\",\"ProviderRef\",\"Reason\",\"IdempotencyKey\",\"CreatedAt\") \
@@ -280,7 +280,14 @@ pub fn handle(
                     &parsed.provider_ref,
                     &Utc::now(),
                 ],
-            )?;
+            );
+            if let Err(err) = insert_refund {
+                late_tx.rollback()?;
+                if err.as_db_error().map(|db| db.code()) == Some(&postgres::error::SqlState::UNIQUE_VIOLATION) {
+                    return Ok(IngestOutcome::Duplicate);
+                }
+                return Err(err);
+            }
         }
         late_tx.commit()?;
 
