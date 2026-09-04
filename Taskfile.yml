@@ -165,7 +165,7 @@ tasks:
         TAG="${TAG:-$(git rev-parse --short HEAD)}"
         REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
         PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (lazuar-pay, lazuar-pay-merchant, lazuar-pay-checkout)"
+        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (lazuar-pay, lazuar-pay-api, lazuar-pay-merchant, lazuar-pay-checkout)"
         docker buildx bake --load \
           --builder lazuar-builder \
           REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"

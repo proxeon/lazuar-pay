@@ -1212,6 +1212,42 @@ fn org_webhook_test_route(request: &rouille::Request, state: &State, org_id: &st
 }
 
 /// Route pattern for logging (C# `RouteEndpoint.RoutePattern.RawText` analogue).
+fn org_from_url(url: &str) -> &str {
+    let parts: Vec<&str> = url.split('/').filter(|s| !s.is_empty()).collect();
+    match parts.as_slice() {
+        ["v1", "orgs", org, ..] => org,
+        ["v1", "webhooks", _, org, ..] => org,
+        _ => "",
+    }
+}
+
+fn log_request(
+    environment: &str,
+    request_id: &str,
+    method: &str,
+    pattern: &str,
+    status: u16,
+    org: &str,
+    duration_ms: u128,
+) {
+    if environment == "Production" || environment == "Staging" {
+        log::info!(
+            "{}",
+            serde_json::json!({
+                "msg": "http",
+                "request_id": request_id,
+                "method": method,
+                "route": pattern,
+                "status": status,
+                "org": org,
+                "duration_ms": duration_ms,
+            })
+        );
+    } else {
+        log::info!("http {request_id} {method} {pattern} {status} {duration_ms} {org}");
+    }
+}
+
 fn route_pattern(request: &rouille::Request) -> &'static str {
     let url = request.url().to_string();
     let segments: Vec<&str> = url.split('/').filter(|s| !s.is_empty()).collect();
@@ -1348,18 +1384,31 @@ pub fn serve(addr: String, state: Arc<State>) -> ! {
             .push(("X-Request-Id".into(), request_id.clone().into()));
 
         let pattern = route_pattern(request);
-        let org = if pattern.starts_with("/v1/orgs/") || pattern.starts_with("/v1/webhooks/") {
-            request.url().split('/').nth(4).unwrap_or("").to_string()
-        } else {
-            String::new()
-        };
+        let url = request.url();
+        let org = org_from_url(&url);
         let duration_ms = start.elapsed().as_millis();
-        log::info!(
-            "http {} {} {pattern} {status} {duration_ms} {org}",
-            request_id,
+        log_request(
+            &state.config.environment,
+            &request_id,
             request.method(),
-            status = response.status_code,
+            pattern,
+            response.status_code,
+            org,
+            duration_ms,
         );
         response
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::org_from_url;
+
+    #[test]
+    fn org_from_url_picks_orgs_and_webhook_segments() {
+        assert_eq!(org_from_url("/v1/orgs/t1/gateway"), "t1");
+        assert_eq!(org_from_url("/v1/webhooks/stripe/t1"), "t1");
+        assert_eq!(org_from_url("/v1/pay/abc"), "");
+        assert_eq!(org_from_url("/health"), "");
+    }
 }

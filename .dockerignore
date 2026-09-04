@@ -26,7 +26,9 @@
 .env.*
 !**/.env.example
 **/*credentials*
-**/*secret*
+**/*.secret
+**/*secret*.pem
+**/*secret*.key
 
 # Docs, tests, local tooling (not needed in runtime images)
 docs
@@ -43,3 +45,6 @@ apps/lazuar-api/tests
 # Large lock-adjacent / unused for single-app builds can still stay for monorepo
 **/.cache
 **/coverage
+**/target
+plans
+*.db

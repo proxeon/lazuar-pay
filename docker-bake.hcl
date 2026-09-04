@@ -70,6 +70,11 @@ target "lazuar-pay-api" {
   }
 }
 
+# Checklist name for the Rust image. Keep `lazuar-pay` (C#) until Phase 8 + 30 days.
+target "pay-api" {
+  inherits = ["lazuar-pay-api"]
+}
+
 target "lazuar-pay" {
   inherits   = ["_common"]
   context    = "."

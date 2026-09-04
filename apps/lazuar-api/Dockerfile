@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM rust:1-bookworm AS build
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends pkg-config libssl-dev \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY apps/lazuar-api/Cargo.toml apps/lazuar-api/Cargo.toml
 COPY apps/lazuar-api/Cargo.lock apps/lazuar-api/Cargo.lock
@@ -19,6 +22,7 @@ USER pay
 EXPOSE 8081
 ENV LISTEN_ADDR=0.0.0.0:8081
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV RUST_LOG=info
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
   CMD curl -fsS http://127.0.0.1:8081/ready || exit 1
 ENTRYPOINT ["/app/lazuar-api"]

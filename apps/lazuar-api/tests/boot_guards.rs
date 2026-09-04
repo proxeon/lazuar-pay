@@ -107,3 +107,17 @@ fn worker_key_sk_is_rejected_in_any_env() {
     let err = boot::run(&c).unwrap_err();
     assert!(err.0.contains("lzr_sk_"), "{err}");
 }
+
+#[test]
+fn env_example_lists_every_from_env_key() {
+    let example = include_str!("../.env.example");
+    for key in Config::FROM_ENV_KEYS {
+        assert!(example.contains(key), "missing {key}");
+    }
+    assert!(
+        !example
+            .lines()
+            .any(|line| line.trim_start().starts_with("Pay__ConnectionString=")),
+        "do not bind Pay__ConnectionString"
+    );
+}

@@ -1,6 +1,7 @@
 # Greenfield Pay stack. Not Hub (repo-root docker-compose.yml stays museum).
 #   docker compose -f apps/lazuar-pay/docker-compose.pay.yml up -d            # Postgres 5435
 #   docker compose -f apps/lazuar-pay/docker-compose.pay.yml --profile apps up -d --build
+#   docker compose -f apps/lazuar-pay/docker-compose.pay.yml --profile rust up -d --build  # Rust :8095, same pay-db
 #
 # --profile apps is laptop containers (Development, localhost CORS/VITE). Not production.
 # Production CORS and VITE_* must be real HTTPS origins, not laptop :5178/:5179.
@@ -45,7 +46,9 @@ services:
         condition: service_healthy
 
   # Rust port on 8095, same database as C# :8081 (G5 side-by-side).
-  # Single replica — do not scale this service. Schema owner remains C# until cutover.
+  # Single replica — do not `docker compose up --scale pay-api=2`.
+  # In-process limiter / start-fulfill gates / whoami cache (issue 016).
+  # Schema owner remains C# until cutover; this process never migrates.
   pay-api:
     profiles: ["rust"]
     build:
@@ -57,13 +60,25 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       LISTEN_ADDR: 0.0.0.0:8081
+      RUST_LOG: ${RUST_LOG:-info}
       ConnectionStrings__Pay: host=pay-db port=5432 user=postgres password=postgres dbname=lazuar_pay
       One__BaseUrl: ${One__BaseUrl:-http://host.docker.internal:8080/api/v1}
+      One__TimeoutSeconds: ${One__TimeoutSeconds:-5}
+      One__ApiKey: ${One__ApiKey:-}
+      One__WorkerOrgId: ${One__WorkerOrgId:-}
       Pay__CorsOrigins: ${Pay__CorsOrigins:-http://localhost:5178,http://127.0.0.1:5178,http://localhost:5179,http://127.0.0.1:5179}
       Pay__CheckoutBaseUrl: ${Pay__CheckoutBaseUrl:-http://localhost:5179}
-      Pay__PublicBaseUrl: ${Pay__PublicBaseUrl:-http://localhost:8081}
+      Pay__PublicBaseUrl: ${Pay__PublicBaseUrl:-http://localhost:8095}
       Pay__WrapKey: ${Pay__WrapKey:-}
       Pay__OneWebhookSecret: ${Pay__OneWebhookSecret:-}
+      Pay__StripeWebhookSecret: ${Pay__StripeWebhookSecret:-}
+      Pay__TestWebhookSecret: ${Pay__TestWebhookSecret:-}
+      Pay__StartMaxPerMinute: ${Pay__StartMaxPerMinute:-20}
+      Pay__ReservationTtlMinutes: ${Pay__ReservationTtlMinutes:-30}
+      Pay__Solana__Cluster: ${Pay__Solana__Cluster:-devnet}
+      Pay__Solana__RpcUrl: ${Pay__Solana__RpcUrl:-}
+    deploy:
+      replicas: 1
     depends_on:
       pay-db:
         condition: service_healthy

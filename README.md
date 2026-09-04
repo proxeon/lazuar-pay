@@ -89,12 +89,13 @@ task pay:checkout     # :5179
 
 TypeSpec: [`packages/pay-spec`](packages/pay-spec/) (`task pay:spec`). Generated TS: `packages/pay-types-ts`.
 
-Pay images: `docker-compose.pay.yml`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS.
+Pay images: `docker-compose.pay.yml`. `--profile rust` runs the Rust port on :8095 beside C# :8081 against the same `pay-db` (single replica). Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS.
 
 ## Layout
 
 ```
 apps/lazuar-pay/              focused host (.NET, :8081)
+apps/lazuar-api/              sync Rust port (:8095 until cutover)
 apps/lazuar-pay-merchant/     staff SPA (:5178)
 apps/lazuar-pay-checkout/     buyer page (:5179)
 examples/pay-node/            integrator sample (:3021)

@@ -37,6 +37,28 @@ fn env_opt(key: &str) -> Option<String> {
 }
 
 impl Config {
+    /// Every env key `from_env` reads. `.env.example` must list each one.
+    pub const FROM_ENV_KEYS: &'static [&'static str] = &[
+        "Pay__StripeWebhookSecret",
+        "Pay__TestWebhookSecret",
+        "Pay__OneWebhookSecret",
+        "Pay__PublicBaseUrl",
+        "Pay__CheckoutBaseUrl",
+        "Pay__StartMaxPerMinute",
+        "Pay__Solana__RpcUrl",
+        "Pay__Solana__Cluster",
+        "One__ApiKey",
+        "One__WorkerOrgId",
+        "One__BaseUrl",
+        "One__TimeoutSeconds",
+        "Pay__ReservationTtlMinutes",
+        "Pay__CorsOrigins",
+        "ASPNETCORE_ENVIRONMENT",
+        "ConnectionStrings__Pay",
+        "Pay__WrapKey",
+        "LISTEN_ADDR",
+    ];
+
     /// Defaults mirror the reference test factory so a bare `cargo test` needs no env.
     pub fn from_env() -> Self {
         Self {
