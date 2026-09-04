@@ -28,7 +28,8 @@ impl HostedRail for VaultedRail<'_> {
         let mut conn = self.pool.get().map_err(|e| StartRailError::Rejected(e.to_string()))?;
         let row = conn
             .query_opt(
-                "SELECT \"Provider\",\"Amount\",\"Currency\",\"SuccessUrl\",\"CancelUrl\" \
+                "SELECT \"Provider\",\"Amount\",\"Currency\",\"SuccessUrl\",\"CancelUrl\",\
+                 \"PayerEmail\",\"PayerName\" \
                  FROM public.checkouts WHERE \"Id\" = $1",
                 &[&checkout_id],
             )
@@ -37,6 +38,8 @@ impl HostedRail for VaultedRail<'_> {
         let provider: String = row.get("Provider");
         let amount: rust_decimal::Decimal = row.get("Amount");
         let currency: String = row.get("Currency");
+        let payer_email: Option<String> = row.get("PayerEmail");
+        let payer_name: Option<String> = row.get("PayerName");
         let Some(name) = providers::try_normalize(Some(&provider)) else {
             return Err(StartRailError::Rejected("unknown provider".into()));
         };
@@ -85,7 +88,22 @@ impl HostedRail for VaultedRail<'_> {
                     &success,
                 )
             }
-            p if p == providers::CHIP => mint_chip(self.transport, &secret, checkout_id, &currency, minor, &success, &cancel),
+            p if p == providers::CHIP => {
+                let brand: Option<String> = cred.get("PublicMerchantId");
+                mint_chip(
+                    self.transport,
+                    &secret,
+                    checkout_id,
+                    org_id,
+                    brand.as_deref(),
+                    payer_email.as_deref(),
+                    payer_name.as_deref(),
+                    &currency,
+                    minor,
+                    &success,
+                    &cancel,
+                )
+            }
             p if p == providers::XENDIT => mint_xendit(self.transport, &secret, checkout_id, &currency, minor, &success),
             p if p == providers::RAZORPAY => mint_razorpay(self.transport, &secret, checkout_id, &currency, minor, &success, &cancel),
             _ => Err(StartRailError::Rejected("rail not configured".into())),
@@ -189,18 +207,33 @@ fn mint_chip(
     transport: &dyn Transport,
     secret: &str,
     checkout_id: &str,
+    org_id: &str,
+    brand_id: Option<&str>,
+    payer_email: Option<&str>,
+    payer_name: Option<&str>,
     currency: &str,
     minor: i64,
     success: &str,
     cancel: &str,
 ) -> Result<HostedSession, StartRailError> {
+    let Some(brand_id) = brand_id.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Err(StartRailError::Rejected("rail not configured".into()));
+    };
+    if !crate::publicpay::buyer_email::is_usable(payer_email) {
+        return Err(StartRailError::BadRequest("email is required".into()));
+    }
+    let email = payer_email.map(str::trim).unwrap_or("");
+    let full_name = crate::publicpay::buyer_email::name_from(payer_email, payer_name);
     let body = json!({
+        "brand_id": brand_id,
         "success_redirect": success,
         "failure_redirect": cancel,
-        "client": { "email": "payer@example.com" },
+        "cancel_redirect": cancel,
+        "client": { "email": email, "full_name": full_name },
         "purchase": {
             "currency": currency,
             "products": [{ "name": "Pay", "price": minor }],
+            "metadata": { "checkout_id": checkout_id, "org_id": org_id },
         },
         "reference": checkout_id,
     });
@@ -381,7 +414,20 @@ mod tests {
         assert!(xendit.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
 
         let chip = Capture::new(r#"{"id":"p1","checkout_url":"https://chip.test/c"}"#);
-        mint_chip(&chip, "chip_sk", "co_1", "MYR", 990, "https://ok", "https://cancel").unwrap();
+        mint_chip(
+            &chip,
+            "chip_sk",
+            "co_1",
+            "org_1",
+            Some("brand_1"),
+            Some("ada@acme.test"),
+            Some("Ada"),
+            "MYR",
+            990,
+            "https://ok",
+            "https://cancel",
+        )
+        .unwrap();
         assert!(chip.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
 
         let billplz = Capture::new(r#"{"id":"b1","url":"https://billplz.test/b"}"#);
@@ -402,5 +448,51 @@ mod tests {
         mint_razorpay(&razorpay, "rzp_id:rzp_sec", "co_1", "INR", 990, "https://ok", "https://cancel")
             .unwrap();
         assert!(razorpay.has_header("X-Razorpay-Idempotency", "lazuar-checkout:co_1"));
+    }
+
+    #[test]
+    fn chip_mint_sends_payer_email_and_checkout_metadata() {
+        let cap = Capture::new(r#"{"id":"p1","checkout_url":"https://chip.test/c"}"#);
+        mint_chip(
+            &cap,
+            "chip_sk",
+            "co_1",
+            "org_1",
+            Some("brand_1"),
+            Some("ada@acme.test"),
+            Some("Ada"),
+            "MYR",
+            990,
+            "https://ok",
+            "https://cancel",
+        )
+        .unwrap();
+        let v: serde_json::Value = serde_json::from_str(cap.last().body.as_deref().unwrap()).unwrap();
+        assert_eq!(v["client"]["email"], "ada@acme.test");
+        assert_eq!(v["client"]["full_name"], "Ada");
+        assert_eq!(v["brand_id"], "brand_1");
+        assert_eq!(v["purchase"]["metadata"]["checkout_id"], "co_1");
+        assert_eq!(v["purchase"]["metadata"]["org_id"], "org_1");
+        assert_ne!(v["client"]["email"], "payer@example.com");
+    }
+
+    #[test]
+    fn chip_mint_rejects_placeholder_email() {
+        let cap = Capture::new(r#"{"id":"p1","checkout_url":"https://chip.test/c"}"#);
+        let err = mint_chip(
+            &cap,
+            "chip_sk",
+            "co_1",
+            "org_1",
+            Some("brand_1"),
+            Some("customer@example.com"),
+            None,
+            "MYR",
+            990,
+            "https://ok",
+            "https://cancel",
+        )
+        .unwrap_err();
+        assert!(matches!(err, StartRailError::BadRequest(m) if m == "email is required"));
     }
 }
