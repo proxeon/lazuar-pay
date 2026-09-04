@@ -206,6 +206,7 @@ export function CheckoutsPage() {
           currency,
           provider,
           product_id: productId,
+          label: productName.trim() || undefined,
           max_payers: capacity === 'one' ? 1 : capacity === 'limited' ? limited : undefined,
           unlimited: capacity === 'unlimited',
         }),

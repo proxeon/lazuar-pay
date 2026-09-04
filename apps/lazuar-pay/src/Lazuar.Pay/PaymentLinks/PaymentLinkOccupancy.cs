@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +15,7 @@ internal static class PaymentLinkOccupancy
 {
     public const int DefaultReservationTtlMinutes = 30;
 
-    static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.Ordinal);
+    static readonly KeyedGates Gates = new();
 
     public static bool CountsTowardCapacity(string status) =>
         status is "open" or "paid";
@@ -49,19 +49,8 @@ internal static class PaymentLinkOccupancy
         return TimeSpan.FromMinutes(Math.Max(1, minutes));
     }
 
-    public static async Task<T> SerializeAsync<T>(string linkId, Func<Task<T>> work, CancellationToken ct)
-    {
-        var gate = Gates.GetOrAdd(linkId, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return await work().ConfigureAwait(false);
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
+    public static Task<T> SerializeAsync<T>(string linkId, Func<Task<T>> work, CancellationToken ct) =>
+        Gates.RunAsync(linkId, work, ct);
 
     public static async Task LockParentAsync(PayDbContext db, string linkId, CancellationToken ct)
     {

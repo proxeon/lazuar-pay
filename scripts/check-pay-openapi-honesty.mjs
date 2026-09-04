@@ -137,6 +137,73 @@ function schemaBlock(text, name) {
   return next < 0 ? rest : rest.slice(0, next);
 }
 
+function pascalToSnake(name) {
+  return name
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
+}
+
+function csharpPublicProperties(filePath) {
+  const text = fs.readFileSync(filePath, "utf8");
+  const names = [];
+  const re = /public\s+(?:required\s+)?[\w.?<>]+\s+(\w+)\s*\{\s*get;/g;
+  let m;
+  while ((m = re.exec(text)) !== null) names.push(m[1]);
+  return names;
+}
+
+function openApiSchemaProperties(yamlText, schemaName) {
+  const block = schemaBlock(yamlText, schemaName);
+  if (!block) return null;
+  const names = new Set();
+  for (const line of block.split(/\n/)) {
+    const m = line.match(/^        ([a-z][a-z0-9_]*):\s*$/);
+    if (m) names.add(m[1]);
+  }
+  return names;
+}
+
+/** TypeSpec schema name → C# DTO file (relative to apps/lazuar-pay/src). */
+const DTO_MAP = [
+  ["CreateCheckoutRequest", "Lazuar.Pay/Checkouts/CreateCheckoutRequest.cs"],
+  ["CreatePaymentLinkRequest", "Lazuar.Pay/PaymentLinks/CreatePaymentLinkRequest.cs"],
+  ["CreateProductRequest", "Lazuar.Pay/Catalog/CatalogEndpoints.cs"],
+  ["StartPayRequest", "Lazuar.Pay/PublicPay/PublicPayEndpoints.cs"],
+  ["ConfirmPayRequest", "Lazuar.Pay/PublicPay/PublicPayEndpoints.cs"],
+  ["CreateRefundRequest", "Lazuar.Pay/Money/RefundEndpoints.cs"],
+  ["PaymentLink", "Lazuar.Pay/PaymentLinks/PaymentLinkEndpoints.cs"],
+  ["WhoamiResponse", "Lazuar.Pay/Identity/WhoamiResponse.cs"],
+];
+
+const csharpRoot = path.join(ROOT, "apps/lazuar-pay/src");
+for (const [schema, rel] of DTO_MAP) {
+  const specProps = openApiSchemaProperties(yaml, schema);
+  if (!specProps) {
+    errors.push(`OpenAPI missing schema ${schema}`);
+    continue;
+  }
+  const csPath = path.join(csharpRoot, rel);
+  if (!fs.existsSync(csPath)) {
+    errors.push(`C# DTO missing for ${schema}: ${rel}`);
+    continue;
+  }
+  const csProps = csharpPublicProperties(csPath)
+    .filter((n) => {
+      if (schema === "PaymentLink") return ["Id", "OrgId", "Provider", "Amount", "Currency", "Status", "PublicToken", "PayUrl", "CreatedAt", "MaxPayers", "Unlimited", "PaidCount", "TakenCount", "Remaining", "Label"].includes(n);
+      if (schema === "WhoamiResponse") return ["UserId", "Email", "Name", "IsPlatformAdmin", "ActiveOrgId", "Tenants"].includes(n);
+      if (schema === "StartPayRequest") return ["Name", "Email", "SlotKey"].includes(n);
+      if (schema === "ConfirmPayRequest") return ["Signature"].includes(n);
+      if (schema === "CreateProductRequest") return ["Name", "Description", "Amount", "Currency", "Interval"].includes(n);
+      return true;
+    })
+    .map(pascalToSnake);
+  const missing = csProps.filter((p) => !specProps.has(p));
+  if (missing.length) {
+    errors.push(`OpenAPI ${schema} missing C# fields: ${missing.join(", ")}`);
+  }
+}
+
 const fieldChecks = [
   [schemaBlock(yaml, "CreateCheckoutRequest")?.includes("        provider:"), "CreateCheckoutRequest.provider"],
   [schemaBlock(yaml, "StartPayRequest")?.includes("        slot_key:"), "StartPayRequest.slot_key"],

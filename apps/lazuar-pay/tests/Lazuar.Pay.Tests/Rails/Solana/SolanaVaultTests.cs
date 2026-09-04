@@ -12,8 +12,17 @@ public class SolanaVaultTests
 {
     public static string SampleAddress()
     {
-        var bytes = RandomNumberGenerator.GetBytes(32);
-        return SolanaBase58.Encode(bytes);
+        for (var i = 0; i < 64; i++)
+        {
+            var bytes = RandomNumberGenerator.GetBytes(32);
+            var encoded = SolanaBase58.Encode(bytes);
+            if (SolanaAddress.TryNormalize(encoded, out var address))
+            {
+                return address;
+            }
+        }
+
+        throw new InvalidOperationException("could not sample an on-curve Solana address");
     }
 
     [Test]
@@ -21,6 +30,16 @@ public class SolanaVaultTests
     {
         Assert.That(SolanaAddress.LooksLikeSecret("-----BEGIN PRIVATE KEY-----"), Is.True);
         Assert.That(SolanaAddress.LooksLikeSecret("VendorENDWalletNotAPem"), Is.False);
+    }
+
+    [Test]
+    public void TryNormalize_rejects_off_curve_points()
+    {
+        var off = new byte[32];
+        Array.Fill(off, (byte)2);
+        Assert.That(SolanaAddress.IsOnEd25519(off), Is.False);
+        Assert.That(SolanaAddress.TryNormalize(SolanaBase58.Encode(off), out _), Is.False);
+        Assert.That(SolanaAddress.TryNormalize(SampleAddress(), out _), Is.True);
     }
 
     [Test]

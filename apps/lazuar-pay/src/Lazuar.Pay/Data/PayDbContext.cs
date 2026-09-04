@@ -177,7 +177,7 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         {
             e.ToTable("org_webhook_deliveries");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => x.EventId).IsUnique();
+            e.HasIndex(x => new { x.OrgId, x.EventId }).IsUnique();
             e.HasIndex(x => new { x.Status, x.NextAttemptAt });
         });
     }

@@ -130,6 +130,7 @@ internal static class PaymentLinkEndpoints
             Amount = quoted,
             Currency = currency,
             MaxPayers = maxPayers,
+            Label = TrimLabel(body.Label),
             CreatedAt = DateTimeOffset.UtcNow
         };
         db.PaymentLinks.Add(row);
@@ -213,7 +214,8 @@ internal static class PaymentLinkEndpoints
             {
                 var taken = takenBy.GetValueOrDefault(r.Id);
                 var paid = paidBy.GetValueOrDefault(r.Id);
-                return Map(r, taken, paid, config, env, r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null);
+                var productName = r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null;
+                return Map(r, taken, paid, config, env, productName);
             }),
             next_cursor = next
         }, OneClient.Json);
@@ -243,8 +245,19 @@ internal static class PaymentLinkEndpoints
             PaidCount = paid,
             TakenCount = taken,
             Remaining = PaymentLinkOccupancy.RemainingUnclamped(row.MaxPayers, taken),
-            Label = label
+            Label = !string.IsNullOrWhiteSpace(row.Label) ? row.Label : label
         };
+    }
+
+    static string? TrimLabel(string? raw)
+    {
+        var t = raw?.Trim();
+        if (string.IsNullOrWhiteSpace(t))
+        {
+            return null;
+        }
+
+        return t.Length > 80 ? t[..80] : t;
     }
 }
 

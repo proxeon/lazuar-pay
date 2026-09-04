@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Hosting;
 using Lazuar.Pay.PaymentLinks;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Webhooks.Outbound;
@@ -23,21 +23,10 @@ public sealed record FulfillOutcome(bool Fulfilled, string? PendingLateRefundId 
 
 public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 {
-    static readonly ConcurrentDictionary<string, SemaphoreSlim> CheckoutGates = new(StringComparer.Ordinal);
+    static readonly KeyedGates CheckoutGates = new();
 
-    public async Task<FulfillOutcome> FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
-    {
-        var gate = CheckoutGates.GetOrAdd(checkoutId, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
-        try
-        {
-            return await FulfillPaidCoreAsync(checkoutId, provider, providerRef, ct);
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
+    public Task<FulfillOutcome> FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct) =>
+        CheckoutGates.RunAsync(checkoutId, () => FulfillPaidCoreAsync(checkoutId, provider, providerRef, ct), ct);
 
     async Task<FulfillOutcome> FulfillPaidCoreAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {

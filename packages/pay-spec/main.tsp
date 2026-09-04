@@ -226,6 +226,7 @@ model CreatePaymentLinkRequest {
   currency?: string;
   max_payers?: int32;
   unlimited?: boolean;
+  label?: string;
 }
 
 model PaymentLink {

@@ -35,6 +35,34 @@ public class PaymentLinkTests
     }
 
     [Test]
+    public async Task Create_stores_label_for_solana_without_product()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        using var create = JsonPost("/v1/payment-links",
+            """{"org_id":"t1","amount":10,"provider":"solana","currency":"USDC","label":"Membership Sep"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+        using var created = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(created.RootElement.GetProperty("label").GetString(), Is.EqualTo("Membership Sep"));
+
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/payment-links");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var listed = await client.SendAsync(list);
+        using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
+        Assert.That(PayTest.Items(doc.RootElement)[0].GetProperty("label").GetString(), Is.EqualTo("Membership Sep"));
+    }
+
+    [Test]
     public async Task Create_unlimited_has_null_max()
     {
         await using var factory = new PayApiFactory();

@@ -48,6 +48,7 @@ public sealed class PaymentLinkRow
     public required string Currency { get; set; }
     /// <summary>Null means unlimited payers. 1 is one person. N is a cap.</summary>
     public int? MaxPayers { get; set; }
+    public string? Label { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 

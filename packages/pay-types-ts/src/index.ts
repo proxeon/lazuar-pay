@@ -501,6 +501,7 @@ export interface components {
             /** Format: int32 */
             max_payers?: number;
             unlimited?: boolean;
+            label?: string;
         };
         CreateProductRequest: {
             name: string;

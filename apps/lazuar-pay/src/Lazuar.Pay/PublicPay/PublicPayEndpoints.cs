@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
@@ -26,7 +25,7 @@ internal static class PublicPayEndpoints
     // session — on Solana the tab holding the overwritten QR could pay on-chain into a
     // reference nobody would ever confirm. The mint is now serialized per checkout, and the
     // persist itself is a conditional update so a second replica cannot win either.
-    static readonly ConcurrentDictionary<string, SemaphoreSlim> StartGates = new(StringComparer.Ordinal);
+    static readonly KeyedGates StartGates = new();
 
     public static void MapPublicPay(this WebApplication app)
     {
@@ -204,9 +203,7 @@ internal static class PublicPayEndpoints
             }
         }
 
-        var gate = StartGates.GetOrAdd(row.Id, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
-        try
+        return await StartGates.RunAsync(row.Id, async () =>
         {
             // The row was loaded before this request acquired the gate — a concurrent start
             // that minted while we waited may have persisted its session since. Reload under
@@ -330,11 +327,7 @@ internal static class PublicPayEndpoints
                 await ExpireFailedReservation(db, row, remote, ct);
                 return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
             }
-        }
-        finally
-        {
-            gate.Release();
-        }
+        }, ct);
     }
 
     static async Task<IResult> Confirm(

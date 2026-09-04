@@ -10,4 +10,5 @@ public sealed class CreatePaymentLinkRequest
     /// <summary>1 is one person. N is a cap. Ignored when Unlimited is true. Default 1.</summary>
     public int? MaxPayers { get; set; }
     public bool Unlimited { get; set; }
+    public string? Label { get; set; }
 }
