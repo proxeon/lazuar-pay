@@ -19,8 +19,11 @@ pub fn checkout_view(
     slot_key: Option<&str>,
     solana_cluster: &str,
 ) -> Value {
-    let psp = session.pay_url.clone().unwrap_or_default();
-    let on_page = providers::is_on_page_url(Some(&psp));
+    let psp = session.psp_redirect_url.clone().unwrap_or_default();
+    let started = !psp.trim().is_empty();
+    let live = started && session.status == "open";
+    let live_url = if live { session.psp_redirect_url.clone() } else { None };
+    let on_page = providers::is_on_page_url(live_url.as_deref());
     let mine = match (slot_key, session.slot_key.as_deref()) {
         (Some(a), Some(b)) => a == b,
         _ => slot_key.is_none(),
@@ -32,11 +35,11 @@ pub fn checkout_view(
         "status": session.status,
         "email_required": session.provider.as_deref().is_some_and(providers::requires_email)
             && session.payer_email.as_deref().is_none_or(|e| !buyer_email::is_usable(Some(e))),
-        "started": session.pay_url.as_deref().is_some_and(|u| !u.is_empty()),
+        "started": started,
         "mine": mine,
         "provider": session.provider,
-        "redirect_url": if on_page { Value::Null } else { json!(session.pay_url) },
-        "solana_pay_url": if on_page { json!(psp) } else { Value::Null },
+        "redirect_url": if on_page { Value::Null } else { json!(live_url) },
+        "solana_pay_url": if on_page { json!(live_url) } else { Value::Null },
         "solana_cluster": if session.provider.as_deref().is_some_and(providers::is_solana) {
             json!(solana_cluster)
         } else {

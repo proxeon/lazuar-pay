@@ -24,6 +24,8 @@ pub struct CheckoutSession {
     pub status: String,
     pub public_token: String,
     pub pay_url: Option<String>,
+    /// Hosted PSP URL (`PspRedirectUrl`). Not the checkout-page `pay_url`.
+    pub psp_redirect_url: Option<String>,
     pub interval: Option<String>,
     pub success_url: Option<String>,
     pub cancel_url: Option<String>,
@@ -64,7 +66,7 @@ pub enum CreateError {
 const SELECT_COLUMNS: &str = "\
     SELECT \"Id\",\"OrgId\",\"Provider\",\"ProductId\",\"PaymentLinkId\",\"SlotKey\",\
     \"PublicToken\",\"Amount\",\"Currency\",\"Status\",\"Interval\",\"SuccessUrl\",\
-    \"CancelUrl\",\"PayerName\",\"PayerEmail\",\"CreatedAt\" FROM public.checkouts";
+    \"CancelUrl\",\"PayerName\",\"PayerEmail\",\"PspRedirectUrl\",\"CreatedAt\" FROM public.checkouts";
 
 fn map_row(row: &postgres::Row) -> CheckoutSession {
     CheckoutSession {
@@ -84,6 +86,7 @@ fn map_row(row: &postgres::Row) -> CheckoutSession {
         payer_name: row.get("PayerName"),
         payer_email: row.get("PayerEmail"),
         pay_url: None,
+        psp_redirect_url: row.get("PspRedirectUrl"),
         created_at: row.get("CreatedAt"),
     }
 }
