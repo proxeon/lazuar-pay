@@ -39,17 +39,19 @@ pub trait Transport: Send + Sync {
 /// a 500-after-send is the ambiguous-outcome case (issues/001) that must reach them.
 pub struct UreqTransport {
     pub timeout_secs: u64,
+    /// ureq default is 5. C# solana + pay-webhooks set AllowAutoRedirect = false.
+    redirects: u32,
 }
 
 impl UreqTransport {
     pub fn new(timeout_secs: u64) -> Self {
-        Self { timeout_secs }
+        Self { timeout_secs, redirects: 5 }
     }
 
     /// Sync transport that never follows redirects — the C# solana and
     /// pay-webhooks clients set `AllowAutoRedirect = false`.
     pub fn new_no_redirects(timeout_secs: u64) -> Self {
-        Self { timeout_secs }
+        Self { timeout_secs, redirects: 0 }
     }
 }
 
@@ -57,6 +59,7 @@ impl Transport for UreqTransport {
     fn send(&self, request: OutRequest) -> Result<OutResponse, TransportError> {
         let agent = ureq::AgentBuilder::new()
             .timeout(std::time::Duration::from_secs(self.timeout_secs))
+            .redirects(self.redirects)
             .build();
 
         let mut req = agent.request(&request.method, &request.url);
@@ -85,5 +88,14 @@ impl Transport for UreqTransport {
                 _ => Err(TransportError::Transport(t.to_string())),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn new_no_redirects_disables_follow() {
+        assert_eq!(super::UreqTransport::new_no_redirects(10).redirects, 0);
+        assert_eq!(super::UreqTransport::new(10).redirects, 5);
     }
 }
