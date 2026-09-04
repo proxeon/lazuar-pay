@@ -70,7 +70,7 @@ fn whoami_rejects_wrong_key_family_before_touching_one() {
 fn member_gate_human_member_allowed_via_authz_check() {
     let (client, one) = one();
     one.respond_with(|_| lazuar_api::transport::OutResponse { status: 200, body: r#"{"allowed":true}"#.into() });
-    require_member(&client, one.as_ref(), Some("Bearer jwt_1"), None, "org_1")
+    require_member(&client, one.as_ref(), None, Some("Bearer jwt_1"), None, "org_1")
         .expect("member allowed");
     assert_eq!(one.send_count(), 1, "authz check called");
     let last = one.last().expect("recorded authz check");
@@ -86,7 +86,7 @@ fn member_gate_human_member_allowed_via_authz_check() {
 fn member_gate_non_member_forbidden() {
     let (client, one) = one();
     one.respond_with(|_| lazuar_api::transport::OutResponse { status: 200, body: r#"{"allowed":false}"#.into() });
-    let err = require_member(&client, one.as_ref(), Some("Bearer jwt_1"), None, "org_1")
+    let err = require_member(&client, one.as_ref(), None, Some("Bearer jwt_1"), None, "org_1")
         .expect_err("non-member denied");
     assert_eq!(err.status, 403);
 }
@@ -102,7 +102,7 @@ fn writer_requires_owner_or_admin_role() {
             lazuar_api::transport::OutResponse { status: 200, body: me_json(r#"{"id":"org_1","role":"member","status":"active"}"#) }
         }
     });
-    let err = require_writer(&client, one.as_ref(), Some("Bearer jwt_1"), None, "org_1")
+    let err = require_writer(&client, one.as_ref(), None, Some("Bearer jwt_1"), None, "org_1")
         .expect_err("member role must not write")
         ;
     assert!(err.detail.contains("Writer role required"));
@@ -115,14 +115,14 @@ fn machine_key_checks_tenant_binding_and_active_status() {
     one.respond_with(|_| {
         lazuar_api::transport::OutResponse { status: 200, body: me_json(r#"{"id":"org_1","role":"admin","status":"active"}"#) }
     });
-    require_member(&client, one.as_ref(), Some("Bearer lzr_sk_machine"), None, "org_1")
+    require_member(&client, one.as_ref(), None, Some("Bearer lzr_sk_machine"), None, "org_1")
         .expect("bound machine key allowed");
 
     // Bound but suspended → forbidden.
     one.respond_with(|_| {
         lazuar_api::transport::OutResponse { status: 200, body: me_json(r#"{"id":"org_1","role":"admin","status":"suspended"}"#) }
     });
-    let err = require_member(&client, one.as_ref(), Some("Bearer lzr_sk_machine"), None, "org_1")
+    let err = require_member(&client, one.as_ref(), None, Some("Bearer lzr_sk_machine"), None, "org_1")
         .expect_err("suspended tenant denied");
     assert!(err.detail.contains("suspended"));
 }
@@ -131,7 +131,7 @@ fn machine_key_checks_tenant_binding_and_active_status() {
 fn one_unreachable_surfaces_503() {
     let (client, one) = one();
     one.respond_with(|_| lazuar_api::transport::OutResponse { status: 503, body: "down".into() });
-    let err = require_member(&client, one.as_ref(), Some("Bearer jwt_1"), None, "org_1")
+    let err = require_member(&client, one.as_ref(), None, Some("Bearer jwt_1"), None, "org_1")
         .expect_err("upstream 503 must surface");
     assert_eq!(err.status, 503);
 }
@@ -139,7 +139,7 @@ fn one_unreachable_surfaces_503() {
 #[test]
 fn missing_bearer_is_401() {
     let (client, one) = one();
-    let err = require_member(&client, one.as_ref(), None, None, "org_1")
+    let err = require_member(&client, one.as_ref(), None, None, None, "org_1")
         .expect_err("missing bearer denied");
     assert_eq!(err.status, 401);
     assert_eq!(one.send_count(), 0);

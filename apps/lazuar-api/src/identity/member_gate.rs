@@ -3,6 +3,8 @@
 use crate::hosting::PayError;
 use crate::identity::bearer;
 use crate::identity::one_client::OneClient;
+use crate::identity::whoami::{whoami, WhoamiOutcome};
+use crate::identity::whoami_cache::OneWhoamiCache;
 
 fn forbidden_detail(detail: Option<&str>) -> Option<String> {
     detail
@@ -14,35 +16,24 @@ fn forbidden_detail(detail: Option<&str>) -> Option<String> {
 }
 
 /// Machine-key path: whoami tenants must contain the org, active.
+/// Uses the same whoami cache as GET /v1/whoami so `api_key.revoked` can drop it.
 fn key_bound(
     one: &OneClient,
     transport: &dyn crate::transport::Transport,
+    cache: Option<&OneWhoamiCache>,
     authorization: &str,
     org_id: &str,
     tenant_hint: Option<&str>,
 ) -> Result<(), PayError> {
-    let who = match one.get_whoami(transport, authorization, tenant_hint) {
-        Ok(me) => me,
-        Err(call) => {
-            if call.timed_out || call.transport_failed {
-                return Err(PayError::unavailable("Identity provider unreachable"));
-            }
-            return Err(match call.status_code {
-                401 => PayError::unauthorized("Identity provider rejected the token"),
-                403 => PayError::forbidden(
-                    forbidden_detail(call.detail.as_deref()).unwrap_or_else(|| "Not a member of this org".to_string()),
-                ),
-                400 => PayError::bad_request(call.detail.unwrap_or_else(|| "Identity provider rejected the request".into())),
-                429 => PayError::new(429, "Too Many Requests", "Identity provider rate limited"),
-                _ => PayError::unavailable("Identity provider failed"),
-            });
-        }
+    let who = match whoami(one, transport, cache, Some(authorization), tenant_hint) {
+        WhoamiOutcome::Ok(resp) => resp,
+        WhoamiOutcome::Error(err) => return Err(err),
     };
 
     if who.tenants.is_empty() {
         return Err(PayError::forbidden("Not a member of this org"));
     }
-    let tenant = who.tenants.iter().find(|t| t.id.as_deref() == Some(org_id));
+    let tenant = who.tenants.iter().find(|t| t.id == org_id);
     let Some(tenant) = tenant else {
         return Err(PayError::forbidden("Not a member of this org"));
     };
@@ -58,6 +49,7 @@ fn key_bound(
 pub fn require_member(
     one: &OneClient,
     transport: &dyn crate::transport::Transport,
+    cache: Option<&OneWhoamiCache>,
     auth_header: Option<&str>,
     tenant_hint: Option<&str>,
     org_id: &str,
@@ -73,7 +65,7 @@ pub fn require_member(
     }
 
     if bearer::is_machine_key(&authorization) {
-        key_bound(one, transport, &authorization, org_id, tenant_hint)?;
+        key_bound(one, transport, cache, &authorization, org_id, tenant_hint)?;
         return Ok(());
     }
 
@@ -106,17 +98,18 @@ pub fn require_member(
 pub fn require_writer(
     one: &OneClient,
     transport: &dyn crate::transport::Transport,
+    cache: Option<&OneWhoamiCache>,
     auth_header: Option<&str>,
     tenant_hint: Option<&str>,
     org_id: &str,
 ) -> Result<(), PayError> {
     if let Some(authorization) = bearer::try_get(auth_header) {
         if bearer::is_machine_key(&authorization) {
-            return require_member(one, transport, auth_header, tenant_hint, org_id);
+            return require_member(one, transport, cache, auth_header, tenant_hint, org_id);
         }
     }
 
-    require_member(one, transport, auth_header, tenant_hint, org_id)?;
+    require_member(one, transport, cache, auth_header, tenant_hint, org_id)?;
 
     let Some(authorization) = bearer::try_get(auth_header) else {
         return Err(PayError::unauthorized("Missing bearer token"));

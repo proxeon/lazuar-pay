@@ -98,6 +98,7 @@ pub enum StartOutcome {
     Paused,
     EmailRequired,
     SlotKeyRequired,
+    LinkFull,
     RailNotConfigured,
     Rejected(String),
     BadRequest(String),
@@ -462,6 +463,18 @@ fn mint_or_resume(
                 Ok(Ok(id))
             }
             None => {
+                let taken = tx
+                    .query(
+                        "SELECT \"Status\" FROM public.checkouts WHERE \"PaymentLinkId\" = $1",
+                        &[&link.id],
+                    )?
+                    .iter()
+                    .filter(|row| occupancy::counts_toward_capacity(&row.get::<_, String>(0)))
+                    .count() as i64;
+                if occupancy::is_full(link.max_payers, taken) {
+                    tx.commit()?;
+                    return Ok(Err(StartOutcome::LinkFull));
+                }
                 let token = uuid::Uuid::new_v4().simple().to_string();
                 tx.execute(
                     "INSERT INTO public.checkouts \

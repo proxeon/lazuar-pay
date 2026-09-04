@@ -250,7 +250,7 @@ fn list_omits_payment_link_children() {
     let app = TestApp::spawn();
     allow_org(&app, "t1");
     seed_checkout(&app, "test", None);
-    let (token, _) = seed_payment_link(&app, "test", 1);
+    let (token, _) = seed_payment_link(&app, "test", Some(1));
     let started = start_pay(&app, &token, r#"{"name":"Ada","slot_key":"slot-child-1"}"#);
     assert_eq!(started.status(), 200, "{}", started.into_string().unwrap_or_default());
     let resp = auth_get(&app, "/v1/orgs/t1/checkouts");

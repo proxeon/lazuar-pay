@@ -490,14 +490,16 @@ pub fn seed_checkout(app: &TestApp, provider: &str, currency: Option<&str>) -> (
 }
 
 /// C# `PayTest.SeedPaymentLink`.
-pub fn seed_payment_link(app: &TestApp, provider: &str, max_payers: i32) -> (String, String) {
-    let body = serde_json::json!({
+pub fn seed_payment_link(app: &TestApp, provider: &str, max_payers: Option<i32>) -> (String, String) {
+    let mut body = serde_json::json!({
         "org_id": "t1",
         "amount": 10,
         "provider": provider,
-        "max_payers": max_payers,
-        "unlimited": false,
+        "unlimited": max_payers.is_none(),
     });
+    if let Some(max) = max_payers {
+        body["max_payers"] = serde_json::json!(max);
+    }
     let resp = auth_post(app, "/v1/payment-links", &body.to_string());
     let status = resp.status();
     let raw = resp.into_string().unwrap_or_default();

@@ -26,6 +26,10 @@ pub enum CreateLinkOutcome {
     Created {
         id: String,
         public_token: String,
+        provider: String,
+        amount: Decimal,
+        currency: String,
+        max_payers: Option<i32>,
     },
     Paused,
     AmountRequired,
@@ -168,5 +172,12 @@ pub fn create_link(
         ],
     )?;
 
-    Ok(CreateLinkOutcome::Created { id, public_token })
+    Ok(CreateLinkOutcome::Created {
+        id,
+        public_token,
+        provider: provider.to_string(),
+        amount,
+        currency,
+        max_payers,
+    })
 }

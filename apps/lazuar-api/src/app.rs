@@ -303,6 +303,7 @@ fn refund_create_route(
     if let Err(err) = crate::identity::member_gate::require_writer(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         auth.as_deref(),
         hint.as_deref(),
         org_id,
@@ -425,6 +426,7 @@ fn refund_list_route(request: &rouille::Request, state: &State, org_id: &str) ->
     if let Err(err) = crate::identity::member_gate::require_member(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         auth.as_deref(),
         hint.as_deref(),
         org_id,
@@ -463,6 +465,7 @@ fn link_create_route(request: &rouille::Request, state: &State) -> rouille::Resp
     if let Err(err) = crate::identity::member_gate::require_writer(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         auth.as_deref(),
         hint.as_deref(),
         org_id,
@@ -480,13 +483,30 @@ fn link_create_route(request: &rouille::Request, state: &State) -> rouille::Resp
         unlimited: parsed.get("unlimited").and_then(serde_json::Value::as_bool).unwrap_or(false),
     };
     match crate::links::create::create_link(&mut conn, &state.config.environment, &input) {
-        Ok(crate::links::create::CreateLinkOutcome::Created { id, public_token }) => {
+        Ok(crate::links::create::CreateLinkOutcome::Created {
+            id,
+            public_token,
+            provider,
+            amount,
+            currency,
+            max_payers,
+        }) => {
             let checkout_base = &state.config.checkout_base_url;
+            let remaining = crate::publicpay::occupancy::remaining_unclamped(max_payers, 0);
             rouille::Response::json(&serde_json::json!({
                 "id": id,
                 "org_id": org_id,
+                "provider": provider,
+                "amount": crate::hosting::decimal_json(amount),
+                "currency": currency,
+                "status": "open",
                 "public_token": public_token,
                 "pay_url": format!("{checkout_base}/c/{public_token}"),
+                "max_payers": max_payers,
+                "unlimited": max_payers.is_none(),
+                "paid_count": 0,
+                "taken_count": 0,
+                "remaining": remaining,
             }))
             .with_status_code(201)
         }
@@ -525,6 +545,7 @@ fn link_list_route(request: &rouille::Request, state: &State, org_id: &str) -> r
     if let Err(err) = crate::identity::member_gate::require_member(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         auth.as_deref(),
         hint.as_deref(),
         org_id,
@@ -632,6 +653,7 @@ fn public_start_route(
         Ok(StartOutcome::Paused) => error_response(&PayError::forbidden("Org charges are paused")),
         Ok(StartOutcome::EmailRequired) => error_response(&PayError::bad_request("email is required")),
         Ok(StartOutcome::SlotKeyRequired) => error_response(&PayError::bad_request("slot_key is required")),
+        Ok(StartOutcome::LinkFull) => error_response(&PayError::conflict("This pay link is full")),
         Ok(StartOutcome::RailNotConfigured) => {
             error_response(&PayError::unavailable("rail not configured"))
         }
@@ -776,6 +798,7 @@ fn gate_writer(request: &rouille::Request, state: &State, org_id: &str) -> Resul
     crate::identity::member_gate::require_writer(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         bearer(request).as_deref(),
         tenant_hint(request).as_deref(),
         org_id,
@@ -786,6 +809,7 @@ fn gate_member(request: &rouille::Request, state: &State, org_id: &str) -> Resul
     crate::identity::member_gate::require_member(
         &state.one_client,
         state.one.as_ref(),
+        Some(state.whoami_cache.as_ref()),
         bearer(request).as_deref(),
         tenant_hint(request).as_deref(),
         org_id,

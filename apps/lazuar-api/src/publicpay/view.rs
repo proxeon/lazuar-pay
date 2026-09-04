@@ -138,6 +138,7 @@ fn get_link(
     let mut redirect: Option<String> = None;
     let mut payer_name: Option<String> = None;
     let mut payer_email: Option<String> = None;
+    let mut mine_status: Option<String> = None;
     for row in &children {
         let status: String = row.get("Status");
         if occupancy::counts_toward_capacity(&status) {
@@ -150,6 +151,7 @@ fn get_link(
         if slot_key.is_some() && slot.as_deref() == slot_key {
             mine = true;
             started = true;
+            mine_status = Some(status.clone());
             redirect = row.get("PspRedirectUrl");
             payer_name = row.get("PayerName");
             payer_email = row.get("PayerEmail");
@@ -159,6 +161,9 @@ fn get_link(
     let mut status = occupancy::merchant_status(max_payers, taken).to_string();
     if max_payers == Some(1) && paid >= 1 {
         status = "already_paid".into();
+    }
+    if let Some(child_status) = mine_status {
+        status = child_status;
     }
 
     let on_page = providers::is_on_page_url(redirect.as_deref());
@@ -179,8 +184,8 @@ fn get_link(
         "payer_email": payer_email,
         "pay_url": checkout_page_url(checkout_base, &token),
         "max_payers": max_payers,
-        "taken": taken,
-        "paid": paid,
+        "taken_count": taken,
+        "paid_count": paid,
         "remaining": occupancy::remaining_unclamped(max_payers, taken),
         "unlimited": max_payers.is_none(),
     }))
