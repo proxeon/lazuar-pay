@@ -68,11 +68,9 @@ pub fn parse(
         .ok_or_else(|| WebhookParseError::verify_error("missing currency"))?;
 
     // Invoice paid_amount is major units (10.00), then ToMinor for match.
-    let amount = invoice
-        .get("paid_amount")
-        .and_then(Value::as_f64)
-        .or_else(|| invoice.get("amount").and_then(Value::as_f64))
-        .unwrap_or(0.0);
+    let amount = crate::app::parse_decimal(invoice.get("paid_amount"))
+        .or_else(|| crate::app::parse_decimal(invoice.get("amount")))
+        .unwrap_or(rust_decimal::Decimal::ZERO);
 
     let checkout_id = invoice
         .get("metadata")
@@ -86,9 +84,7 @@ pub fn parse(
         checkout_id,
         hosted_session_id: Some(invoice_id.to_string()),
         provider_ref: Some(invoice_id.to_string()),
-        amount_minor: Some(crate::domain::currency::to_minor(
-            rust_decimal::Decimal::try_from(amount).unwrap_or_default(),
-        )),
+        amount_minor: Some(crate::domain::currency::to_minor(amount)),
         currency: Some(currency),
         ..ParsedWebhook::default()
     })

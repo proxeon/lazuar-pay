@@ -9,6 +9,8 @@ use rsa::RsaPublicKey;
 use serde_json::Value;
 use sha2::Sha256;
 
+use rust_decimal::prelude::ToPrimitive;
+
 use crate::domain::currency;
 use crate::secrets::SecretBox;
 use crate::webhooks::psp_parse::{Headers, ParsedWebhook, WebhookParseError};
@@ -92,7 +94,9 @@ pub fn parse(
 
     let purchase = root.get("purchase").filter(|p| p.is_object());
     // CHIP purchase.total is sen/cents. RM10.00 → 1000. Do not divide by 100.
-    let total = purchase.and_then(|p| p.get("total")).and_then(Value::as_f64).unwrap_or(0.0);
+    let total = crate::app::parse_decimal(purchase.and_then(|p| p.get("total")))
+        .and_then(|d| d.round().to_i64())
+        .unwrap_or(0);
     let currency = purchase
         .and_then(|p| p.get("currency"))
         .and_then(Value::as_str)
@@ -109,7 +113,7 @@ pub fn parse(
         checkout_id,
         hosted_session_id: Some(purchase_id.to_string()),
         provider_ref: Some(purchase_id.to_string()),
-        amount_minor: Some(total as i64),
+        amount_minor: Some(total),
         currency: Some(currency),
         ..ParsedWebhook::default()
     })
