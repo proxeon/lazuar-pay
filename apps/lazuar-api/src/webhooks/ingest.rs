@@ -344,6 +344,10 @@ pub fn handle(
             tx.rollback()?;
             return Ok(IngestOutcome::PausedConflict);
         }
+        Err(FulfillError::Failed) => {
+            tx.rollback()?;
+            return Ok(IngestOutcome::FulfillFailed);
+        }
         Err(FulfillError::Db(db_err)) => {
             tx.rollback()?;
             if db_err.as_db_error().map(|db| db.code()) == Some(&postgres::error::SqlState::UNIQUE_VIOLATION) {

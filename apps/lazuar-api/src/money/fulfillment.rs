@@ -8,6 +8,7 @@
 //! checkout was fulfilled concurrently and the caller answers "duplicate".
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use chrono::Utc;
@@ -36,6 +37,9 @@ pub struct FulfillOutcome {
 pub enum FulfillError {
     #[error("Org charges are paused")]
     Paused,
+    /// C# `FulfillmentProbe` / `InvalidOperationException` → webhook 500 `fulfill failed`.
+    #[error("fulfill failed")]
+    Failed,
     #[error("database: {0}")]
     Db(#[from] postgres::Error),
 }
@@ -49,6 +53,10 @@ pub enum FulfillError {
 #[derive(Clone, Default)]
 pub struct CheckoutGates {
     inner: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
+    /// C# `FulfillmentProbe.ThrowNext` — tests only; production stays false.
+    throw_next: Arc<AtomicBool>,
+    /// C# `FulfillmentProbe.ThrowAfterSave` — tests only; production stays false.
+    throw_after_save: Arc<AtomicBool>,
 }
 
 impl CheckoutGates {
@@ -62,6 +70,25 @@ impl CheckoutGates {
         };
         let _guard = arc.lock().expect("checkout gate");
         f()
+    }
+
+    /// Arm a one-shot throw before any fulfill writes (C# `ThrowNext`).
+    pub fn arm_throw_next(&self) {
+        self.throw_next.store(true, Ordering::SeqCst);
+    }
+
+    /// Arm a one-shot throw after fulfill writes, still inside the caller's
+    /// transaction (C# `ThrowAfterSave`).
+    pub fn arm_throw_after_save(&self) {
+        self.throw_after_save.store(true, Ordering::SeqCst);
+    }
+
+    fn take_throw_next(&self) -> bool {
+        self.throw_next.swap(false, Ordering::SeqCst)
+    }
+
+    fn take_throw_after_save(&self) -> bool {
+        self.throw_after_save.swap(false, Ordering::SeqCst)
     }
 }
 
@@ -91,8 +118,15 @@ pub fn fulfill_paid(
     provider: &str,
     provider_ref: Option<&str>,
 ) -> Result<FulfillOutcome, FulfillError> {
+    if gates.take_throw_next() {
+        return Err(FulfillError::Failed);
+    }
     gates.with_checkout_gate(checkout_id, || {
-        fulfill_paid_core(tx, checkout_id, provider, provider_ref)
+        let outcome = fulfill_paid_core(tx, checkout_id, provider, provider_ref)?;
+        if gates.take_throw_after_save() {
+            return Err(FulfillError::Failed);
+        }
+        Ok(outcome)
     })
 }
 

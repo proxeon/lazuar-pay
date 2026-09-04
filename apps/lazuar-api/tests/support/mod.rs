@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 
 use lazuar_api::app::{self, State};
 use lazuar_api::config::Config;
+use lazuar_api::money::fulfillment::CheckoutGates;
 use lazuar_api::transport::{OutRequest, OutResponse, Transport};
 
 // ---------------------------------------------------------------------------
@@ -119,6 +120,7 @@ pub struct TestApp {
     pub psp: Arc<FakeTransport>,
     pub one: Arc<FakeTransport>,
     pub pool: app::PgPool,
+    pub fulfill_gates: CheckoutGates,
     admin: postgres::Client,
 }
 
@@ -172,6 +174,7 @@ impl TestApp {
 
         let psp = Arc::new(FakeTransport::new("psp"));
         let one = Arc::new(FakeTransport::new("one"));
+        let fulfill_gates = CheckoutGates::default();
 
         let state = Arc::new(State {
             config: config.clone(),
@@ -185,7 +188,7 @@ impl TestApp {
             },
             secret_box: lazuar_api::secrets::SecretBox::from_env_testing(None)
                 .expect("dev secret box"),
-            fulfill_gates: Default::default(),
+            fulfill_gates: fulfill_gates.clone(),
             start_gates: Default::default(),
             link_gates: Default::default(),
             limiter: Default::default(),
@@ -201,7 +204,16 @@ impl TestApp {
         }
         wait_healthy(&format!("http://{addr}/health"));
 
-        Self { base_url: format!("http://{addr}"), db_name, config, psp, one, pool, admin }
+        Self {
+            base_url: format!("http://{addr}"),
+            db_name,
+            config,
+            psp,
+            one,
+            pool,
+            fulfill_gates,
+            admin,
+        }
     }
 
     /// A dedicated connection to the per-test database, for assertions.

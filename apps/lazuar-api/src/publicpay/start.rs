@@ -362,6 +362,10 @@ fn start_gated(
                     tx.rollback()?;
                     return Ok(StartOutcome::Paused);
                 }
+                FulfillError::Failed => {
+                    tx.rollback()?;
+                    return Ok(StartOutcome::Rejected("fulfill failed".into()));
+                }
                 FulfillError::Db(db) => return Err(db),
             }
         }

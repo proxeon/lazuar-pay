@@ -175,6 +175,10 @@ pub fn confirm(
             fulfill_tx.rollback()?;
             return Ok(ConfirmOutcome::Paused);
         }
+        Err(FulfillError::Failed) => {
+            fulfill_tx.rollback()?;
+            return Ok(ConfirmOutcome::FulfillConflict);
+        }
         Err(FulfillError::Db(db_err)) => {
             fulfill_tx.rollback()?;
             if db_err.as_db_error().map(|db| db.code()) == Some(&postgres::error::SqlState::UNIQUE_VIOLATION) {
