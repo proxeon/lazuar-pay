@@ -1,7 +1,7 @@
 # lazuar-api (sync Rust port)
 
-Sync Rust port of `apps/lazuar-pay`. The C# service stays the production process
-until cutover (`plans/027-checklist/00-index.md` Phase 8).
+Sync Rust port of `apps/lazuar-pay`. Laptop money host is this process on `:8081`
+(cutover 2026-09-05, Development). Keep the C# image/binary for 30-day rollback.
 
 **Single replica.** In-process limiter, start/fulfill gates, and whoami cache.
 Scaling out silently disables issue 016 rate limiting. Workers (outbound
@@ -20,10 +20,10 @@ cd apps/lazuar-api
 cp .env.example .env            # then fill secrets
 cargo test                       # real Postgres per test (PAY_TEST_POSTGRES or localhost:5435)
 ConnectionStrings__Pay='host=localhost port=5435 user=postgres password=postgres dbname=lazuar_pay' \
-LISTEN_ADDR=127.0.0.1:8095 cargo run
+LISTEN_ADDR=127.0.0.1:8081 cargo run
 ```
 
-Port `8081` belongs to the C# service until cutover; this host defaults to `8095`.
+Default listen is `:8081`. Do not run C# `dotnet watch` on the same port. Rollback is start C# on `:8081` instead.
 
 See `.env.example` for every `Config::from_env` key. Do **not** use
 `Pay__ConnectionString` — the C# key is `ConnectionStrings__Pay`.
@@ -32,7 +32,8 @@ Side-by-side with C# on the same `pay-db`:
 
 ```sh
 docker compose -f apps/lazuar-pay/docker-compose.pay.yml --profile rust up -d --build
-# C# :8081 (`--profile apps`), Rust :8095 (`--profile rust`). Do not scale pay-api.
+# Shadow: Rust :8095 (`--profile rust`). Cutover overlay binds Rust :8081.
+# Do not scale pay-api. Do not run C# `--profile apps` on :8081 at the same time.
 ```
 
 Image: `docker buildx bake lazuar-pay-api` (alias `pay-api`). Do not delete the
@@ -58,14 +59,14 @@ blocker if those lines are greppable.
 | No live PSP sandbox in CI | Keep D004. Manual dogfood per rail before inviting strangers. |
 
 `examples/pay-node` mints a checkout and verifies Pay’s outbound HMAC. Against
-Rust: `PAY_API_URL=http://localhost:8095`. The host keeps 300s timestamp skew;
+Rust: `PAY_API_URL=http://localhost:8081`. The host keeps 300s timestamp skew;
 the sample does not enforce it.
 
 ## Cutover
 
-Human-gated. See [`CUTOVER.md`](CUTOVER.md). Do not bind this process to `:8081`
-until every pre-flight box there is signed. Rollback is stop Rust, start C# on
-the same database and WrapKey.
+See [`CUTOVER.md`](CUTOVER.md). Laptop: Rust is on `:8081` (Development). Public
+Production still needs HTTPS One/CORS/WrapKey boot guards before you point a
+live origin here. Rollback is stop Rust, start C# on the same database and WrapKey.
 
 ```sh
 bash scripts/pay-cutover-preflight.sh

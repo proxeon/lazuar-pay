@@ -1,11 +1,13 @@
 # Phase 8 cutover runbook
 
-Human-gated. This file is the ops checklist (`plans/029-checklist/07-phase-8-cutover.md`).
-Landing it on `rust-parity` is **not** a cutover.
+Ops checklist (`plans/029-checklist/07-phase-8-cutover.md`).
 
-C# (`apps/lazuar-pay` `:8081`) stays the money process until every **Pre-flight**
-box is signed by a human. An agent must not pause charges, stop C#, or bind
-Rust to `:8081`.
+**Laptop 2026-09-05:** C# `dotnet watch` on `:8081` stopped. Rust
+(`Development`, `LISTEN_ADDR=127.0.0.1:8081`) is the money process on the same
+`lazuar_pay` Postgres. Pending deliveries were already 0. Production public
+HTTPS was **not** applied — boot guards reject localhost One/checkout.
+
+C# binary/image stays for 30-day rollback. Do not delete `apps/lazuar-pay`.
 
 Code gates that must stay true (enforced by `scripts/pay-cutover-preflight.sh`
 and `tests/http_paths.rs`):
@@ -35,9 +37,8 @@ and `tests/http_paths.rs`):
 
 ## Execution (human, after pre-flight)
 
-Laptop dual-run today: C# `http://127.0.0.1:8081/health`, Rust
-`http://127.0.0.1:8095/ready`, same Postgres. Do not collapse those ports until
-this section.
+Laptop after 2026-09-05: Rust `http://127.0.0.1:8081/ready`. C# is stopped.
+Shadow port `:8095` is free. Same Postgres.
 
 1. Pause org charges (`ChargesPaused` via One `org.suspended` / settings). Drain
    `org_webhook_deliveries` pending count to 0.

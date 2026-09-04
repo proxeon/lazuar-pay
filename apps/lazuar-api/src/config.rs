@@ -91,7 +91,7 @@ impl Config {
             // (`Pay__ConnectionString` was a porting bug — 025/04 §7).
             connection_string: env_opt("ConnectionStrings__Pay"),
             wrap_key: env_opt("Pay__WrapKey"),
-            listen_addr: env_or("LISTEN_ADDR", "127.0.0.1:8095"),
+            listen_addr: env_or("LISTEN_ADDR", "127.0.0.1:8081"),
         }
     }
 }

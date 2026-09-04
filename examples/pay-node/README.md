@@ -1,7 +1,7 @@
 # @examples/pay-node
 
-Second-app hatch against focused Pay. Default `PAY_API_URL` is C# `:8081`.
-Against the Rust port: `PAY_API_URL=http://localhost:8095`. Not Hub `hub-cashier-next`.
+Second-app hatch against focused Pay. Default `PAY_API_URL` is the money host
+on `:8081` (Rust after laptop cutover). Not Hub `hub-cashier-next`.
 
 1. Mint a One `lzr_sk_` (`tenant:read`, `authz:check`) — Pay merchant **Developers → API keys**, or One Settings → API keys.
 2. `PUT http://localhost:8081/v1/orgs/$ORG_ID/webhooks` with `{"url":"http://127.0.0.1:3021/hook"}` (Testing loopback). Copy `webhook_secret`.
