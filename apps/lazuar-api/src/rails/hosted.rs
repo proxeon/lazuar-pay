@@ -170,6 +170,7 @@ fn mint_billplz(
             url: "https://www.billplz.com/api/v3/bills".into(),
             headers: vec![
                 ("Authorization".into(), format!("Basic {auth}")),
+                ("Idempotency-Key".into(), format!("lazuar-checkout:{checkout_id}")),
                 ("Content-Type".into(), "application/x-www-form-urlencoded".into()),
             ],
             body: Some(body),
@@ -209,6 +210,7 @@ fn mint_chip(
             url: "https://gate.chip-in.asia/api/v1/purchases/".into(),
             headers: vec![
                 ("Authorization".into(), format!("Bearer {secret}")),
+                ("Idempotency-Key".into(), format!("lazuar-checkout:{checkout_id}")),
                 ("Content-Type".into(), "application/json".into()),
             ],
             body: Some(body.to_string()),
@@ -247,6 +249,7 @@ fn mint_xendit(
             url: "https://api.xendit.co/v2/invoices".into(),
             headers: vec![
                 ("Authorization".into(), format!("Basic {auth}")),
+                ("Idempotency-Key".into(), format!("lazuar-checkout:{checkout_id}")),
                 ("Content-Type".into(), "application/json".into()),
             ],
             body: Some(body.to_string()),
@@ -287,6 +290,7 @@ fn mint_razorpay(
             url: "https://api.razorpay.com/v1/payment_links".into(),
             headers: vec![
                 ("Authorization".into(), format!("Basic {auth}")),
+                ("X-Razorpay-Idempotency".into(), format!("lazuar-checkout:{checkout_id}")),
                 ("Content-Type".into(), "application/json".into()),
             ],
             body: Some(body.to_string()),
@@ -338,25 +342,65 @@ mod tests {
     use crate::transport::{OutRequest, OutResponse, Transport, TransportError};
     use std::sync::Mutex;
 
-    struct Capture(Mutex<Option<OutRequest>>);
+    struct Capture {
+        last: Mutex<Option<OutRequest>>,
+        body: String,
+    }
+    impl Capture {
+        fn new(body: &str) -> Self {
+            Self { last: Mutex::new(None), body: body.into() }
+        }
+        fn last(&self) -> OutRequest {
+            self.last.lock().unwrap().clone().expect("outbound POST")
+        }
+        fn has_header(&self, name: &str, value: &str) -> bool {
+            self.last().headers.iter().any(|(k, v)| k.eq_ignore_ascii_case(name) && v == value)
+        }
+    }
     impl Transport for Capture {
         fn send(&self, request: OutRequest) -> Result<OutResponse, TransportError> {
-            *self.0.lock().unwrap() = Some(request);
-            Ok(OutResponse {
-                status: 200,
-                body: r#"{"id":"inv_1","invoice_url":"https://xendit.test/i"}"#.into(),
-            })
+            *self.last.lock().unwrap() = Some(request);
+            Ok(OutResponse { status: 200, body: self.body.clone() })
         }
     }
 
     #[test]
     fn xendit_mint_sends_major_units_not_sen() {
-        let cap = Capture(Mutex::new(None));
+        let cap = Capture::new(r#"{"id":"inv_1","invoice_url":"https://xendit.test/i"}"#);
         mint_xendit(&cap, "xnd_key", "co_1", "MYR", 990, "https://ok.example/c/t").unwrap();
-        let req = cap.0.lock().unwrap().clone().expect("xendit POST");
-        let v: serde_json::Value = serde_json::from_str(req.body.as_deref().unwrap()).unwrap();
+        let v: serde_json::Value = serde_json::from_str(cap.last().body.as_deref().unwrap()).unwrap();
         assert!(v["amount"].is_number(), "amount must be a JSON number: {v}");
         assert_eq!(v["amount"].to_string(), "9.90");
         assert_ne!(v["amount"], 990);
+    }
+
+    #[test]
+    fn hosted_mints_send_lazuar_checkout_idempotency_key() {
+        let xendit = Capture::new(r#"{"id":"inv_1","invoice_url":"https://xendit.test/i"}"#);
+        mint_xendit(&xendit, "xnd_key", "co_1", "MYR", 990, "https://ok.example/c/t").unwrap();
+        assert!(xendit.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
+
+        let chip = Capture::new(r#"{"id":"p1","checkout_url":"https://chip.test/c"}"#);
+        mint_chip(&chip, "chip_sk", "co_1", "MYR", 990, "https://ok", "https://cancel").unwrap();
+        assert!(chip.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
+
+        let billplz = Capture::new(r#"{"id":"b1","url":"https://billplz.test/b"}"#);
+        mint_billplz(
+            &billplz,
+            "bp_key",
+            "col_1",
+            "co_1",
+            "org_1",
+            990,
+            "https://pay.example",
+            "https://ok",
+        )
+        .unwrap();
+        assert!(billplz.has_header("Idempotency-Key", "lazuar-checkout:co_1"));
+
+        let razorpay = Capture::new(r#"{"id":"pl_1","short_url":"https://rzp.test/l"}"#);
+        mint_razorpay(&razorpay, "rzp_id:rzp_sec", "co_1", "INR", 990, "https://ok", "https://cancel")
+            .unwrap();
+        assert!(razorpay.has_header("X-Razorpay-Idempotency", "lazuar-checkout:co_1"));
     }
 }
