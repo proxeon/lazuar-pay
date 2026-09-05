@@ -185,6 +185,36 @@ public class SolanaConfirmTests
     }
 
     [Test]
+    public async Task Throttled_rpc_answers_503_not_an_unhandled_500()
+    {
+        // Issue 011 (issues/003): the SolanaRpcThrottledException rethrow exists for the
+        // poller's backoff, but the public confirm endpoint let it escape as a bare 500.
+        // It must map to 503 like every other upstream hiccup.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, _) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+        {
+            Content = new StringContent("""{"jsonrpc":"2.0","error":{"code":-32005,"message":"limit reached"}}""", Encoding.UTF8, "application/json")
+        };
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+
+        using var confirm = Confirm(token, signature);
+        var res = await client.SendAsync(confirm);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable), await res.Content.ReadAsStringAsync());
+        Assert.That(await res.Content.ReadAsStringAsync(), Does.Contain("throttled"));
+    }
+
+    [Test]
     public async Task Confirm_rejects_other_mint()
     {
         await using var factory = new PayApiFactory();

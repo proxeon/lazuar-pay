@@ -367,7 +367,18 @@ internal static class PublicPayEndpoints
             return PayErrors.Status(404, "Not Found", "Checkout not found");
         }
 
-        return await confirm.ConfirmAsync(row, body?.Signature?.Trim() ?? "", ct);
+        try
+        {
+            return await confirm.ConfirmAsync(row, body?.Signature?.Trim() ?? "", ct);
+        }
+        catch (SolanaRpcThrottledException)
+        {
+            // Issue 011 (issues/003): ConfirmAsync rethrows the throttle for the poller's
+            // backoff, but on this public endpoint that surfaced as an unhandled bare 500
+            // (no exception handler is registered) and invited retry storms against the
+            // same throttled RPC. Map it like every other upstream hiccup.
+            return PayErrors.Status(503, "Service Unavailable", "solana rpc throttled, retry shortly");
+        }
     }
 
     static async Task<(CheckoutRow? Row, IResult? Error)> MintOrResume(
