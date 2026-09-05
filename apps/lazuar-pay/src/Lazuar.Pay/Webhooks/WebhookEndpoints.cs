@@ -43,6 +43,16 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "unknown provider");
         }
 
+        // plans/031/04: exactly one parse-outcome measurement per delivered event — the
+        // contract-drift signal (see PspWebhookMetrics for the vocabulary and alert shape).
+        // Paths before this point (unknown provider, empty body, test-rail guard) involve
+        // no vendor contract and are not counted.
+        IResult Finish(string outcome, IResult result)
+        {
+            PspWebhookMetrics.Outcome(name, outcome);
+            return result;
+        }
+
         using var reader = new StreamReader(request.Body, Encoding.UTF8);
         var raw = await reader.ReadToEndAsync(ct);
         if (string.IsNullOrWhiteSpace(raw))
@@ -64,7 +74,8 @@ internal static class WebhookEndpoints
                 .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
             if (cred is null)
             {
-                return PayErrors.Status(400, "Bad Request", "invalid signature");
+                return Finish(PspWebhookMetrics.VerifyFailed,
+                    PayErrors.Status(400, "Bad Request", "invalid signature"));
             }
         }
 
@@ -85,34 +96,42 @@ internal static class WebhookEndpoints
         }
         catch (PspVerifyException ex)
         {
-            return PayErrors.Status(400, "Bad Request", ex.Message);
+            return Finish(PspWebhookMetrics.VerifyFailed,
+                PayErrors.Status(400, "Bad Request", ex.Message));
         }
         catch (System.Security.Cryptography.CryptographicException)
         {
-            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
+            return Finish(PspWebhookMetrics.SecretUnavailable,
+                PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable"));
         }
         catch (FormatException)
         {
-            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
+            return Finish(PspWebhookMetrics.SecretUnavailable,
+                PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable"));
         }
         catch (ArgumentOutOfRangeException)
         {
-            return PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable");
+            return Finish(PspWebhookMetrics.SecretUnavailable,
+                PayErrors.Status(503, "Service Unavailable", "webhook secret undecryptable"));
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("webhook secret", StringComparison.Ordinal))
         {
-            return PayErrors.Status(503, "Service Unavailable", ex.Message);
+            return Finish(PspWebhookMetrics.SecretUnavailable,
+                PayErrors.Status(503, "Service Unavailable", ex.Message));
         }
 
         if (await db.PspWebhookEvents.FindAsync([orgId, name, parsed.EventId], ct) is not null)
         {
-            return Results.Ok(new { duplicate = true });
+            return Finish(PspWebhookMetrics.Dedupe, Results.Ok(new { duplicate = true }));
         }
 
         if (parsed.Ignored && !parsed.Failed)
         {
-            await InsertEventAsync(db, orgId, name, parsed.EventId, ct);
-            return Results.Json(new { ignored = parsed.IgnoreReason }, OneClient.Json);
+            // plans/031/04: verified-but-unrecognized events are persisted WITH their
+            // ignore reason, so vendor drift shows up as queryable data, not just logs.
+            await InsertEventAsync(db, orgId, name, parsed.EventId, parsed.IgnoreReason, ct);
+            return Finish(PspWebhookMetrics.Ignored,
+                Results.Json(new { ignored = parsed.IgnoreReason }, OneClient.Json));
         }
 
         string? checkoutId = parsed.CheckoutId;
@@ -125,13 +144,15 @@ internal static class WebhookEndpoints
 
         if (string.IsNullOrWhiteSpace(checkoutId))
         {
-            return PayErrors.Status(400, "Bad Request", "checkout not found");
+            return Finish(PspWebhookMetrics.CheckoutMissing,
+                PayErrors.Status(400, "Bad Request", "checkout not found"));
         }
 
         var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == checkoutId, ct);
         if (checkout is null || checkout.OrgId != orgId)
         {
-            return PayErrors.Status(400, "Bad Request", "checkout not found");
+            return Finish(PspWebhookMetrics.CheckoutMissing,
+                PayErrors.Status(400, "Bad Request", "checkout not found"));
         }
 
         if (string.IsNullOrWhiteSpace(checkout.Provider)
@@ -151,8 +172,9 @@ internal static class WebhookEndpoints
         {
             if (checkout.Status == "paid")
             {
-                await InsertEventAsync(db, orgId, name, parsed.EventId, ct);
-                return Results.Json(new { ignored = "already_paid" }, OneClient.Json);
+                await InsertEventAsync(db, orgId, name, parsed.EventId, "already_paid", ct);
+                return Finish(PspWebhookMetrics.Dedupe,
+                    Results.Json(new { ignored = "already_paid" }, OneClient.Json));
             }
 
             await using var failTx = await db.Database.BeginTransactionAsync(ct);
@@ -175,7 +197,8 @@ internal static class WebhookEndpoints
                     {
                         await db.SaveChangesAsync(ct);
                         await failTx.CommitAsync(ct);
-                        return Results.Json(new { failed = true }, OneClient.Json);
+                        return Finish(PspWebhookMetrics.Ok,
+                            Results.Json(new { failed = true }, OneClient.Json));
                     }
 
                     // plans/031/01 (Option A): no dunning bookkeeping — recurring billing is
@@ -202,10 +225,11 @@ internal static class WebhookEndpoints
             catch (DbUpdateException)
             {
                 await failTx.RollbackAsync(ct);
-                return Results.Ok(new { duplicate = true });
+                return Finish(PspWebhookMetrics.Dedupe, Results.Ok(new { duplicate = true }));
             }
 
-            return Results.Json(new { failed = true }, OneClient.Json);
+            return Finish(PspWebhookMetrics.Ok,
+                Results.Json(new { failed = true }, OneClient.Json));
         }
 
         if (checkout.Status is "expired" or "failed")
@@ -260,24 +284,27 @@ internal static class WebhookEndpoints
             catch (DbUpdateException)
             {
                 await lateTx.RollbackAsync(ct);
-                return Results.Ok(new { duplicate = true });
+                return Finish(PspWebhookMetrics.Dedupe, Results.Ok(new { duplicate = true }));
             }
 
             var refunded = alreadyReserved
                 ? false
                 : await remote.SettlePendingRefundAsync(refundId, checkout, parsed.ProviderRef, parsed.AmountMinor, ct);
-            return Results.Json(new { refunded }, OneClient.Json);
+            return Finish(PspWebhookMetrics.Ok,
+                Results.Json(new { refunded }, OneClient.Json));
         }
 
         if (parsed.Currency is not null
             && !string.Equals(parsed.Currency, checkout.Currency, StringComparison.OrdinalIgnoreCase))
         {
-            return PayErrors.Status(400, "Bad Request", "currency mismatch");
+            return Finish(PspWebhookMetrics.CurrencyMismatch,
+                PayErrors.Status(400, "Bad Request", "currency mismatch"));
         }
 
         if (parsed.AmountMinor is not null && parsed.AmountMinor.Value != MoneyMath.ToMinor(checkout.Amount))
         {
-            return PayErrors.Status(400, "Bad Request", "amount mismatch");
+            return Finish(PspWebhookMetrics.AmountMismatch,
+                PayErrors.Status(400, "Bad Request", "amount mismatch"));
         }
 
         FulfillOutcome outcome;
@@ -304,21 +331,26 @@ internal static class WebhookEndpoints
             var fresh = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == checkout.Id, ct);
             if (fresh?.Status == "paid")
             {
-                return Results.Ok(new { duplicate = true });
+                return Finish(PspWebhookMetrics.Dedupe, Results.Ok(new { duplicate = true }));
             }
 
-            return PayErrors.Status(500, "Internal Server Error", "fulfill conflict");
+            // The contract held (parse + binding + amounts validated) — the conflict is a
+            // concurrency artifact, not drift, so it counts as ok.
+            return Finish(PspWebhookMetrics.Ok,
+                PayErrors.Status(500, "Internal Server Error", "fulfill conflict"));
         }
         catch (ChargesPausedException)
         {
             // Dedicated type so this cannot be shadowed by InvalidOperationException → 500.
             await tx.RollbackAsync(ct);
-            return PayErrors.Status(409, "Conflict", "Org charges are paused");
+            return Finish(PspWebhookMetrics.Ok,
+                PayErrors.Status(409, "Conflict", "Org charges are paused"));
         }
         catch (InvalidOperationException)
         {
             await tx.RollbackAsync(ct);
-            return PayErrors.Status(500, "Internal Server Error", "fulfill failed");
+            return Finish(PspWebhookMetrics.Ok,
+                PayErrors.Status(500, "Internal Server Error", "fulfill failed"));
         }
 
         // Settle the over-capacity late refund only after commit: the pending row is durable
@@ -329,17 +361,19 @@ internal static class WebhookEndpoints
                 outcome.PendingLateRefundId, checkout, parsed.ProviderRef, outcome.LateRefundAmountMinor, ct);
         }
 
-        return Results.Json(new { ok = true }, OneClient.Json);
+        return Finish(PspWebhookMetrics.Ok, Results.Json(new { ok = true }, OneClient.Json));
     }
 
-    static async Task InsertEventAsync(PayDbContext db, string orgId, string provider, string eventId, CancellationToken ct)
+    static async Task InsertEventAsync(
+        PayDbContext db, string orgId, string provider, string eventId, string? ignoreReason, CancellationToken ct)
     {
         db.PspWebhookEvents.Add(new PspWebhookEventRow
         {
             OrgId = orgId,
             Provider = provider,
             EventId = eventId,
-            ReceivedAt = DateTimeOffset.UtcNow
+            ReceivedAt = DateTimeOffset.UtcNow,
+            IgnoreReason = ignoreReason
         });
         try
         {

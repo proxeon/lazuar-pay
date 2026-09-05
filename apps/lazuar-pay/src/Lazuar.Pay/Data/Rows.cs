@@ -95,6 +95,12 @@ public sealed class PspWebhookEventRow
     public required string Provider { get; set; }
     public required string EventId { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
+
+    /// <summary>
+    /// Why a verified event was recorded but not acted on (e.g. "preauthorized") —
+    /// plans/031/04: queryable drift signal. Null for processed events.
+    /// </summary>
+    public string? IgnoreReason { get; set; }
 }
 
 public sealed class ChargeRow
