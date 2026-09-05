@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { slotKey, tokenFromPath, usableEmail, type SlotStore } from './pay'
+import { formatMoney, slotKey, tokenFromPath, usableEmail, type SlotStore } from './pay'
 
 describe('slotKey', () => {
   it('returns the same id when storage throws on every call', () => {
@@ -63,5 +63,29 @@ describe('usableEmail', () => {
     expect(usableEmail('')).toBe(false)
     expect(usableEmail('customer@example.com')).toBe(false)
     expect(usableEmail('Ada@acme.test')).toBe(true)
+  })
+})
+
+describe('formatMoney', () => {
+  it('formats ISO currencies with the buyer default locale', () => {
+    // ICU inserts a non-breaking space (U+00A0) between the code and the amount.
+    expect(formatMoney(10, 'MYR').replace(/\u00a0/g, ' ')).toBe('RM 10.00')
+  })
+
+  it('formats INR with Indian lakh grouping', () => {
+    const rendered = formatMoney(123456.78, 'INR')
+    expect(rendered).toContain('₹')
+    expect(rendered).toContain('1,23,456.78')
+  })
+
+  it('formats USDC with 2-6 decimals and a literal code — the QR amount is the truth', () => {
+    expect(formatMoney(10, 'USDC')).toBe('10.00 USDC')
+    expect(formatMoney(0.000001, 'USDC')).toBe('0.000001 USDC')
+    expect(formatMoney(10, 'USDC').startsWith('RM')).toBe(false)
+    expect(formatMoney(10, 'USDC').startsWith('$')).toBe(false)
+  })
+
+  it('falls back to a literal code for malformed currency codes', () => {
+    expect(formatMoney(10, 'ABCD')).toBe('10 ABCD')
   })
 })

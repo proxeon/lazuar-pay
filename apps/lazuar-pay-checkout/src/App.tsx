@@ -4,7 +4,7 @@ import { Button } from './ui/components/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/components/card'
 import { Input } from './ui/components/input'
 import { Label } from './ui/components/label'
-import { payApi, payPath, slotKey, tokenFromPath, usableEmail, verifyingQuery } from './pay'
+import { formatMoney, payApi, payPath, slotKey, tokenFromPath, usableEmail, verifyingQuery } from './pay'
 import { SolanaQr } from './SolanaQr'
 
 type PayView = {
@@ -21,14 +21,6 @@ type PayView = {
   solana_cluster?: string | null
   payer_name?: string | null
   payer_email?: string | null
-}
-
-function formatMoney(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat('en-MY', { style: 'currency', currency }).format(amount)
-  } catch {
-    return `${amount} ${currency}`
-  }
 }
 
 function Shell({ children }: { children: ReactNode }) {

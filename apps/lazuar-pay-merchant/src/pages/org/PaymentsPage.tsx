@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
+import { formatMoney } from '../../lib/money'
 import { listAll } from '../../lib/payApi'
 import { isRail, railLabel } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
@@ -17,14 +18,6 @@ type Payment = {
   payer_name?: string | null
   created_at?: string
   label?: string | null
-}
-
-function formatMoney(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat('en-MY', { style: 'currency', currency }).format(amount)
-  } catch {
-    return `${amount} ${currency}`
-  }
 }
 
 function formatWhen(iso?: string): string {

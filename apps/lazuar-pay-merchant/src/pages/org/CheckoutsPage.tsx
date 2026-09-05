@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
-import { parseAmountInput } from '../../lib/money'
+import { formatMoney, parseAmountInput } from '../../lib/money'
 import { listAll, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
@@ -47,14 +47,6 @@ const checkoutOrigin = resolveCheckoutOrigin(
 function buyerUrl(token: string): string | null {
   if (!checkoutOrigin) return null
   return buyerPayUrl(token, checkoutOrigin)
-}
-
-function formatMoney(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat('en-MY', { style: 'currency', currency }).format(amount)
-  } catch {
-    return `${amount} ${currency}`
-  }
 }
 
 function formatWhen(iso?: string): string {
