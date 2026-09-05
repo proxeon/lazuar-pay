@@ -71,8 +71,15 @@ internal static class RazorpayWebhook
             };
         }
 
-        if (eventType is "payment_link.paid" or "payment_link.expired" or "order.paid"
-            || eventType != "payment.captured")
+        // Issue 004 (issues/003): Pay mints payment links, and Razorpay's own payment-links
+        // docs point merchants at payment_link.paid — the event Pay used to file under
+        // "ignored", so a merchant subscribing to exactly that event never saw a
+        // fulfillment. The payment entity below carries everything the captured path reads
+        // (id, minor amount, currency, notes, and payment_link.entity.id for session
+        // binding). payment_link.expired stays ignored: the local TTL sweep owns expiry,
+        // and a capture can still trail an expired link — that arrival must find the
+        // late-pay route, which ignoring keeps reachable.
+        if (eventType is not "payment.captured" and not "payment_link.paid")
         {
             var otherId = headerEventId
                           ?? (string.IsNullOrWhiteSpace(paymentId) ? (eventType ?? "razorpay") + ":none" : eventType + ":" + paymentId);
@@ -112,7 +119,12 @@ internal static class RazorpayWebhook
             hostedSessionId = linkId.GetString();
         }
 
-        var eventId = !string.IsNullOrWhiteSpace(headerEventId) ? headerEventId : "captured:" + paymentId;
+        // Distinct namespace per success event type: a merchant enabling both events gets
+        // two deliveries for one payment. Without the header event id they must not dedupe
+        // against each other — the first fulfills and Handle answers the second benignly.
+        var eventId = !string.IsNullOrWhiteSpace(headerEventId)
+            ? headerEventId
+            : (eventType == "payment_link.paid" ? "link_paid:" : "captured:") + paymentId;
         return new PspParseResult
         {
             EventId = eventId,
