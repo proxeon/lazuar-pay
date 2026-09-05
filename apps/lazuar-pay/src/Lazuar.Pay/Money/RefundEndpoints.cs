@@ -15,6 +15,7 @@ internal static class RefundEndpoints
     {
         app.MapPost("/v1/orgs/{orgId}/refunds", Create);
         app.MapGet("/v1/orgs/{orgId}/refunds", List);
+        app.MapPost("/v1/orgs/{orgId}/refunds/{id}/resolve", Resolve);
     }
 
     static async Task<IResult> Create(
@@ -289,6 +290,85 @@ internal static class RefundEndpoints
     }
 
     /// <summary>
+    /// plans/031/02: manual reconciliation exit for a pending refund — stripe rows past the
+    /// 24 h idempotency-key window (the settle worker never claims them), and rails with no
+    /// refund implementation (chip/billplz/xendit/razorpay/solana) where a human refunded
+    /// in the PSP dashboard or on-chain. Succeeded emits the same Plane C
+    /// <c>refund.created</c> envelope the writer path does.
+    /// </summary>
+    static async Task<IResult> Resolve(
+        string orgId,
+        string id,
+        ResolveRefundRequest? body,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireWriterAsync(request, one, orgId, ct);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var status = body?.Status?.Trim().ToLowerInvariant();
+        if (status is not ("succeeded" or "failed"))
+        {
+            return PayErrors.Status(400, "Bad Request", "status must be succeeded or failed");
+        }
+
+        var row = await db.Refunds.FirstOrDefaultAsync(x => x.Id == id && x.OrgId == orgId, ct);
+        if (row is null)
+        {
+            return PayErrors.Status(404, "Not Found", "Refund not found");
+        }
+
+        if (row.Status != "pending")
+        {
+            return PayErrors.Status(409, "Conflict", "refund is not pending");
+        }
+
+        // Refuse while the settle worker holds the claim lease — a stale resolve racing an
+        // in-flight settlement could overwrite the worker's succeeded with a failed.
+        if (row.NextAttemptAt is { } lease && lease > DateTimeOffset.UtcNow)
+        {
+            return PayErrors.Status(409, "Conflict", "refund is being settled; retry shortly");
+        }
+
+        row.Status = status;
+        row.NextAttemptAt = null;
+        db.AuditEvents.Add(new AuditEventRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = orgId,
+            Action = "refund.resolved",
+            At = DateTimeOffset.UtcNow
+        });
+        if (status == "succeeded")
+        {
+            await OutboundWebhookEnqueue.TryAddAsync(
+                db,
+                orgId,
+                row.Id,
+                PayWebhookEnvelope.RefundCreated,
+                new
+                {
+                    refund_id = row.Id,
+                    checkout_id = row.CheckoutId,
+                    charge_id = row.ChargeId,
+                    amount = row.Amount,
+                    currency = row.Currency,
+                    provider = row.Provider,
+                    number = (string?)null
+                },
+                ct);
+        }
+
+        await db.SaveChangesAsync(ct);
+        return Results.Json(View(row), OneClient.Json);
+    }
+
+    /// <summary>
     /// Deterministic refund id per (org, idempotency key). SHA-256 → Guid: retries of the same
     /// logical refund reuse both the row id and the processor idempotency key (issue 001).
     /// </summary>
@@ -395,4 +475,9 @@ public sealed class CreateRefundRequest
     public string? CheckoutId { get; set; }
     public decimal? Amount { get; set; }
     public string? IdempotencyKey { get; set; }
+}
+
+public sealed class ResolveRefundRequest
+{
+    public string? Status { get; set; }
 }

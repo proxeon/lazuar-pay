@@ -136,6 +136,13 @@ public sealed class RefundRow
     public string Reason { get; set; } = "merchant";
     public string? IdempotencyKey { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+
+    // plans/031/02: settlement retry bookkeeping. AttemptCount includes the original
+    // settle attempt; NextAttemptAt doubles as the worker's claim lease; a NULL
+    // NextAttemptAt with a past CreatedAt marks a row for manual resolution only.
+    public int AttemptCount { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
+    public string? LastError { get; set; }
 }
 
 public sealed class JournalEntryRow

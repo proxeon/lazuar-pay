@@ -107,6 +107,8 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
             e.HasIndex(x => x.OrgId);
             e.HasIndex(x => x.CheckoutId);
             e.Property(x => x.Amount).HasPrecision(18, 2);
+            // plans/031/02: worker claim scan (pending + next attempt due).
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
             if (Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
             {
                 e.HasIndex(x => new { x.OrgId, x.IdempotencyKey })

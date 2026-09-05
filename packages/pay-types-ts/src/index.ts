@@ -255,6 +255,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orgs/{orgId}/refunds/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Writer. Manual reconciliation exit for a pending refund (plans/031/02): stripe rows past the idempotency window and rails with no refund API. Succeeded emits Plane C refund.created. */
+        post: operations["Money_resolveRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orgs/{orgId}/subscriptions": {
         parameters: {
             query?: never;
@@ -718,6 +735,10 @@ export interface components {
         RefundListPage: {
             items: components["schemas"]["Refund"][];
             next_cursor?: string;
+        };
+        /** @description plans/031/02: manual reconciliation exit for a pending refund. */
+        ResolveRefundRequest: {
+            status: string;
         };
         /**
          * @description Buyer start body. `slot_key` is required for payment-link tokens (trim, length 8–128);
@@ -1262,6 +1283,33 @@ export interface operations {
             };
             /** @description The request has succeeded and a new resource has been created as a result. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+        };
+    };
+    Money_resolveRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRefundRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

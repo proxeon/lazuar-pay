@@ -172,6 +172,7 @@ const DTO_MAP = [
   ["StartPayRequest", "Lazuar.Pay/PublicPay/PublicPayEndpoints.cs"],
   ["ConfirmPayRequest", "Lazuar.Pay/PublicPay/PublicPayEndpoints.cs"],
   ["CreateRefundRequest", "Lazuar.Pay/Money/RefundEndpoints.cs"],
+  ["ResolveRefundRequest", "Lazuar.Pay/Money/RefundEndpoints.cs"],
   ["PaymentLink", "Lazuar.Pay/PaymentLinks/PaymentLinkEndpoints.cs"],
   ["WhoamiResponse", "Lazuar.Pay/Identity/WhoamiResponse.cs"],
 ];
@@ -194,6 +195,8 @@ for (const [schema, rel] of DTO_MAP) {
       if (schema === "WhoamiResponse") return ["UserId", "Email", "Name", "IsPlatformAdmin", "ActiveOrgId", "Tenants"].includes(n);
       if (schema === "StartPayRequest") return ["Name", "Email", "SlotKey"].includes(n);
       if (schema === "ConfirmPayRequest") return ["Signature"].includes(n);
+      if (schema === "CreateRefundRequest") return ["CheckoutId", "Amount", "IdempotencyKey"].includes(n);
+      if (schema === "ResolveRefundRequest") return ["Status"].includes(n);
       if (schema === "CreateProductRequest") return ["Name", "Description", "Amount", "Currency", "Interval"].includes(n);
       return true;
     })

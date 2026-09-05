@@ -3,11 +3,51 @@ using System.Net.Http.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
 using Lazuar.Pay.Secrets;
+using Lazuar.Pay.Webhooks.Outbound;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
 
 namespace Lazuar.Pay.Rails;
+
+/// <summary>
+/// The refund attempt's determined outcome (plans/031/02). The old bool collapsed three
+/// very different situations into "not settled": the processor definitively refused
+/// (nothing moved), the outcome is unknown (money may have moved), and the rail has no
+/// refund implementation at all. The worker needs the distinction — Rejected can release
+/// the row as failed, Unknown schedules a bounded retry, unimplemented rails stay manual.
+/// </summary>
+public enum RefundLateOutcome
+{
+    Settled,
+    Rejected,
+    Unknown,
+}
+
+/// <summary>
+/// Refund settlement retry schedule (plans/031/02). The stripe idempotency key is pruned
+/// after >= 24 h (docs.stripe.com/api/idempotent_requests) — a reused key after pruning
+/// creates a NEW refund, so attempts must stay inside the window: the original attempt
+/// counts as 1, and worker retries at +1m/+5m/+30m/+2h/+8h keep the last retry at
+/// ~10 h 36 m with margin.
+/// </summary>
+internal static class RefundSchedule
+{
+    /// <summary>Original settle attempt + 5 worker retries.</summary>
+    public const int MaxAttempts = 6;
+
+    /// <summary>Stripe prunes idempotency keys after >= 24 h — never claim rows older.</summary>
+    public static readonly TimeSpan ClaimWindow = TimeSpan.FromHours(24);
+
+    public static TimeSpan Backoff(int completedAttempts) => completedAttempts switch
+    {
+        <= 1 => TimeSpan.FromMinutes(1),
+        2 => TimeSpan.FromMinutes(5),
+        3 => TimeSpan.FromMinutes(30),
+        4 => TimeSpan.FromHours(2),
+        _ => TimeSpan.FromHours(8),
+    };
+}
 
 /// <summary>
 /// Expire unpaid hosted sessions and refund late PSP captures. Named rails, not
@@ -18,6 +58,10 @@ public sealed class ProcessorRemote(
     SecretBox box,
     IHttpClientFactory http)
 {
+    // plans/031/02 test seam: the Stripe SDK builds its own HTTP client, so tests replace
+    // this to route refund calls through a fake handler (default is the real network).
+    internal Func<string, StripeClient> StripeClientFactory { get; set; } = secret => new StripeClient(secret);
+
     public async Task ExpireAsync(CheckoutRow checkout, CancellationToken ct)
     {
         if (checkout.Status != "expired")
@@ -40,7 +84,7 @@ public sealed class ProcessorRemote(
             }
             else if (provider == PayProviders.Chip)
             {
-                await ChipPostAsync(checkout, "cancel/", null, ct);
+                await ChipPostAsync(checkout, "cancel/", null, "lazuar-cancel:" + checkout.Id, ct);
             }
         }
         catch (Exception)
@@ -51,29 +95,49 @@ public sealed class ProcessorRemote(
 
     /// <summary>
     /// Best-effort late-capture refund. Callers book the refund row as <c>pending</c> first;
-    /// false (or a thrown-then-caught failure) leaves it pending — the capture is real, so it
-    /// must never read as settled. Rails with no refund API return false.
-    /// <paramref name="refundId"/> keys the Stripe idempotency key so a re-attempt of the same
-    /// logical refund cannot move money twice.
+    /// anything but <see cref="RefundLateOutcome.Settled"/> leaves it pending — the capture
+    /// is real, so it must never read as settled. Stripe retries are safe inside the
+    /// idempotency-key window (same key + same params replay the original result);
+    /// CHIP retries are NOT — its refund docs promise no idempotency semantics, so the
+    /// settle worker never claims CHIP rows.
     /// </summary>
-    public async Task<bool> RefundLateAsync(CheckoutRow checkout, string? providerRef, long? amountMinor, string refundId, CancellationToken ct)
+    public async Task<RefundLateOutcome> RefundLateAsync(CheckoutRow checkout, string? providerRef, long? amountMinor, string refundId, CancellationToken ct)
     {
         if (!PayProviders.TryNormalize(checkout.Provider, out var provider))
         {
-            return false;
+            return RefundLateOutcome.Unknown;
         }
 
         if (PayProviders.IsTest(provider))
         {
-            return true;
+            return RefundLateOutcome.Settled;
         }
 
         try
         {
             if (provider == PayProviders.Stripe)
             {
-                await RefundStripeAsync(checkout, providerRef, amountMinor, ct, refundId);
-                return true;
+                try
+                {
+                    await RefundStripeAsync(checkout, providerRef, amountMinor, ct, refundId);
+                    return RefundLateOutcome.Settled;
+                }
+                catch (StripeException ex) when (ex.StripeError?.Code == "charge_already_refunded")
+                {
+                    // The refund provably exists (dashboard or a lost original response) —
+                    // the row's intent is satisfied, so this reads as settled.
+                    return RefundLateOutcome.Settled;
+                }
+                catch (StripeException ex) when ((int)ex.HttpStatusCode >= 500)
+                {
+                    // Response lost or server error: the refund may already have executed.
+                    return RefundLateOutcome.Unknown;
+                }
+                catch (StripeException)
+                {
+                    // Definitive (<500) answer other than already-refunded: nothing moved.
+                    return RefundLateOutcome.Rejected;
+                }
             }
 
             if (provider == PayProviders.Chip)
@@ -83,38 +147,74 @@ public sealed class ProcessorRemote(
                         .AnyAsync(x => x.OrgId == checkout.OrgId && x.Provider == PayProviders.Chip, ct))
                 {
                     // No purchase to refund. Honest pending beats a fake settled row.
-                    return false;
+                    return RefundLateOutcome.Unknown;
                 }
 
                 object? body = amountMinor is long minor ? new { amount = minor } : null;
-                await ChipPostAsync(checkout, "refund/", body, ct);
-                return true;
+                await ChipPostAsync(checkout, "refund/", body, "lazuar-refund:" + refundId, ct);
+                return RefundLateOutcome.Settled;
             }
 
-            return false;
+            // Rails with no refund API: the row is the ops marker, resolved by a human.
+            return RefundLateOutcome.Unknown;
+        }
+        catch (ProcessorRejectedException)
+        {
+            return RefundLateOutcome.Rejected;
+        }
+        catch (ProcessorOutcomeUnknownException)
+        {
+            return RefundLateOutcome.Unknown;
         }
         catch (Exception)
         {
             // Cash at the processor; the pending row is the ops follow-up marker.
-            return false;
+            return RefundLateOutcome.Unknown;
         }
     }
 
     /// <summary>
-    /// Settle a pending late-pay refund AFTER the caller's transaction has committed: move the
-    /// money, then flip the row to succeeded. False (or unsupported rails) leaves it pending.
+    /// Settle a pending late-pay refund AFTER the caller's transaction has committed: move
+    /// the money, then flip the row to succeeded. Anything but Settled schedules a bounded
+    /// worker retry (stripe late_pay rows only) and returns false — the row stays pending.
     /// </summary>
     public async Task<bool> SettlePendingRefundAsync(
         string refundId, CheckoutRow checkout, string? providerRef, long? amountMinor, CancellationToken ct)
     {
-        var refunded = await RefundLateAsync(checkout, providerRef, amountMinor, refundId, ct);
-        if (!refunded)
+        var outcome = await RefundLateAsync(checkout, providerRef, amountMinor, refundId, ct);
+        var row = await db.Refunds.FirstAsync(x => x.Id == refundId, ct);
+        if (outcome != RefundLateOutcome.Settled)
         {
+            // plans/031/02: the original attempt counts as attempt 1; the worker takes over
+            // from here (stripe late_pay rows only — other providers stay manual).
+            row.AttemptCount = Math.Max(1, row.AttemptCount);
+            row.NextAttemptAt = DateTimeOffset.UtcNow.Add(RefundSchedule.Backoff(row.AttemptCount));
+            row.LastError = "settle outcome unknown";
+            await db.SaveChangesAsync(ct);
             return false;
         }
 
-        var row = await db.Refunds.FirstAsync(x => x.Id == refundId, ct);
         row.Status = "succeeded";
+        row.NextAttemptAt = null;
+        row.LastError = null;
+        // plans/031/02: merchants reconcile on webhooks — late-pay settlements were
+        // previously invisible to them; emit the same envelope the merchant path does.
+        await OutboundWebhookEnqueue.TryAddAsync(
+            db,
+            row.OrgId,
+            row.Id,
+            PayWebhookEnvelope.RefundCreated,
+            new
+            {
+                refund_id = row.Id,
+                checkout_id = row.CheckoutId,
+                charge_id = row.ChargeId,
+                amount = row.Amount,
+                currency = row.Currency,
+                provider = row.Provider,
+                number = (string?)null
+            },
+            ct);
         await db.SaveChangesAsync(ct);
         return true;
     }
@@ -168,7 +268,7 @@ public sealed class ProcessorRemote(
                 throw new InvalidOperationException("chip is not configured; nothing to refund with");
             }
 
-            await ChipPostAsync(checkout, "refund/", new { amount = minor }, ct);
+            await ChipPostAsync(checkout, "refund/", new { amount = minor }, "lazuar-refund:" + refundId, ct);
             return;
         }
 
@@ -183,7 +283,7 @@ public sealed class ProcessorRemote(
             return;
         }
 
-        var service = new SessionService(new StripeClient(secret));
+        var service = new SessionService(StripeClientFactory(secret));
         await service.ExpireAsync(checkout.ProviderSessionId, cancellationToken: ct);
     }
 
@@ -197,7 +297,7 @@ public sealed class ProcessorRemote(
             throw new InvalidOperationException("stripe is not configured; cannot refund");
         }
 
-        var client = new StripeClient(secret);
+        var client = StripeClientFactory(secret);
         var sessionId = !string.IsNullOrWhiteSpace(checkout.ProviderSessionId)
             ? checkout.ProviderSessionId
             : providerRef;
@@ -245,7 +345,7 @@ public sealed class ProcessorRemote(
         await new RefundService(client).CreateAsync(options, req, ct);
     }
 
-    async Task ChipPostAsync(CheckoutRow checkout, string action, object? body, CancellationToken ct)
+    async Task ChipPostAsync(CheckoutRow checkout, string action, object? body, string? idempotencyKey, CancellationToken ct)
     {
         var purchaseId = checkout.ProviderSessionId;
         if (string.IsNullOrWhiteSpace(purchaseId))
@@ -265,6 +365,13 @@ public sealed class ProcessorRemote(
             HttpMethod.Post,
             Rails.Chip.ChipHosted.ApiBase + "purchases/" + Uri.EscapeDataString(purchaseId) + "/" + action);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", box.Unprotect(cred.Ciphertext));
+        // plans/031/02 step 0: CHIP's refund docs do not document idempotency semantics, but
+        // the header is harmless and the mint path already sends one. The settle worker
+        // treats CHIP as manual until CHIP confirms key behavior on refunds.
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+        }
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);

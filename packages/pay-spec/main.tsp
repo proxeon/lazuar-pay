@@ -283,6 +283,11 @@ model CreateRefundRequest {
   idempotency_key?: string;
 }
 
+/** plans/031/02: manual reconciliation exit for a pending refund. */
+model ResolveRefundRequest {
+  status: string;
+}
+
 model Refund {
   id: string;
   org_id: string;
@@ -541,6 +546,15 @@ interface Money {
     @statusCode statusCode: 200;
     @body body: Refund;
   };
+
+  /** Writer. Manual reconciliation exit for a pending refund (plans/031/02): stripe rows past the idempotency window and rails with no refund API. Succeeded emits Plane C refund.created. */
+  @post
+  @route("/orgs/{orgId}/refunds/{id}/resolve")
+  resolveRefund(
+    @path orgId: string,
+    @path id: string,
+    @body body: ResolveRefundRequest,
+  ): Refund;
 
   @get
   @route("/orgs/{orgId}/refunds")
