@@ -174,13 +174,14 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             Title = "Official Receipt",
             CreatedAt = DateTimeOffset.UtcNow
         });
-        db.AuditEvents.Add(new AuditEventRow
+        // plans/031/05: webhook-driven events have no HTTP actor — the provider is the
+        // actor, keeping the audit ledger's "who" uniform.
+        db.AuditEvents.Add(Audit.New(checkout.OrgId, "checkout.paid", "psp:" + provider, new
         {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = checkout.OrgId,
-            Action = "checkout.paid",
-            At = DateTimeOffset.UtcNow
-        });
+            checkout_id = checkout.Id,
+            amount = checkout.Amount,
+            currency = checkout.Currency
+        }));
 
         await OutboundWebhookEnqueue.TryAddAsync(
             db,

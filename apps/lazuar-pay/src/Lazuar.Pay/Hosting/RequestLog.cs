@@ -8,6 +8,16 @@ internal static class RequestLog
 {
     public const string OrgItemKey = "pay.org_id";
 
+    /// <summary>
+    /// plans/031/05: the audited actor for this request (the One user id), stashed by
+    /// MemberGate in the same pass that resolves the org — audit rows read it from here
+    /// instead of re-calling One.
+    /// </summary>
+    public const string ActorItemKey = "pay.actor_id";
+
+    public static string? Actor(HttpRequest request) =>
+        request.HttpContext.Items.TryGetValue(ActorItemKey, out var raw) ? raw as string : null;
+
     // Issue 007 (issues/003): the echoed id is capped so a caller-supplied megabyte header
     // cannot inflate the response head and the log line.
     const int MaxRequestIdLength = 64;

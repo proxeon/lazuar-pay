@@ -100,13 +100,9 @@ internal static class OneWebhookEndpoints
             settings.OneWebhookCiphertext = wrapped;
         }
 
-        db.AuditEvents.Add(new AuditEventRow
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "one.webhook_secret.upsert",
-            At = DateTimeOffset.UtcNow
-        });
+        // plans/031/05: nothing non-sensitive to snapshot for a secret upsert — the actor
+        // is the record.
+        db.AuditEvents.Add(Audit.New(orgId, "one.webhook_secret.upsert", RequestLog.Actor(request), null));
 
         try
         {

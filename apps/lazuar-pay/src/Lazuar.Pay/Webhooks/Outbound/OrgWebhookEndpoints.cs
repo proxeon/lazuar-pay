@@ -74,13 +74,12 @@ internal static class OrgWebhookEndpoints
             row.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
-        db.AuditEvents.Add(new AuditEventRow
+        // plans/031/05: rotation/upsert forensics — url and prefix only, never the secret.
+        db.AuditEvents.Add(Audit.New(orgId, "org.webhook.upsert", RequestLog.Actor(request), new
         {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "org.webhook.upsert",
-            At = DateTimeOffset.UtcNow
-        });
+            url,
+            secret_prefix = row.SecretPrefix
+        }));
         try
         {
             await db.SaveChangesAsync(ct);
@@ -156,6 +155,13 @@ internal static class OrgWebhookEndpoints
 
         row.SecretPrefix = secret[^4..];
         row.UpdatedAt = DateTimeOffset.UtcNow;
+        // plans/031/05: rotation is the most sensitive call on this endpoint — audit who
+        // re-keyed and to which prefix (never the secret itself).
+        db.AuditEvents.Add(Audit.New(orgId, "org.webhook.rotated", RequestLog.Actor(request), new
+        {
+            url = row.Url,
+            secret_prefix = row.SecretPrefix
+        }));
         await db.SaveChangesAsync(ct);
         return Results.Json(new
         {

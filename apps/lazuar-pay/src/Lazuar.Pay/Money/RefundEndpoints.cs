@@ -259,13 +259,14 @@ internal static class RefundEndpoints
 
             // row was inserted pending in the reservation transaction above; it flips to
             // succeeded only now that the processor accepted the refund.
-            db.AuditEvents.Add(new AuditEventRow
+            // plans/031/05: actor + amount snapshot for the audit trail.
+            db.AuditEvents.Add(Audit.New(orgId, "refund.created", RequestLog.Actor(request), new
             {
-                Id = Guid.NewGuid().ToString("N"),
-                OrgId = orgId,
-                Action = "refund.created",
-                At = DateTimeOffset.UtcNow
-            });
+                refund_id = refundId,
+                checkout_id = checkoutId,
+                amount,
+                currency = charge.Currency
+            }));
             await OutboundWebhookEnqueue.TryAddAsync(
                 db,
                 orgId,
@@ -337,13 +338,12 @@ internal static class RefundEndpoints
 
         row.Status = status;
         row.NextAttemptAt = null;
-        db.AuditEvents.Add(new AuditEventRow
+        // plans/031/05: a human just declared money reconciled — the decision needs a name.
+        db.AuditEvents.Add(Audit.New(orgId, "refund.resolved", RequestLog.Actor(request), new
         {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "refund.resolved",
-            At = DateTimeOffset.UtcNow
-        });
+            refund_id = id,
+            status
+        }));
         if (status == "succeeded")
         {
             await OutboundWebhookEnqueue.TryAddAsync(

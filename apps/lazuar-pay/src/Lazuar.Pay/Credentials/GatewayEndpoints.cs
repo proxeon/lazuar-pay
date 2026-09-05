@@ -172,13 +172,15 @@ internal static class GatewayEndpoints
 
         await OrgSettingsStore.GetOrCreateAsync(db, orgId, ct);
 
-        db.AuditEvents.Add(new AuditEventRow
+        // plans/031/05: actor from the resolved whoami, detail is a non-sensitive snapshot
+        // — enough to answer "who pointed this rail at which account", never the secret.
+        db.AuditEvents.Add(Audit.New(orgId, "gateway.credentials.upsert", RequestLog.Actor(request), new
         {
-            Id = Guid.NewGuid().ToString("N"),
-            OrgId = orgId,
-            Action = "gateway.credentials.upsert",
-            At = DateTimeOffset.UtcNow
-        });
+            provider,
+            last4,
+            environment = row.Environment,
+            webhook_configured = !string.IsNullOrWhiteSpace(wrappedWh)
+        }));
         try
         {
             await db.SaveChangesAsync(ct);

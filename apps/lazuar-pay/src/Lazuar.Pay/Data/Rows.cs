@@ -201,6 +201,19 @@ public sealed class AuditEventRow
     public required string OrgId { get; set; }
     public required string Action { get; set; }
     public DateTimeOffset At { get; set; }
+
+    /// <summary>
+    /// Who acted: the One user id resolved by MemberGate for writer calls, or
+    /// "psp:&lt;provider&gt;" for webhook-driven events — plans/031/05. Null only for
+    /// legacy rows written before the column existed.
+    /// </summary>
+    public string? Actor { get; set; }
+
+    /// <summary>
+    /// Non-sensitive snapshot of what changed (provider/last4/prefix/amounts — never
+    /// secrets or raw payloads), plans/031/05.
+    /// </summary>
+    public string? Detail { get; set; }
 }
 
 public sealed class MailOutboxRow

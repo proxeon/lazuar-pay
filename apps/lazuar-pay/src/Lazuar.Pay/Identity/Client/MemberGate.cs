@@ -29,10 +29,15 @@ internal static class MemberGate
         request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
         if (Bearer.IsMachineKey(authorization))
         {
-            var keyDenied = await RequireKeyBoundAsync(one, authorization, orgId, hint.ToString(), cancellationToken);
+            var (keyDenied, actorId) = await RequireKeyBoundAsync(one, authorization, orgId, hint.ToString(), cancellationToken);
             if (keyDenied is null)
             {
                 request.HttpContext.Items[RequestLog.OrgItemKey] = orgId;
+                // plans/031/05: the machine key's whoami carries the audit actor.
+                if (actorId is not null)
+                {
+                    request.HttpContext.Items[RequestLog.ActorItemKey] = actorId;
+                }
             }
 
             return keyDenied;
@@ -79,7 +84,7 @@ internal static class MemberGate
         return null;
     }
 
-    static async Task<IResult?> RequireKeyBoundAsync(
+    static async Task<(IResult? Denied, string? ActorId)> RequireKeyBoundAsync(
         OneClient one,
         string authorization,
         string orgId,
@@ -89,17 +94,17 @@ internal static class MemberGate
         var who = await one.GetWhoamiAsync(authorization, tenantHint, cancellationToken);
         if (who.TimedOut || who.TransportFailed)
         {
-            return PayErrors.Status(503, "Service Unavailable", "Identity provider unreachable");
+            return (PayErrors.Status(503, "Service Unavailable", "Identity provider unreachable"), null);
         }
 
         if (who.StatusCode == 401)
         {
-            return PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token");
+            return (PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token"), null);
         }
 
         if (who.Value is null)
         {
-            return who.StatusCode switch
+            IResult denied = who.StatusCode switch
             {
                 403 => PayErrors.Status(403, "Forbidden", ForbiddenDetail(who.Detail) ?? "Not a member of this org"),
                 400 => PayErrors.Status(400, "Bad Request", string.IsNullOrWhiteSpace(who.Detail)
@@ -108,25 +113,26 @@ internal static class MemberGate
                 429 => PayErrors.Status(429, "Too Many Requests", "Identity provider rate limited"),
                 _ => PayErrors.Status(503, "Service Unavailable", "Identity provider failed")
             };
+            return (denied, null);
         }
 
         if (who.Value.Tenants.Count == 0)
         {
-            return PayErrors.Status(403, "Forbidden", "Not a member of this org");
+            return (PayErrors.Status(403, "Forbidden", "Not a member of this org"), null);
         }
 
         var tenant = who.Value.Tenants.FirstOrDefault(t => t.Id == orgId);
         if (tenant is null)
         {
-            return PayErrors.Status(403, "Forbidden", "Not a member of this org");
+            return (PayErrors.Status(403, "Forbidden", "Not a member of this org"), null);
         }
 
         if (!string.Equals(tenant.Status, "active", StringComparison.OrdinalIgnoreCase))
         {
-            return PayErrors.Status(403, "Forbidden", "Tenant is suspended.");
+            return (PayErrors.Status(403, "Forbidden", "Tenant is suspended."), null);
         }
 
-        return null;
+        return (null, who.Value.UserId);
     }
 
     public static async Task<IResult?> RequireWriterAsync(
@@ -170,6 +176,9 @@ internal static class MemberGate
             return PayErrors.Status(403, "Forbidden", "Writer role required");
         }
 
+        // plans/031/05: the JWT writer's whoami was resolved for the role check anyway —
+        // stash the user id as the audit actor before granting the write.
+        request.HttpContext.Items[RequestLog.ActorItemKey] = who.Value.UserId;
         return null;
     }
 }
