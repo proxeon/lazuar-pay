@@ -185,7 +185,13 @@ internal static class GatewayEndpoints
         }
         catch (DbUpdateException)
         {
+            // Issue 009 (issues/003): a concurrent first PUT won the (OrgId, Provider)
+            // insert — our row was never persisted. Answer from committed state; reporting
+            // the request's own values as "configured" told the merchant their key was on
+            // file when the winner's key was what actually lived in the vault. (Same
+            // pattern as OrgWebhookEndpoints.Put.)
             db.ChangeTracker.Clear();
+            row = await db.GatewayCredentials.FindAsync([orgId, provider], ct) ?? row;
         }
 
         return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);

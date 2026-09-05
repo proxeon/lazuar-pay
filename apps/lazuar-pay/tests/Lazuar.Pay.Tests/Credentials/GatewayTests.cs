@@ -35,6 +35,49 @@ public class GatewayTests
     }
 
     [Test]
+    public async Task Concurrent_first_puts_answer_from_committed_state()
+    {
+        // Issue 009 (issues/003): the loser of the (OrgId, Provider) insert race used to
+        // answer 200 built from its own UNSAVED row — "configured: true" with a last4 that
+        // was never on file, while the winner's key actually lived in the vault. Both
+        // responses must describe committed state, i.e. the same last4 as the database.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+
+        async Task<(string? Last4, string Body)> Put(string keyId, string secretPart)
+        {
+            using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
+            {
+                Content = new StringContent(
+                    $$"""{"provider":"razorpay","secret":"{{keyId}}:{{secretPart}}","webhook_secret":"whsec_{{keyId}}"}""",
+                    Encoding.UTF8, "application/json")
+            };
+            keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+            var response = await client.SendAsync(keys);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.That(response.IsSuccessStatusCode, body);
+            using var doc = JsonDocument.Parse(body);
+            return (doc.RootElement.GetProperty("last4").GetString(), body);
+        }
+
+        var a = Put("rzp_key_1111", "sec_a");
+        var b = Put("rzp_key_2222", "sec_b");
+        var results = await Task.WhenAll(a, b);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        var committed = db.GatewayCredentials.Single();
+        Assert.That(db.GatewayCredentials.Count(), Is.EqualTo(1), "the insert race must yield exactly one row");
+
+        // Each response must echo the committed row, not the responder's own unsaved one —
+        // both last4s read the same, and both read what the database actually holds.
+        Assert.That(results[0].Last4, Is.EqualTo(committed.Last4),
+            $"responses must reflect committed state: {results[0].Body} / {results[1].Body}");
+        Assert.That(results[1].Last4, Is.EqualTo(committed.Last4));
+        Assert.That(committed.Last4, Is.AnyOf("1111", "2222"));    }
+
+    [Test]
     public async Task Put_requires_webhook_secret()
     {
         await using var factory = new PayApiFactory();

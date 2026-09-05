@@ -114,9 +114,14 @@ internal static class OneWebhookEndpoints
         }
         catch (DbUpdateException)
         {
+            // Issue 009 (issues/003): a concurrent first PUT won the insert race — ours was
+            // never persisted. Report committed state instead of claiming our unsaved
+            // secret landed; a false "configured" is annoying, a false positive is a
+            // control channel that silently never existed.
             db.ChangeTracker.Clear();
+            settings = await db.OrgSettings.FindAsync([orgId], ct);
         }
-        return Results.Json(View(orgId, configured: true), OneClient.Json);
+        return Results.Json(View(orgId, configured: !string.IsNullOrWhiteSpace(settings?.OneWebhookCiphertext)), OneClient.Json);
     }
 
     static async Task<IResult> Get(
