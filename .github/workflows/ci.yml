@@ -28,6 +28,12 @@ jobs:
         run: |
           pnpm --filter lazuar-pay-merchant test
           pnpm --filter lazuar-pay-checkout test
+      # Issue 012 (issues/003): lint scripts existed locally but CI never ran them —
+      # lint-only regressions shipped green.
+      - name: Lint merchant and checkout
+        run: |
+          pnpm --filter lazuar-pay-merchant lint
+          pnpm --filter lazuar-pay-checkout lint
       - name: Build merchant and checkout
         env:
           # Build-time sanity check only — the CI artifact is never deployed.

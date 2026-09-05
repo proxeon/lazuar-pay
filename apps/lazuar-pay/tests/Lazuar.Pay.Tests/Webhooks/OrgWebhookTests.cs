@@ -195,6 +195,96 @@ public class OrgWebhookTests
         Assert.That(db.Charges.Count(), Is.EqualTo(1));
     }
 
+    [Test]
+    public async Task Rotate_mints_a_new_secret_and_the_next_delivery_verifies_with_it()
+    {
+        // Issue 012: rotate was never under test — a receiver re-keying must get a distinct
+        // secret whose prefix matches what the dashboard shows, and the next delivery must
+        // verify against the ROTATED secret.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK);
+        var client = factory.CreateClient();
+        var put = await client.SendAsync(PutUrl("t1", "http://127.0.0.1:9/hook"));
+        using var putDoc = JsonDocument.Parse(await put.Content.ReadAsStringAsync());
+        var firstSecret = putDoc.RootElement.GetProperty("webhook_secret").GetString()!;
+
+        using var rotate = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/webhooks/rotate")
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        rotate.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var rotated = await client.SendAsync(rotate);
+        Assert.That(rotated.StatusCode, Is.EqualTo(HttpStatusCode.OK), await rotated.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await rotated.Content.ReadAsStringAsync());
+        var rotatedSecret = doc.RootElement.GetProperty("webhook_secret").GetString()!;
+        var prefix = doc.RootElement.GetProperty("secret_prefix").GetString();
+        Assert.That(rotatedSecret, Is.Not.EqualTo(firstSecret));
+        Assert.That(rotatedSecret, Does.StartWith("whsec_"));
+        Assert.That(rotatedSecret.EndsWith(prefix!), $"prefix must be the rotated secret's tail ({prefix})");
+
+        var (token, _) = await PayTest.SeedCheckout(client, "test");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"name":"Ada"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<OutboundWebhookDispatch>().ProcessBatchAsync(CancellationToken.None);
+        }
+
+        var sig = factory.Psp.LastRequest!.Headers.GetValues("X-Lazuar-Signature").Single();
+        var ts = factory.Psp.LastRequest.Headers.GetValues("X-Lazuar-Timestamp").Single();
+        Assert.That(OneWebhookSignature.TryVerify(rotatedSecret, factory.Psp.LastBody!, sig, ts), Is.True,
+            "post-rotation deliveries must verify with the rotated secret");
+        Assert.That(OneWebhookSignature.TryVerify(firstSecret, factory.Psp.LastBody!, sig, ts), Is.False);
+    }
+
+    [Test]
+    public async Task Test_ping_enqueues_a_signed_delivery()
+    {
+        // Issue 012: TestPing was untested — the receiver-side "send a test event" button
+        // must enqueue a real webhook.test delivery that dispatches and verifies like any
+        // other.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        factory.Psp.Responder = (_, _) => new HttpResponseMessage(HttpStatusCode.OK);
+        var client = factory.CreateClient();
+        var put = await client.SendAsync(PutUrl("t1", "http://127.0.0.1:9/hook"));
+        using var putDoc = JsonDocument.Parse(await put.Content.ReadAsStringAsync());
+        var secret = putDoc.RootElement.GetProperty("webhook_secret").GetString()!;
+
+        using var ping = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/webhooks/test")
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        ping.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(ping);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var eventId = doc.RootElement.GetProperty("event_id").GetString()!;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var delivery = db.OrgWebhookDeliveries.Single();
+            Assert.That(delivery.EventType, Is.EqualTo("webhook.test"));
+            Assert.That(delivery.EventId, Is.EqualTo(eventId));
+            Assert.That(delivery.Status, Is.EqualTo("pending"));
+            await scope.ServiceProvider.GetRequiredService<OutboundWebhookDispatch>().ProcessBatchAsync(CancellationToken.None);
+        }
+
+        Assert.That(factory.Psp.SendCount, Is.GreaterThan(0));
+        Assert.That(factory.Psp.LastBody, Does.Contain("webhook.test"));
+        Assert.That(factory.Psp.LastRequest!.Headers.GetValues("X-Lazuar-Event-Id").Single(), Is.EqualTo(eventId));
+        var sig = factory.Psp.LastRequest.Headers.GetValues("X-Lazuar-Signature").Single();
+        var ts = factory.Psp.LastRequest.Headers.GetValues("X-Lazuar-Timestamp").Single();
+        Assert.That(OneWebhookSignature.TryVerify(secret, factory.Psp.LastBody!, sig, ts), Is.True);
+        using var after = factory.Services.CreateScope();
+        Assert.That(after.ServiceProvider.GetRequiredService<PayDbContext>().OrgWebhookDeliveries.Single().Status, Is.EqualTo("succeeded"));
+    }
+
     sealed class NamedEnv(string name) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = name;
