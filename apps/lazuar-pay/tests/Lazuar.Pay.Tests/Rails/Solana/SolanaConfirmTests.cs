@@ -139,6 +139,52 @@ public class SolanaConfirmTests
     }
 
     [Test]
+    public async Task Paused_org_still_books_the_late_pay_marker_on_an_expired_checkout()
+    {
+        // Issue 002 (issues/003): the paused gate used to sit before validation, so USDC
+        // that landed on the vault address for a suspended org could never book the
+        // late-pay marker. Open checkouts still 409 before the RPC (see
+        // Pause_does_not_consume_signature); expired checkouts fall through.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var address = SolanaVaultTests.SampleAddress();
+        await PayTest.Put(client, JsonSerializer.Serialize(new
+        {
+            provider = "solana",
+            public_merchant_id = address,
+            environment = "devnet"
+        }));
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "solana", "USDC");
+        Assert.That((await PayTest.StartPay(client, token, null)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var startDoc = JsonDocument.Parse(await (await client.GetAsync("/v1/pay/" + token)).Content.ReadAsStringAsync());
+        var reference = ReferenceFrom(startDoc.RootElement.GetProperty("solana_pay_url").GetString()!);
+        var signature = SolanaBase58.Encode(RandomNumberGenerator.GetBytes(64));
+        factory.Psp.Responder = (_, body) => RpcTx(body, Fixture(
+            signature, address, SolanaUsdc.DevnetMint, "10000000", reference, checkoutId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Single(x => x.Id == checkoutId).Status = "expired";
+            db.OrgSettings.Single().ChargesPaused = true;
+            await db.SaveChangesAsync();
+        }
+
+        using var confirm = Confirm(token, signature);
+        var res = await client.SendAsync(confirm);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK), await res.Content.ReadAsStringAsync());
+
+        using var after = factory.Services.CreateScope();
+        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(pay.Refunds.Single().Reason, Is.EqualTo("late_pay"));
+        Assert.That(pay.Refunds.Single().Status, Is.EqualTo("pending"), "solana has no refund API — the row is the ops marker");
+        Assert.That(pay.PspWebhookEvents.Count(x => x.EventId == signature), Is.EqualTo(1));
+        Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("expired"));
+        Assert.That(pay.Charges.Count(), Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task Confirm_rejects_other_mint()
     {
         await using var factory = new PayApiFactory();

@@ -31,10 +31,6 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
         }
 
         var settings = await db.OrgSettings.FindAsync([orgId], ct);
-        if (settings?.ChargesPaused == true)
-        {
-            return PayErrors.Status(409, "Conflict", "Org charges are paused");
-        }
 
         var cred = await db.GatewayCredentials.AsNoTracking()
             .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == PayProviders.Solana, ct);
@@ -47,6 +43,16 @@ public sealed class SolanaConfirm(PayDbContext db, SolanaRpc rpc, IFulfillPaid f
         if (!SolanaCluster.MatchesVault(cluster, cred.Environment))
         {
             return PayErrors.Status(400, "Bad Request", "solana cluster mismatch");
+        }
+
+        // Issue 002 (issues/003): pausing stops NEW charges, not bookkeeping or returning
+        // money. A live "open" checkout is refused before the RPC so a paused org's confirm
+        // never consumes the buyer's signature; expired/failed checkouts fall through — the
+        // USDC is already on the vault address and must still book the late-pay marker.
+        // Fulfillment itself stays blocked by Fulfillment's ChargesPausedException.
+        if (settings?.ChargesPaused == true && checkout.Status == "open")
+        {
+            return PayErrors.Status(409, "Conflict", "Org charges are paused");
         }
 
         JsonDocument doc;

@@ -140,11 +140,12 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "provider mismatch");
         }
 
-        var orgSettings = await db.OrgSettings.FindAsync([orgId], ct);
-        if (orgSettings?.ChargesPaused == true)
-        {
-            return PayErrors.Status(409, "Conflict", "Org charges are paused");
-        }
+        // Issue 002 (issues/003): no charges-paused gate here. Pausing stops NEW charges,
+        // not bookkeeping or returning money — the old pre-auth 409 stranded PSP captures
+        // for suspended orgs (no refund row, no charge, no failed-event recording) and the
+        // PSP's retries could never land anywhere. Fulfillment of a live checkout is still
+        // refused with the same 409 by Fulfillment's ChargesPausedException below; the
+        // failed-event and expired/failed late-pay branches must always run.
 
         if (parsed.Failed)
         {

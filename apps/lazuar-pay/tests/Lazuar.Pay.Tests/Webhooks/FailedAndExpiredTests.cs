@@ -60,6 +60,54 @@ public class FailedAndExpiredTests
     }
 
     [Test]
+    public async Task Paused_org_still_records_failed_events_and_marks_the_subscription_past_due()
+    {
+        // Issue 002 (issues/003): the paused 409 used to swallow payment_failed before the
+        // dedupe row was written — the event vanished on every PSP retry and the
+        // subscription never moved to past_due. Recording a failure is bookkeeping, not
+        // charging; only fulfillment stays blocked while paused.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PutHook(client);
+        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
+        {
+            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test","interval":"mo"}""", Encoding.UTF8, "application/json")
+        };
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var created = await client.SendAsync(create);
+        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created), await created.Content.ReadAsStringAsync());
+        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var checkoutId = createdDoc.RootElement.GetProperty("id").GetString()!;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused = true;
+            await db.SaveChangesAsync();
+        }
+
+        var body = $$"""{"id":"evt_paused_fail","checkout_id":"{{checkoutId}}","status":"failed","currency":"myr"}""";
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("test_whsec_local"), Encoding.UTF8.GetBytes(body));
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/test/t1")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("failed"));
+
+        using var after = factory.Services.CreateScope();
+        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("failed"));
+        Assert.That(pay.PspWebhookEvents.Single(x => x.Provider == "test").EventId, Is.EqualTo("evt_paused_fail"));
+        Assert.That(pay.Subscriptions.Single().Status, Is.EqualTo("past_due"));
+        Assert.That(pay.Subscriptions.Single().AttemptCount, Is.EqualTo(1));
+        Assert.That(pay.OrgWebhookDeliveries.Single().EventType, Is.EqualTo("payment.failed"));
+    }
+
+    [Test]
     public async Task Stale_reservation_emits_checkout_expired()
     {
         await using var factory = new PayApiFactory();

@@ -260,6 +260,45 @@ public class RefundIntegrityTests
         Assert.That(pay.Refunds.Count(), Is.EqualTo(0), "the guard fires before any row can book");
     }
 
+    [Test]
+    public async Task Paused_org_still_books_and_settles_the_late_pay_refund_on_an_expired_checkout()
+    {
+        // Issue 002 (issues/003): the charges-paused 409 used to fire before the late-pay
+        // branch, so a capture that arrived for a suspended org booked nothing — no refund
+        // row, no event, nothing to reconcile on reactivation. Pausing stops NEW charges;
+        // returning money is bookkeeping and must still run.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "test");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Single(x => x.Id == checkoutId).Status = "expired";
+            db.OrgSettings.Single(x => x.OrgId == "t1").ChargesPaused = true;
+            await db.SaveChangesAsync();
+        }
+
+        var body = $$"""{"id":"evt_paused_late","checkout_id":"{{checkoutId}}","amount_total":1000,"currency":"myr"}""";
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("test_whsec_local"), Encoding.UTF8.GetBytes(body));
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/test/t1")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+
+        using var after = factory.Services.CreateScope();
+        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(pay.Refunds.Single().Reason, Is.EqualTo("late_pay"));
+        Assert.That(pay.Refunds.Single().Status, Is.EqualTo("succeeded"), "the test rail settles instantly");
+        Assert.That(pay.PspWebhookEvents.Count(x => x.Provider == "test"), Is.EqualTo(1));
+        Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("expired"));
+        Assert.That(pay.Charges.Count(), Is.EqualTo(0), "paused org must not gain a fulfilled charge");
+        Assert.That(pay.Documents.Count(), Is.EqualTo(0));
+    }
+
     /// <summary>Paid checkout + charge on the no-op test rail (refund "executes" instantly).</summary>
     static async Task SeedPaidTestCheckout(PayApiFactory factory, string checkoutId)
     {
