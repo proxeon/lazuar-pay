@@ -165,6 +165,21 @@ internal static class OutboundUrl
                 return IsPrivateOrLoopback(new IPAddress(b[12..]));
             }
 
+            // NAT64 well-known prefix 64:ff9b::/96 — judge the embedded IPv4, not the
+            // wrapper: an IPv6-only host with NAT64/DNS64 routes 64:ff9b::a.b.c.d through
+            // the operator's translator to exactly that IPv4 address (issue 008).
+            if (b.Length == 16 && b[0] == 0x00 && b[1] == 0x64 && b[2] == 0xFF && b[3] == 0x9B
+                && b[4..12].All(x => x == 0))
+            {
+                return IsPrivateOrLoopback(new IPAddress(b[12..]));
+            }
+
+            // Documentation range 2001:db8::/32 — never a real destination (issue 008).
+            if (b.Length == 16 && b[0] == 0x20 && b[1] == 0x01 && b[2] == 0x0D && b[3] == 0xB8)
+            {
+                return true;
+            }
+
             return b[0] == 0xFF                             // multicast ff00::/8
                 || (b[0] == 0xFE && (b[1] & 0xC0) == 0x80)  // link-local fe80::/10
                 || (b[0] & 0xFE) == 0xFC                    // unique-local fc00::/7
@@ -172,12 +187,23 @@ internal static class OutboundUrl
         }
 
         var bytes = ip.GetAddressBytes();
+        // Issue 008: multicast 224.0.0.0/4 and reserved 240.0.0.0/4 (including broadcast
+        // 255.255.255.255) are not global unicast and must never be dialed; the named
+        // non-routable blocks below (IETF protocol assignments, TEST-NET-1/2/3,
+        // benchmarking 198.18.0.0/15) complete the set — some cloud test rigs route
+        // internal services inside them.
         return bytes[0] == 0
             || bytes[0] == 10
             || bytes[0] == 127
-            || (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) // CGNAT
+            || bytes[0] >= 224                                              // multicast + reserved + broadcast
+            || (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127)       // CGNAT
             || (bytes[0] == 169 && bytes[1] == 254)
             || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
-            || (bytes[0] == 192 && bytes[1] == 168);
+            || (bytes[0] == 192 && bytes[1] == 168)
+            || (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 0)          // 192.0.0.0/24 IETF protocol assignments
+            || (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 2)          // 192.0.2.0/24 TEST-NET-1
+            || (bytes[0] == 198 && bytes[1] >= 18 && bytes[1] <= 19)        // 198.18.0.0/15 benchmarking
+            || (bytes[0] == 198 && bytes[1] == 51 && bytes[2] == 100)       // 198.51.100.0/24 TEST-NET-2
+            || (bytes[0] == 203 && bytes[1] == 0 && bytes[2] == 113);       // 203.0.113.0/24 TEST-NET-3
     }
 }
