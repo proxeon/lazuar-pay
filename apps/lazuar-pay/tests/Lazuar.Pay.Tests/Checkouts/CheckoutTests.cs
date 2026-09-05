@@ -171,6 +171,55 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task Create_idempotency_fingerprint_covers_product_and_redirects()
+    {
+        // Issue 006 (issues/003): a reused key with a different product_id (or success_url)
+        // used to silently replay the ORIGINAL checkout — charges, receipt labels, and PSP
+        // metadata bound to a product the retry never asked for. The fingerprint must 409
+        // the mismatch instead.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        async Task<string> PostProduct(string name)
+        {
+            using var create = JsonPost("/v1/orgs/t1/products", $$"""{"name":"{{name}}","amount":10,"currency":"MYR"}""");
+            create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+            var response = await client.SendAsync(create);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            return doc.RootElement.GetProperty("id").GetString()!;
+        }
+
+        var productId = await PostProduct("B");
+        var otherProductId = await PostProduct("C");
+
+        async Task<(HttpStatusCode Status, string Id)> Post(string json)
+        {
+            using var create = JsonPost("/v1/checkouts", json);
+            create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+            create.Headers.TryAddWithoutValidation("Idempotency-Key", "k-product");
+            var response = await client.SendAsync(create);
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var id = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+            return (response.StatusCode, id);
+        }
+
+        var a = await Post($$"""{"org_id":"t1","amount":10,"provider":"stripe","product_id":"{{productId}}","success_url":"https://shop.test/a"}""");
+        Assert.That(a.Status, Is.EqualTo(HttpStatusCode.Created));
+
+        var sameProduct = await Post($$"""{"org_id":"t1","amount":10,"provider":"stripe","product_id":"{{productId}}","success_url":"https://shop.test/a"}""");
+        Assert.That(sameProduct.Status, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(sameProduct.Id, Is.EqualTo(a.Id));
+
+        var otherProduct = await Post($$"""{"org_id":"t1","amount":10,"provider":"stripe","product_id":"{{otherProductId}}","success_url":"https://shop.test/a"}""");
+        Assert.That(otherProduct.Status, Is.EqualTo(HttpStatusCode.Conflict));
+
+        var otherRedirect = await Post($$"""{"org_id":"t1","amount":10,"provider":"stripe","product_id":"{{productId}}","success_url":"https://shop.test/b"}""");
+        Assert.That(otherRedirect.Status, Is.EqualTo(HttpStatusCode.Conflict));
+    }
+
+    [Test]
     public async Task Create_defaults_currency_to_myr()
     {
         await using var factory = new PayApiFactory();

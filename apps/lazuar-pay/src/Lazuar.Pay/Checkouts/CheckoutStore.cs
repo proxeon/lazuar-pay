@@ -83,11 +83,23 @@ public sealed class CheckoutStore(PayDbContext db)
         return Map(row);
     }
 
+    // Issue 006 (issues/003): product and redirect URLs are part of the replay contract —
+    // the fingerprint used to compare only amount/currency/provider/interval, so a reused
+    // key with a different product silently replayed the ORIGINAL checkout: charges,
+    // receipt labels, and PSP metadata all bound to a product the retry never asked for
+    // (compare RefundEndpoints, which 409s a same-key different-body replay). Null and
+    // empty compare equal so "absent" stays interchangeable across clients.
     static bool SameFingerprint(CheckoutRow existing, CheckoutSession session) =>
         existing.Amount == session.Amount
         && string.Equals(existing.Currency, session.Currency, StringComparison.OrdinalIgnoreCase)
         && string.Equals(existing.Provider, session.Provider, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(existing.Interval ?? "one_off", session.Interval ?? "one_off", StringComparison.OrdinalIgnoreCase);
+        && string.Equals(existing.Interval ?? "one_off", session.Interval ?? "one_off", StringComparison.OrdinalIgnoreCase)
+        && SameText(existing.ProductId, session.ProductId)
+        && SameText(existing.SuccessUrl, session.SuccessUrl)
+        && SameText(existing.CancelUrl, session.CancelUrl);
+
+    static bool SameText(string? a, string? b) =>
+        string.Equals(a ?? "", b ?? "", StringComparison.Ordinal);
 
     public async Task<CheckoutSession?> GetAsync(string id, CancellationToken ct)
     {
