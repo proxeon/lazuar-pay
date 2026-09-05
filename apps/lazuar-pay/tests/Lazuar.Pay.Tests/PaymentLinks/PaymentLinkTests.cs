@@ -430,6 +430,33 @@ public class PaymentLinkTests
     }
 
     [Test]
+    public async Task Start_budget_is_process_shared_but_independent_per_token()
+    {
+        // plans/031/06: the start limiter is process-global by design — two connections in
+        // one process share a token's budget (the in-process analog of two replicas sharing
+        // a host), and separate tokens have separate budgets. Pins the documented scope so
+        // an accidental change (per-factory state, or a silent move to a shared store) is
+        // caught: a per-factory budget would let the second instance through (404, token
+        // unknown there), and a per-DB budget would too.
+        await using var factoryA = new PayApiFactory { StartMaxPerMinute = 2 };
+        factoryA.One.Responder = PayTest.Owner;
+        var clientA = factoryA.CreateClient();
+        var (token, _) = await PayTest.SeedPaymentLink(clientA, unlimited: true);
+        Assert.That((await PayTest.StartPay(clientA, token, "slot-pshare-01")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await PayTest.StartPay(clientA, token, "slot-pshare-02")).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        await using var factoryB = new PayApiFactory { StartMaxPerMinute = 2 };
+        factoryB.One.Responder = PayTest.Owner;
+        var clientB = factoryB.CreateClient();
+        Assert.That((await PayTest.StartPay(clientB, token, "slot-pshare-03")).StatusCode,
+            Is.EqualTo((HttpStatusCode)429), "the budget lives in the process, not in the database");
+
+        var (token2, _) = await PayTest.SeedPaymentLink(clientB, unlimited: true);
+        Assert.That((await PayTest.StartPay(clientB, token2, "slot-pshare-04")).StatusCode,
+            Is.EqualTo(HttpStatusCode.OK), "a different token has its own budget");
+    }
+
+    [Test]
     public async Task Concurrent_start_on_one_person_link_admits_one_psp()
     {
         await using var factory = new PayApiFactory();
