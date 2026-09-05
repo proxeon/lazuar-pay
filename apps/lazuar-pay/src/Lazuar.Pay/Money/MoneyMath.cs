@@ -18,13 +18,23 @@ public static class MoneyMath
             return PayErrors.Status(400, "Bad Request", "amount is too large");
         }
 
-        if (decimal.Round(amount.Value, 2, MidpointRounding.AwayFromZero) != amount.Value)
+        if (ExceedsTwoDecimals(amount.Value))
         {
             return PayErrors.Status(400, "Bad Request", "amount must have at most 2 decimal places");
         }
 
         return null;
     }
+
+    /// <summary>
+    /// True when the value cannot be stored exactly in the ledger's numeric(18,2) — the
+    /// database would silently round it. Issue 001 (issues/003): a refund of 0.001 stored
+    /// as 0.00 reserved nothing while RefundStripeAsync turned the zero minor amount into
+    /// an amount-less ("refund everything") processor call. Every money entry point must
+    /// refuse such values instead of letting the column round them.
+    /// </summary>
+    public static bool ExceedsTwoDecimals(decimal amount) =>
+        decimal.Round(amount, 2, MidpointRounding.AwayFromZero) != amount;
 
     public static long ToMinor(decimal amount) =>
         (long)Math.Round(amount * 100m, MidpointRounding.AwayFromZero);

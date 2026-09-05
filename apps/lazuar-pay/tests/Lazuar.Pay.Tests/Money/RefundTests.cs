@@ -93,6 +93,57 @@ public class RefundTests
     }
 
     [Test]
+    public async Task Subcent_refund_amount_is_refused_before_a_reservation_is_booked()
+    {
+        // Issue 001 (issues/003): 0.001 passed the `<= 0` check, numeric(18,2) stored the
+        // reservation as 0.00, and the processor call degraded into an amount-less Stripe
+        // refund — i.e. a full refund of the charge. Anything the ledger cannot represent
+        // exactly must 400 before a row is booked; tiny but exact amounts still work.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "test");
+        using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
+        {
+            Content = new StringContent("""{"name":"Ada"}""", Encoding.UTF8, "application/json")
+        };
+        Assert.That((await client.SendAsync(start)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        async Task<HttpResponseMessage> Refund(string amount)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/orgs/t1/refunds")
+            {
+                Content = new StringContent($$"""{"checkout_id":"{{checkoutId}}","amount":{{amount}}}""", Encoding.UTF8, "application/json")
+            };
+            req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+            return await client.SendAsync(req);
+        }
+
+        foreach (var amount in new[] { "0.001", "0.004", "4.001" })
+        {
+            var refused = await Refund(amount);
+            Assert.That(refused.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), $"amount {amount}");
+            Assert.That(await refused.Content.ReadAsStringAsync(), Does.Contain("at most 2 decimal places"));
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            Assert.That(db.Refunds.Count(), Is.EqualTo(0), "refused amounts must not book a reservation");
+            Assert.That(db.Charges.Single().Status, Is.EqualTo("paid"));
+        }
+
+        var acceptable = await Refund("0.01");
+        Assert.That(acceptable.StatusCode, Is.EqualTo(HttpStatusCode.Created), await acceptable.Content.ReadAsStringAsync());
+        using var after = factory.Services.CreateScope();
+        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(pay.Refunds.Count(), Is.EqualTo(1), "only the exact-2dp refund may book a row");
+        Assert.That(pay.Refunds.Single().Amount, Is.EqualTo(0.01m));
+        Assert.That(pay.Refunds.Single().Status, Is.EqualTo("succeeded"));
+        Assert.That(pay.Charges.Single().Status, Is.EqualTo("partially_refunded"));
+    }
+
+    [Test]
     public async Task Solana_refund_is_refused_and_releases_the_reservation()
     {
         // Pins the refusal to the provider label, not just the shared throw exercised via Billplz.

@@ -38,6 +38,15 @@ internal static class RefundEndpoints
             return PayErrors.Status(400, "Bad Request", "checkout_id is required");
         }
 
+        // Issue 001 (issues/003): amounts pass only a positivity/remainder check, so 0.001
+        // reached the reservation — numeric(18,2) stored it as 0.00 while RefundStripeAsync
+        // turned the zero minor amount into an amount-less "refund the whole charge" call.
+        // Refuse anything the ledger cannot represent exactly, mirroring QuotedAmountError.
+        if (body?.Amount is decimal requested && MoneyMath.ExceedsTwoDecimals(requested))
+        {
+            return PayErrors.Status(400, "Bad Request", "amount must have at most 2 decimal places");
+        }
+
         var idempotency = request.Headers["Idempotency-Key"].ToString().Trim();
         if (string.IsNullOrWhiteSpace(idempotency))
         {

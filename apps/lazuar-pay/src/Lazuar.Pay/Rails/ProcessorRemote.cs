@@ -223,9 +223,20 @@ public sealed class ProcessorRemote(
         }
 
         var options = new RefundCreateOptions { PaymentIntent = paymentIntent };
-        if (amountMinor is > 0)
+        // Issue 001 (issues/003): an amount-less RefundCreate is Stripe's "refund the full
+        // remaining amount" — a supplied amount that rounds to zero minor units must never
+        // degrade into it. A thrown ProcessorRejectedException keeps the merchant refund
+        // row "failed" and the late-pay row "pending"; no money moves on an ambiguous ask.
+        // Null stays the late-pay fallback (hand back the whole capture) when the PSP event
+        // carried no readable amount.
+        if (amountMinor is long minor)
         {
-            options.Amount = amountMinor;
+            if (minor <= 0)
+            {
+                throw new ProcessorRejectedException("refund amount rounds to zero minor units; refusing an amount-less Stripe refund");
+            }
+
+            options.Amount = minor;
         }
 
         var req = string.IsNullOrWhiteSpace(refundId)

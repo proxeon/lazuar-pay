@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Rails;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,8 +11,9 @@ namespace Lazuar.Pay.Tests;
 
 /// <summary>
 /// Regression tests for the refund-integrity fixes (issues 001, 009, 010, 012 in
-/// issues/001): ambiguous processor outcomes, one late-pay refund per checkout, settle-time
-/// status recompute, and the same-key partial-refund race.
+/// issues/001; 001 in issues/003): ambiguous processor outcomes, one late-pay refund per
+/// checkout, settle-time status recompute, the same-key partial-refund race, and the
+/// zero-minor-amount guard that keeps an amount-less Stripe refund unreachable.
 /// </summary>
 public class RefundIntegrityTests
 {
@@ -212,6 +214,50 @@ public class RefundIntegrityTests
         Assert.That(db.Refunds.Count(x => x.Status == "succeeded"), Is.EqualTo(2));
         Assert.That(db.Charges.Single().Status, Is.EqualTo("refunded"),
             "the last status write must be recomputed from persisted rows under the charge lock");
+    }
+
+    [Test]
+    public async Task Stripe_refund_of_a_zero_minor_amount_throws_instead_of_omitting_the_amount()
+    {
+        // Issue 001 (issues/003): RefundStripeAsync treated ToMinor(0.002)==0 as "no partial
+        // amount supplied" — which is Stripe's refund-everything default. A supplied amount
+        // of zero must be a definite precondition failure (ProcessorRejectedException), so
+        // the merchant path can never full-refund on a sub-cent ask. The pi_ session id lets
+        // the guard fire before any processor round-trip.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Add(new CheckoutRow
+            {
+                Id = "c_pi", OrgId = "t1", PublicToken = "tok_c_pi",
+                Amount = 10m, Currency = "MYR", Status = "paid", Provider = "stripe",
+                ProviderSessionId = "pi_test_1"
+            });
+            db.Charges.Add(new ChargeRow
+            {
+                Id = "ch_pi", OrgId = "t1", CheckoutId = "c_pi",
+                Provider = "stripe", ProviderRef = "pi_test_1",
+                Amount = 10m, Currency = "MYR", Status = "paid"
+            });
+            await db.SaveChangesAsync();
+
+            var remote = scope.ServiceProvider.GetRequiredService<ProcessorRemote>();
+            var checkout = db.Checkouts.Single(x => x.Id == "c_pi");
+            var charge = db.Charges.Single(x => x.Id == "ch_pi");
+            Assert.ThrowsAsync<ProcessorRejectedException>(
+                async () => await remote.RefundChargeAsync(charge, checkout, 0.002m, "ref_zero", CancellationToken.None));
+            Assert.ThrowsAsync<ProcessorRejectedException>(
+                async () => await remote.RefundChargeAsync(charge, checkout, -1m, "ref_negative", CancellationToken.None));
+        }
+
+        using var after = factory.Services.CreateScope();
+        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(pay.Refunds.Count(), Is.EqualTo(0), "the guard fires before any row can book");
     }
 
     /// <summary>Paid checkout + charge on the no-op test rail (refund "executes" instantly).</summary>
