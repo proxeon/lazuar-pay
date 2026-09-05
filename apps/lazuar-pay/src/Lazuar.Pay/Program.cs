@@ -71,11 +71,13 @@ builder.Services.AddHttpClient("pay-webhooks", c => c.Timeout = TimeSpan.FromSec
     });
 builder.Services.AddScoped<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookDispatch>();
 builder.Services.AddScoped<Lazuar.Pay.Money.RefundSettler>();
+builder.Services.AddScoped<Lazuar.Pay.Hosting.RetentionSweeper>();
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddHostedService<Lazuar.Pay.Webhooks.Outbound.OutboundWebhookWorker>();
     builder.Services.AddHostedService<Lazuar.Pay.Money.RefundSettleWorker>();
     builder.Services.AddHostedService<Lazuar.Pay.Rails.Solana.SolanaConfirmWorker>();
+    builder.Services.AddHostedService<Lazuar.Pay.Hosting.RetentionWorker>();
 }
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<SecretBox>();
