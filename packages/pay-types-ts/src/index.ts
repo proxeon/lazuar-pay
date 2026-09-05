@@ -262,7 +262,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Member list. Dunning status is the row status. No Plane C subscription.* events. */
+        /** @description Member list. Legacy/future only: no rows are minted while recurring billing is not offered (plans/031/01). */
         get: operations["Money_listSubscriptions"];
         put?: never;
         post?: never;
@@ -488,7 +488,7 @@ export interface components {
             success_url?: string;
             cancel_url?: string;
             idempotency_key?: string;
-            /** @description one_off | mo | yr. Default one_off. Recurring mints an incomplete subscription row; no Plane C subscription events. */
+            /** @description one_off only — mo/yr are refused with 400, recurring billing is not offered (plans/031/01). Default one_off. */
             interval?: string;
         };
         CreatePaymentLinkRequest: {
@@ -509,6 +509,7 @@ export interface components {
             /** Format: decimal */
             amount: number;
             currency?: string;
+            /** @description one_off only — mo/yr are refused with 400, recurring billing is not offered (plans/031/01). Default one_off. */
             interval?: string;
         };
         CreateRefundRequest: {

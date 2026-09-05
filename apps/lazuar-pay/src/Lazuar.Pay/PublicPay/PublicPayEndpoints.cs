@@ -166,19 +166,13 @@ internal static class PublicPayEndpoints
                 return PayErrors.Status(404, "Not Found", "Checkout not found");
             }
 
-            if (session.Status is "paid" or "expired" or "failed")
+            // plans/031/01 (Option A): every non-open checkout is terminal — paid/expired
+            // as before, and failed too now that the past_due recovery path is gone with
+            // recurring billing (a fresh checkout is the retry). The old issue-004
+            // failed→open re-open path existed only for subscriptions.
+            if (session.Status is not "open")
             {
-                // Issue 004 (issues/001): a failed checkout tied to a past_due subscription is
-                // the subscription's only recovery path — Start used to 409 on every non-open
-                // status, and since no rail ever re-bills, past_due was a dead end the payer
-                // could never leave. Failed ONE-OFF checkouts stay terminal (a fresh checkout
-                // is the retry); expired stays terminal (late-pay refund logic depends on it).
-                if (session.Status != "failed"
-                    || await db.Subscriptions.AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.CheckoutId == session.Id, ct) is null)
-                {
-                    return PayErrors.Status(409, "Conflict", "Checkout is not open");
-                }
+                return PayErrors.Status(409, "Conflict", "Checkout is not open");
             }
 
             var settings = await db.OrgSettings.FindAsync([session.OrgId], ct);
@@ -188,19 +182,6 @@ internal static class PublicPayEndpoints
             }
 
             row = await db.Checkouts.FirstAsync(x => x.Id == session.Id, ct);
-            if (session.Status == "failed")
-            {
-                // CAS failed→open so exactly one retryer wins; drop the dead PSP session so a
-                // fresh hosted URL mints instead of resuming the spent one.
-                if (!await CheckoutTransitions.TryTransitionAsync(db, row, from: "failed", to: "open", ct))
-                {
-                    return PayErrors.Status(409, "Conflict", "Checkout is not open");
-                }
-
-                row.PspRedirectUrl = null;
-                row.ProviderSessionId = null;
-                await db.SaveChangesAsync(ct);
-            }
         }
 
         return await StartGates.RunAsync(row.Id, async () =>

@@ -47,7 +47,7 @@ model CreateCheckoutRequest {
   success_url?: string;
   cancel_url?: string;
   idempotency_key?: string;
-  /** one_off | mo | yr. Default one_off. Recurring mints an incomplete subscription row; no Plane C subscription events. */
+  /** one_off only — mo/yr are refused with 400, recurring billing is not offered (plans/031/01). Default one_off. */
   interval?: string;
 }
 
@@ -177,6 +177,7 @@ model CreateProductRequest {
   description?: string;
   amount: decimal;
   currency?: string;
+  /** one_off only — mo/yr are refused with 400, recurring billing is not offered (plans/031/01). Default one_off. */
   interval?: string;
 }
 
@@ -545,7 +546,7 @@ interface Money {
   @route("/orgs/{orgId}/refunds")
   listRefunds(@path orgId: string, @query limit?: int32, @query after?: string): RefundListPage;
 
-  /** Member list. Dunning status is the row status. No Plane C subscription.* events. */
+  /** Member list. Legacy/future only: no rows are minted while recurring billing is not offered (plans/031/01). */
   @get
   @route("/orgs/{orgId}/subscriptions")
   listSubscriptions(@path orgId: string, @query limit?: int32, @query after?: string): SubscriptionListPage;

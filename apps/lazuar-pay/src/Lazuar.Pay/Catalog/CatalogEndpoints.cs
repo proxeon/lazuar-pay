@@ -42,10 +42,11 @@ internal static class CatalogEndpoints
             return amountErr;
         }
 
-        var interval = string.IsNullOrWhiteSpace(body!.Interval) ? "one_off" : body.Interval.Trim();
-        if (interval is not ("one_off" or "mo" or "yr"))
+        var interval = BillingIntervals.OneOff;
+        var intervalErr = BillingIntervals.Error(body!.Interval);
+        if (intervalErr is not null)
         {
-            return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
+            return intervalErr;
         }
 
         var product = new ProductRow

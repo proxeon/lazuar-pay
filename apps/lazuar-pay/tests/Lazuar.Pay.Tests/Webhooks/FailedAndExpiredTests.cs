@@ -72,7 +72,7 @@ public class FailedAndExpiredTests
         await PutHook(client);
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
         {
-            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test","interval":"mo"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test"}""", Encoding.UTF8, "application/json")
         };
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var created = await client.SendAsync(create);
@@ -102,8 +102,9 @@ public class FailedAndExpiredTests
         var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("failed"));
         Assert.That(pay.PspWebhookEvents.Single(x => x.Provider == "test").EventId, Is.EqualTo("evt_paused_fail"));
-        Assert.That(pay.Subscriptions.Single().Status, Is.EqualTo("past_due"));
-        Assert.That(pay.Subscriptions.Single().AttemptCount, Is.EqualTo(1));
+        // plans/031/01 (Option A): no dunning bookkeeping — no subscription row exists to
+        // flip past_due, and the merchant's own failed webhook is the signal.
+        Assert.That(pay.Subscriptions.Count(), Is.EqualTo(0));
         Assert.That(pay.OrgWebhookDeliveries.Single().EventType, Is.EqualTo("payment.failed"));
     }
 

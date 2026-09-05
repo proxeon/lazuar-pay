@@ -1,5 +1,4 @@
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
@@ -7,31 +6,61 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lazuar.Pay.Tests;
 
+/// <summary>
+/// plans/031/01 (Option A): recurring billing is not offered — a `mo`/`yr` checkout bills
+/// exactly once while the subscriptions row would claim otherwise. The intervals are
+/// refused at every entry point, no subscription rows are ever minted, and the list
+/// endpoint reads the (legacy/future) table.
+/// </summary>
 public class SubscriptionTests
 {
+    static async Task<HttpResponseMessage> Post(HttpClient client, string path, string json)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        return await client.SendAsync(req);
+    }
+
     [Test]
-    public async Task Mint_interval_lists_incomplete_then_active_on_pay()
+    public async Task Recurring_intervals_are_refused_at_every_entry_point()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+
+        foreach (var interval in new[] { "mo", "yr" })
+        {
+            var checkout = await Post(client, "/v1/checkouts",
+                $$"""{"org_id":"t1","amount":10,"provider":"test","interval":"{{interval}}"}""");
+            Assert.That(checkout.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), interval);
+            Assert.That(await checkout.Content.ReadAsStringAsync(), Does.Contain("recurring billing is not offered"));
+
+            var product = await Post(client, "/v1/orgs/t1/products",
+                $$"""{"name":"B","amount":10,"currency":"MYR","interval":"{{interval}}"}""");
+            Assert.That(product.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), interval);
+            Assert.That(await product.Content.ReadAsStringAsync(), Does.Contain("recurring billing is not offered"));
+        }
+    }
+
+    [Test]
+    public async Task One_off_checkout_mints_no_subscription_rows()
     {
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
         {
-            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test","interval":"mo"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test"}""", Encoding.UTF8, "application/json")
         };
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var minted = await client.SendAsync(create);
-        Assert.That(minted.StatusCode, Is.EqualTo(HttpStatusCode.Created), await minted.Content.ReadAsStringAsync());
+        Assert.That(minted.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var mintedDoc = JsonDocument.Parse(await minted.Content.ReadAsStringAsync());
-        Assert.That(mintedDoc.RootElement.GetProperty("interval").GetString(), Is.EqualTo("mo"));
+        Assert.That(mintedDoc.RootElement.GetProperty("interval").GetString(), Is.EqualTo("one_off"));
         var token = mintedDoc.RootElement.GetProperty("public_token").GetString();
-
-        using var listOpen = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/subscriptions");
-        listOpen.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var listed = await client.SendAsync(listOpen);
-        using var openDoc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
-        Assert.That(PayTest.Items(openDoc.RootElement)[0].GetProperty("status").GetString(), Is.EqualTo("incomplete"));
-        Assert.That(openDoc.RootElement.ToString(), Does.Not.Contain("subscription.activated"));
 
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
@@ -39,41 +68,13 @@ public class SubscriptionTests
         };
         Assert.That((await client.SendAsync(start)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        using var listPaid = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/subscriptions");
-        listPaid.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var paidList = await client.SendAsync(listPaid);
-        using var paidDoc = JsonDocument.Parse(await paidList.Content.ReadAsStringAsync());
-        Assert.That(PayTest.Items(paidDoc.RootElement)[0].GetProperty("status").GetString(), Is.EqualTo("active"));
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/subscriptions");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        using var doc = JsonDocument.Parse(await (await client.SendAsync(list)).Content.ReadAsStringAsync());
+        Assert.That(PayTest.Items(doc.RootElement).EnumerateArray(), Is.Empty);
         using var scope = factory.Services.CreateScope();
-        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgWebhookDeliveries.Any(x => x.EventType.StartsWith("subscription.")), Is.False);
-    }
-
-    [Test]
-    public async Task Failed_marks_past_due()
-    {
-        await using var factory = new PayApiFactory();
-        factory.One.Responder = PayTest.Owner;
-        var client = factory.CreateClient();
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test","interval":"yr"}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var minted = await client.SendAsync(create);
-        using var mintedDoc = JsonDocument.Parse(await minted.Content.ReadAsStringAsync());
-        var checkoutId = mintedDoc.RootElement.GetProperty("id").GetString();
-        var body = $$"""{"id":"evt_sub_fail","checkout_id":"{{checkoutId}}","status":"failed","currency":"myr"}""";
-        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("test_whsec_local"), Encoding.UTF8.GetBytes(body));
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/test/t1")
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json")
-        };
-        req.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
-        Assert.That((await client.SendAsync(req)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        using var scope = factory.Services.CreateScope();
-        var sub = scope.ServiceProvider.GetRequiredService<PayDbContext>().Subscriptions.Single();
-        Assert.That(sub.Status, Is.EqualTo("past_due"));
-        Assert.That(sub.AttemptCount, Is.EqualTo(1));
-        Assert.That(sub.PastDueAt, Is.Not.Null);
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Subscriptions.Count(), Is.EqualTo(0));
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().OrgWebhookDeliveries
+            .Any(x => x.EventType.StartsWith("subscription.")), Is.False);
     }
 }

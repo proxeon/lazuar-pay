@@ -72,13 +72,13 @@ internal static class CheckoutEndpoints
             }
         }
 
-        var interval = string.IsNullOrWhiteSpace(body.Interval) ? "one_off" : body.Interval.Trim();
-        if (interval is not ("one_off" or "mo" or "yr"))
+        var intervalErr = BillingIntervals.Error(body.Interval);
+        if (intervalErr is not null)
         {
-            return PayErrors.Status(400, "Bad Request", "interval must be one_off, mo, or yr");
+            return intervalErr;
         }
 
-        var mintErr = SolanaMoney.MintError(provider, body.Currency, interval, body.ProductId, body.Amount);
+        var mintErr = SolanaMoney.MintError(provider, body.Currency, BillingIntervals.OneOff, body.ProductId, body.Amount);
         if (mintErr is not null)
         {
             return mintErr;
@@ -121,7 +121,7 @@ internal static class CheckoutEndpoints
             Amount = quoted,
             Currency = currency,
             Status = "open",
-            Interval = interval,
+            Interval = BillingIntervals.OneOff,
             SuccessUrl = body.SuccessUrl,
             CancelUrl = body.CancelUrl,
             CreatedAt = DateTimeOffset.UtcNow
@@ -138,19 +138,9 @@ internal static class CheckoutEndpoints
         }
 
         var created = session.Id == mintedId;
-        if (created && interval is "mo" or "yr")
-        {
-            db.Subscriptions.Add(new SubscriptionRow
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                OrgId = session.OrgId,
-                CheckoutId = session.Id,
-                Status = "incomplete",
-                Interval = interval,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
-            await db.SaveChangesAsync(cancellationToken);
-        }
+
+        // plans/031/01 (Option A): no subscription row is minted on checkout create —
+        // recurring billing is not offered, so there is no incomplete state to track.
 
         StampPayUrl(session, config, env);
         return Results.Json(session, OneClient.Json, statusCode: created ? 201 : 200);

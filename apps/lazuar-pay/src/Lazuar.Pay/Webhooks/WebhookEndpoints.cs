@@ -178,13 +178,9 @@ internal static class WebhookEndpoints
                         return Results.Json(new { failed = true }, OneClient.Json);
                     }
 
-                    var sub = await db.Subscriptions.FirstOrDefaultAsync(x => x.CheckoutId == checkout.Id, ct);
-                    if (sub is not null)
-                    {
-                        sub.Status = "past_due";
-                        sub.PastDueAt ??= DateTimeOffset.UtcNow;
-                        sub.AttemptCount += 1;
-                    }
+                    // plans/031/01 (Option A): no dunning bookkeeping — recurring billing is
+                    // not offered, so a failed checkout is simply terminal (a fresh checkout
+                    // is the retry) and the merchant's own webhook below is the signal.
 
                     await OutboundWebhookEnqueue.TryAddAsync(
                         db,

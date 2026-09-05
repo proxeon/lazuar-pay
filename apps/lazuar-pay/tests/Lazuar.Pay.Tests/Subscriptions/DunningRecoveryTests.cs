@@ -8,20 +8,17 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Lazuar.Pay.Tests;
 
 /// <summary>
-/// Issue 004 (issues/001): past_due was a dead end — Start 409'd on every non-open checkout
-/// and nothing ever wrote the subscription active again. The failed subscription checkout is
-/// now re-openable so the payer can retry; failed one-off checkouts stay terminal.
+/// plans/031/01 (Option A): with recurring billing not offered, the issue-004 failed→open
+/// re-open path is gone — a failed checkout is terminal (a fresh checkout is the retry),
+/// even when a legacy subscription row from before the removal still points at it.
 /// </summary>
 public class DunningRecoveryTests
 {
-    static async Task<string> CreateCheckout(HttpClient client, string intervalJson)
+    static async Task<string> CreateCheckout(HttpClient client)
     {
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
         {
-            Content = new StringContent(
-                $$"""{"org_id":"t1","amount":10,"provider":"test"{{intervalJson}}}""",
-                Encoding.UTF8,
-                "application/json")
+            Content = new StringContent("""{"org_id":"t1","amount":10,"provider":"test"}""", Encoding.UTF8, "application/json")
         };
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var minted = await client.SendAsync(create);
@@ -30,11 +27,8 @@ public class DunningRecoveryTests
         return doc.RootElement.GetProperty("public_token").GetString()!;
     }
 
-    static async Task Fail(HttpClient client, string token)
+    static async Task<string> Fail(HttpClient client, string token)
     {
-        using var scope0 = new HttpRequestMessage(HttpMethod.Get, $"/v1/pay/{token}");
-        // resolve checkout id via list is awkward; use the seeded org list instead
-        _ = scope0;
         using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/checkouts?limit=1");
         list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         using var listDoc = JsonDocument.Parse(await (await client.SendAsync(list)).Content.ReadAsStringAsync());
@@ -48,49 +42,37 @@ public class DunningRecoveryTests
         };
         req.Headers.TryAddWithoutValidation("X-Pay-Test-Signature", Convert.ToHexString(mac).ToLowerInvariant());
         Assert.That((await client.SendAsync(req)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        return checkoutId;
     }
 
     [Test]
-    public async Task Past_due_subscription_checkout_can_be_retried_back_to_active()
+    public async Task Failed_checkout_is_terminal_even_with_a_legacy_subscription_row()
     {
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        var token = await CreateCheckout(client, ",\"interval\":\"mo\"");
-        await Fail(client, token);
+        var token = await CreateCheckout(client);
+        var checkoutId = await Fail(client, token);
 
+        // A row left behind by a deployment that predates the interval removal must not
+        // resurrect the checkout.
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
-            Assert.That(db.Subscriptions.Single().Status, Is.EqualTo("past_due"));
+            db.Subscriptions.Add(new SubscriptionRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = "t1",
+                CheckoutId = checkoutId,
+                Status = "past_due",
+                Interval = "mo",
+                AttemptCount = 1,
+                PastDueAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
             Assert.That(db.Checkouts.Single().Status, Is.EqualTo("failed"));
         }
-
-        // The retry: start on the same token now succeeds instead of 409. The test rail
-        // fulfills immediately, flipping the subscription back to active.
-        using var retry = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
-        {
-            Content = new StringContent("""{"name":"Ada"}""", Encoding.UTF8, "application/json")
-        };
-        var response = await client.SendAsync(retry);
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
-
-        using var after = factory.Services.CreateScope();
-        var pay = after.ServiceProvider.GetRequiredService<PayDbContext>();
-        Assert.That(pay.Subscriptions.Single().Status, Is.EqualTo("active"), "the dead end is gone");
-        Assert.That(pay.Checkouts.Single().Status, Is.EqualTo("paid"));
-        Assert.That(pay.Charges.Count(), Is.EqualTo(1));
-        Assert.That(pay.Subscriptions.Single().AttemptCount, Is.EqualTo(1), "dunning history is kept");
-    }
-
-    [Test]
-    public async Task Failed_one_off_checkout_stays_terminal()
-    {
-        await using var factory = new PayApiFactory();
-        factory.One.Responder = PayTest.Owner;
-        var client = factory.CreateClient();
-        var token = await CreateCheckout(client, "");
-        await Fail(client, token);
 
         using var retry = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
@@ -98,6 +80,6 @@ public class DunningRecoveryTests
         };
         var response = await client.SendAsync(retry);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict),
-            "one-off retries mint a fresh checkout; the failed one stays terminal");
+            "a legacy subscription row must not re-open a failed checkout");
     }
 }

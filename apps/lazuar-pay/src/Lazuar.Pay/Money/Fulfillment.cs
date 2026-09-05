@@ -123,41 +123,19 @@ public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
             Status = "paid"
         });
 
-        string? payerId = null;
         if (!string.IsNullOrWhiteSpace(checkout.PayerEmail) || !string.IsNullOrWhiteSpace(checkout.PayerName))
         {
-            payerId = Guid.NewGuid().ToString("N");
             db.Payers.Add(new PayerRow
             {
-                Id = payerId,
+                Id = Guid.NewGuid().ToString("N"),
                 OrgId = checkout.OrgId,
                 Email = checkout.PayerEmail,
                 Name = checkout.PayerName
             });
         }
 
-        if (checkout.Interval is "mo" or "yr")
-        {
-            var sub = await db.Subscriptions.FirstOrDefaultAsync(x => x.CheckoutId == checkout.Id, ct);
-            if (sub is null)
-            {
-                db.Subscriptions.Add(new SubscriptionRow
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    OrgId = checkout.OrgId,
-                    CheckoutId = checkout.Id,
-                    PayerId = payerId,
-                    Status = "active",
-                    Interval = checkout.Interval,
-                    CreatedAt = DateTimeOffset.UtcNow
-                });
-            }
-            else
-            {
-                sub.Status = "active";
-                sub.PayerId = payerId ?? sub.PayerId;
-            }
-        }
+        // plans/031/01 (Option A): no subscription activation here — recurring billing is
+        // not offered, every checkout is one_off, and no code path mints subscription rows.
 
         var entryId = Guid.NewGuid().ToString("N");
         db.JournalEntries.Add(new JournalEntryRow
