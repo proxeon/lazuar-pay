@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createsCatalogProduct,
   defaultCurrency,
   defaultMintRail,
   hostListsTest,
@@ -45,6 +46,48 @@ describe('vaultedNonTest', () => {
   it('does not count Test as on file', () => {
     expect(vaultedNonTest([test, stripe])).toEqual([stripe])
     expect(vaultedNonTest([test])).toEqual([])
+  })
+})
+
+describe('defaultCurrency', () => {
+  it('mirrors the server table — the create payload currency per rail', () => {
+    // Issue 003 (issues/003): the mirror said MYR for razorpay, but that rail settles INR
+    // only — every Razorpay pay link this dashboard created was rejected server-side.
+    expect(defaultCurrency('stripe')).toBe('MYR')
+    expect(defaultCurrency('chip')).toBe('MYR')
+    expect(defaultCurrency('billplz')).toBe('MYR')
+    expect(defaultCurrency('xendit')).toBe('MYR')
+    expect(defaultCurrency('razorpay')).toBe('INR')
+    expect(defaultCurrency('solana')).toBe('USDC')
+    expect(defaultCurrency('test')).toBe('MYR')
+    expect(defaultCurrency('')).toBe('MYR')
+  })
+
+  it('lets the server declaration win over the local mirror', () => {
+    const razorpay: Processor = { provider: 'razorpay', configured: true, currency: 'INR' }
+    expect(defaultCurrency('razorpay', [razorpay])).toBe('INR')
+    expect(defaultCurrency('stripe', [{ provider: 'stripe', currency: 'usd ' }])).toBe('USD')
+    expect(defaultCurrency('stripe', [{ provider: 'chip', currency: 'USD' }])).toBe('MYR')
+  })
+})
+
+describe('createsCatalogProduct', () => {
+  it('attaches a product only when the rail settles the MYR catalog currency', () => {
+    expect(createsCatalogProduct('stripe')).toBe(true)
+    expect(createsCatalogProduct('chip')).toBe(true)
+    expect(createsCatalogProduct('billplz')).toBe(true)
+    expect(createsCatalogProduct('xendit')).toBe(true)
+    expect(createsCatalogProduct('test')).toBe(true)
+    // INR links cannot match a MYR catalog price — attaching a product would 400 the
+    // link create and orphan the product.
+    expect(createsCatalogProduct('razorpay')).toBe(false)
+    expect(createsCatalogProduct('solana')).toBe(false)
+    expect(createsCatalogProduct('')).toBe(false)
+  })
+
+  it('follows a server-declared currency', () => {
+    expect(createsCatalogProduct('stripe', [{ provider: 'stripe', currency: 'USD' }])).toBe(false)
+    expect(createsCatalogProduct('razorpay', [{ provider: 'razorpay', currency: 'INR' }])).toBe(false)
   })
 })
 

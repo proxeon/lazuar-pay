@@ -124,6 +124,8 @@ model GatewayView {
   public_merchant_id?: string;
   environment?: string;
   webhook_configured?: boolean;
+  /** Server-declared settlement currency for NEW charges on this rail (RailCurrencies.Default). */
+  currency: string;
 }
 
 model GatewayList {

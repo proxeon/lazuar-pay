@@ -540,6 +540,8 @@ export interface components {
             public_merchant_id?: string;
             environment?: string;
             webhook_configured?: boolean;
+            /** @description Server-declared settlement currency for NEW charges on this rail (RailCurrencies.Default). */
+            currency: string;
         };
         HealthResponse: {
             status: string;

@@ -6,12 +6,12 @@ import { listAll, payFetch, payJson } from '../../lib/payApi'
 import { buyerPayUrl, resolveCheckoutOrigin } from '../../lib/checkoutOrigin'
 import { occupancyOverCapacity, occupancyPayersLabel, occupancyStatusLabel } from '../../lib/occupancyDisplay'
 import {
+  createsCatalogProduct,
   defaultCurrency,
   defaultMintRail,
   isRail,
   railLabel,
   readyMintRails,
-  usesCatalogProduct,
   type Processor,
   type Rail,
 } from '../../lib/processors'
@@ -178,10 +178,15 @@ export function CheckoutsPage() {
     setBusy(true)
     setError(null)
     let productCreated = false
-    const currency = defaultCurrency(provider)
+    // Server-declared when /gateways answered, local mirror before that. Issue 003
+    // (issues/003): razorpay settles INR — quoting MYR here 400'd every link.
+    const currency = defaultCurrency(provider, configured)
     try {
       let productId: string | undefined
-      if (usesCatalogProduct(provider)) {
+      // Catalog products are MYR-only server-side and a link with a product must match its
+      // price, so a rail that settles another currency must not attach one (it would 400
+      // on the price match and orphan the product).
+      if (createsCatalogProduct(provider, configured)) {
         const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
           method: 'POST',
           orgHint: orgId,
@@ -372,7 +377,7 @@ export function CheckoutsPage() {
           <DialogHeader>
             <DialogTitle>Create pay link</DialogTitle>
             <DialogDescription>
-              {defaultCurrency(provider)}. Success URL defaults to checkout ?status=verifying (not paid).
+              {defaultCurrency(provider, configured)}. Success URL defaults to checkout ?status=verifying (not paid).
             </DialogDescription>
           </DialogHeader>
           {error ? (
@@ -391,7 +396,7 @@ export function CheckoutsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ({defaultCurrency(provider)})</Label>
+                <Label htmlFor="amount">Amount ({defaultCurrency(provider, configured)})</Label>
                 <Input
                   id="amount"
                   inputMode="decimal"

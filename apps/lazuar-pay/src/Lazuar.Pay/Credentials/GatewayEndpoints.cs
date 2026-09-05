@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Rails.Solana;
@@ -265,7 +266,8 @@ internal static class GatewayEndpoints
                     capability = PayProviders.Capability,
                     public_merchant_id = (string?)null,
                     environment = (string?)null,
-                    webhook_configured = false
+                    webhook_configured = false,
+                    currency = RailCurrencies.Default(name)
                 };
             }
 
@@ -321,7 +323,10 @@ internal static class GatewayEndpoints
         capability = PayProviders.Capability,
         public_merchant_id = row.PublicMerchantId,
         environment = row.Environment,
-        webhook_configured = !string.IsNullOrWhiteSpace(row.WebhookCiphertext)
+        webhook_configured = !string.IsNullOrWhiteSpace(row.WebhookCiphertext),
+        // Issue 003 (issues/003): the server's answer for "what currency do new charges on
+        // this rail quote" — the merchant UI mirrors it only until this payload arrives.
+        currency = RailCurrencies.Default(row.Provider)
     };
 
     static bool TryChipPem(string pem)
@@ -347,7 +352,8 @@ internal static class GatewayEndpoints
         capability = PayProviders.Capability,
         public_merchant_id = (string?)null,
         environment = "test",
-        webhook_configured = true
+        webhook_configured = true,
+        currency = RailCurrencies.Default(PayProviders.Test)
     };
 }
 

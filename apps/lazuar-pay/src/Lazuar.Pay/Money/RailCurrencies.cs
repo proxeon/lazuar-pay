@@ -58,4 +58,17 @@ public static class RailCurrencies
         PayProviders.IsSolana(provider)
             ? SolanaUsdc.Currency
             : string.Join(", ", ByProvider.TryGetValue(provider, out var list) ? list : []);
+
+    /// <summary>
+    /// The currency a NEW checkout or pay link quotes by default on this rail — the catalog
+    /// currency (MYR) wherever the rail settles it, else the rail's own. Issues 003 and 014
+    /// (issues/001) made this table binding server-side; issue 003 (issues/003) broke the
+    /// merchant dashboard because its local mirror said MYR for razorpay, which this rail
+    /// only ever rejects. Exposed on /gateways processor payloads so the UI reads the
+    /// server's answer instead of trusting its mirror.
+    /// </summary>
+    public static string Default(string provider) =>
+        PayProviders.IsSolana(provider) ? SolanaUsdc.Currency
+        : provider == PayProviders.Razorpay ? "INR"
+        : "MYR";
 }

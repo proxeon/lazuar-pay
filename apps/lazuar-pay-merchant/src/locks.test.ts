@@ -305,8 +305,12 @@ describe('merchant honesty locks', () => {
     expect(checkouts).toContain('finally')
     expect(checkouts).toContain('setBusy(false)')
     expect(checkouts).toContain('A product was created. Pay link failed:')
-    expect(checkouts).toContain('usesCatalogProduct')
-    expect(checkouts).toContain('defaultCurrency')
+    // Issue 003 (issues/003): the rail's currency comes from the server-declared
+    // processor row (razorpay settles INR, not MYR), and a product is attached only when
+    // the rail settles the MYR catalog currency — otherwise the link 400s on the price
+    // match and the product is orphaned.
+    expect(checkouts).toContain('createsCatalogProduct')
+    expect(checkouts).toContain('defaultCurrency(provider, configured)')
     expect(gateway).toContain('usesReceiveAddress')
   })
 })

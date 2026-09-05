@@ -41,6 +41,8 @@ export type Processor = {
   public_merchant_id?: string
   environment?: string
   webhook_configured?: boolean
+  /** Server-declared settlement currency for NEW charges on this rail (RailCurrencies.Default). */
+  currency?: string
 }
 
 export function isRail(value: string | undefined | null): value is Rail {
@@ -80,6 +82,31 @@ export function usesCatalogProduct(rail: Rail): boolean {
   return !usesReceiveAddress(rail)
 }
 
-export function defaultCurrency(rail: Rail | ''): string {
-  return rail !== '' && usesReceiveAddress(rail) ? 'USDC' : 'MYR'
+/**
+ * The currency NEW charges on this rail quote. The server's /gateways answer
+ * (RailCurrencies.Default) wins when a processor row carries it; the local mirror below
+ * only covers the moment before that payload arrives. Issue 003 (issues/003): the mirror
+ * used to say MYR for every card rail, but Razorpay settles INR only — the server
+ * rejected every Razorpay pay link this dashboard tried to create.
+ */
+export function defaultCurrency(rail: Rail | '', processors?: Processor[]): string {
+  const declared = processors
+    ?.find((p) => p.provider === rail)
+    ?.currency?.trim()
+    ?.toUpperCase()
+  if (declared) return declared
+  if (rail === 'solana') return 'USDC'
+  if (rail === 'razorpay') return 'INR'
+  return 'MYR'
+}
+
+/**
+ * Whether the create-link flow should mint a catalog product for this rail. Catalog
+ * products are MYR-only server-side ("Bar B currency is MYR") and a pay link attached to
+ * a product must match its price, so a rail that settles another currency (razorpay →
+ * INR) must skip the product: the link would 400 on the price match and the product
+ * would be orphaned. The label still travels on the pay link itself.
+ */
+export function createsCatalogProduct(rail: Rail | '', processors?: Processor[]): boolean {
+  return rail !== '' && usesCatalogProduct(rail) && defaultCurrency(rail, processors) === 'MYR'
 }

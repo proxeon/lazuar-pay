@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace Lazuar.Pay.Tests;
 
@@ -79,5 +80,35 @@ public class CurrencyValidationTests
         var razorInr = await Create(client, "/v1/checkouts",
             """{"org_id":"t1","amount":10,"currency":"INR","provider":"razorpay"}""");
         Assert.That(razorInr.StatusCode, Is.EqualTo(HttpStatusCode.Created), await razorInr.Content.ReadAsStringAsync());
+    }
+
+    [Test]
+    public async Task Gateways_declare_each_rails_default_currency()
+    {
+        // Issue 003 (issues/003): the merchant dashboard mirrored "MYR for every card rail"
+        // locally and could never create a Razorpay link (INR-only), orphaning a product on
+        // every attempt. The server now answers per-rail default currency on /gateways;
+        // the UI mirrors it only until this payload arrives.
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = PayTest.Owner;
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
+        await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"rzp_wh"}""");
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateways");
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(req);
+        Assert.That(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var byProvider = doc.RootElement.GetProperty("processors").EnumerateArray()
+            .ToDictionary(p => p.GetProperty("provider").GetString()!, p => p.GetProperty("currency").GetString()!);
+
+        Assert.That(byProvider["razorpay"], Is.EqualTo("INR"));
+        Assert.That(byProvider["stripe"], Is.EqualTo("MYR"));
+        Assert.That(byProvider["billplz"], Is.EqualTo("MYR"));
+        Assert.That(byProvider["chip"], Is.EqualTo("MYR"));
+        Assert.That(byProvider["xendit"], Is.EqualTo("MYR"));
+        Assert.That(byProvider["solana"], Is.EqualTo("USDC"));
+        Assert.That(byProvider["test"], Is.EqualTo("MYR"));
     }
 }
