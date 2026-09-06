@@ -32,6 +32,18 @@ api = { path = "crates/api" }
 workers = { path = "crates/workers" }
 obs = { path = "crates/obs" }
 rust_decimal = { version = "1.36", default-features = false, features = ["std"] }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "postgres",
+    "macros",
+    "migrate",
+    "uuid",
+] }
 thiserror = "2"
 time = { version = "0.3.36", default-features = false, features = ["std"] }
-uuid = { version = "1.11", default-features = false, features = ["std"] }
+tokio = { version = "1", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+] }
+uuid = { version = "1.11", default-features = false, features = ["std", "v4"] }

@@ -72,6 +72,12 @@ tasks:
     cmds:
       - cargo test -p domain
 
+  pay-rs:storage:
+    desc: Apply pay_rs migrations on Postgres 16 and assert unique locks (033/01)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo test -p storage
+
   pay-rs:check:
     desc: Workspace check + domain purity (no tokio/sqlx/axum)
     dir: apps/lazuar-pay-rs

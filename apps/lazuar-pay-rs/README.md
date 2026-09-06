@@ -16,15 +16,15 @@ crates/
   workers/    # outbox, settler, psync, retention. SKIP LOCKED.
   obs/        # /metrics + OTLP.
   app/        # binary: serve | --api-only | --worker-only | --watcher-only
-migrations/   # sqlx migrate, one folder (pay_rs). Empty until 08.
+migrations/   # sqlx migrate, one folder (pay_rs). P1 init is in.
 ```
 
 v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 
 ## Build order
 
-1. `domain` + tests (this PR).
-2. `migrations/` + `storage` apply TX (08).
+1. `domain` + tests — done.
+2. `migrations/` + unique tests (P1 / 033/01) — this tree. `storage::apply` is P2.
 3. `api` adapter: health, whoami, test rail, webhook ingest, public start.
 4. `workers`.
 5. Live rails one PR each.
@@ -32,6 +32,7 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 
 ```sh
 cargo test -p domain
+cargo test -p storage   # Docker: Postgres 16 via testcontainers
 cargo check --workspace
 ```
 
