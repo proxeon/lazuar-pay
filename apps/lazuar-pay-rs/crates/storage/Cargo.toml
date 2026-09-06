@@ -13,9 +13,11 @@ workspace = true
 [dependencies]
 domain.workspace = true
 sqlx.workspace = true
-
-[dev-dependencies]
+thiserror.workspace = true
+time.workspace = true
 tokio.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
 testcontainers = { version = "0.25", features = ["blocking"] }
 testcontainers-modules = { version = "0.13", features = ["postgres"] }

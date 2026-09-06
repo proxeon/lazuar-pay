@@ -1,9 +1,14 @@
-//! Persistence. sqlx migrate for `pay_rs` (033/01).
-//!
-//! `apply` is the only composer of fold + journal + outbox — **not in this crate
-//! yet** (P2). This crate must not import rail HTTP clients.
+//! Persistence. `apply` is the only composer of fold + journal + outbox (033/02).
+//! This crate must not import rail HTTP clients.
 
 #![forbid(unsafe_code)]
+
+pub mod apply;
+pub mod error;
+pub mod rows;
+
+pub use apply::{apply, ApplyCmd, ApplyOutcome, MintSpec};
+pub use error::ApplyError;
 
 use sqlx::postgres::PgPool;
 

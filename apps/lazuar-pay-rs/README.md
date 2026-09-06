@@ -24,7 +24,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 ## Build order
 
 1. `domain` + tests — done.
-2. `migrations/` + unique tests (P1 / 033/01) — this tree. `storage::apply` is P2.
+2. `migrations/` + unique tests (P1 / 033/01) — done.
+2b. `storage::apply` TX + G4 races (P2 / 033/02) — this tree.
 3. `api` adapter: health, whoami, test rail, webhook ingest, public start.
 4. `workers`.
 5. Live rails one PR each.

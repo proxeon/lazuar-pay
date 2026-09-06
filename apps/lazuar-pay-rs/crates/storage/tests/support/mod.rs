@@ -39,7 +39,7 @@ fn db_url() -> &'static str {
 
 pub async fn pool() -> PgPool {
     let pool = PgPoolOptions::new()
-        .max_connections(4)
+        .max_connections(8)
         .connect(db_url())
         .await
         .expect("connect postgres");
@@ -75,6 +75,23 @@ pub async fn insert_payment(tx: &mut Transaction<'_, Postgres>, token: &str) -> 
     )
     .bind(token)
     .fetch_one(&mut **tx)
+    .await?;
+    Ok(row.0)
+}
+
+pub async fn insert_link_max(pool: &PgPool, tenant: &str, max_payers: i32) -> sqlx::Result<Uuid> {
+    let row: (Uuid,) = sqlx::query_as(
+        r#"
+        INSERT INTO pay_rs.payment_links (
+            tenant_id, public_token, rail, amount_minor, currency, exponent, max_payers
+        ) VALUES ($1, $2, 'test', 1000, 'MYR', 2, $3)
+        RETURNING id
+        "#,
+    )
+    .bind(tenant)
+    .bind(token("link"))
+    .bind(max_payers)
+    .fetch_one(pool)
     .await?;
     Ok(row.0)
 }
