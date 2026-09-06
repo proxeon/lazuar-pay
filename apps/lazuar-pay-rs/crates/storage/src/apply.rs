@@ -35,6 +35,8 @@ pub struct MintSpec {
     pub monitoring_until: OffsetDateTime,
     pub payment_link_id: Option<PaymentLinkId>,
     pub slot_key: Option<String>,
+    pub success_url: Option<String>,
+    pub cancel_url: Option<String>,
 }
 
 pub enum ApplyCmd {
@@ -184,10 +186,11 @@ async fn mint(
         r#"
         INSERT INTO pay_rs.payments (
             id, tenant_id, public_token, amount_minor, currency, exponent,
-            status, expires_at, monitoring_until, payment_link_id, slot_key, version
+            status, expires_at, monitoring_until, payment_link_id, slot_key,
+            success_url, cancel_url, version
         ) VALUES (
             $1, $2, $3, $4, $5, $6,
-            'open', $7, $8, $9, $10, 1
+            'open', $7, $8, $9, $10, $11, $12, 1
         )
         "#,
     )
@@ -201,6 +204,8 @@ async fn mint(
     .bind(spec.monitoring_until)
     .bind(spec.payment_link_id.map(|l| l.as_uuid()))
     .bind(spec.slot_key.as_deref())
+    .bind(spec.success_url.as_deref())
+    .bind(spec.cancel_url.as_deref())
     .execute(&mut **tx)
     .await
     .map_err(ApplyError::from_sql)?;

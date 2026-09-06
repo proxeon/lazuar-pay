@@ -78,6 +78,18 @@ tasks:
     cmds:
       - cargo test -p storage
 
+  pay-rs:api:
+    desc: Thin TypeSpec /v1 adapter tests (test rail, 033/03)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo test -p api
+
+  pay-rs:serve:
+    desc: Run lazuar-pay-rs on :8081 (Testing; needs ConnectionStrings__Pay)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo run -p lazuar-pay-rs -- serve
+
   pay-rs:check:
     desc: Workspace check + domain purity (no tokio/sqlx/axum)
     dir: apps/lazuar-pay-rs

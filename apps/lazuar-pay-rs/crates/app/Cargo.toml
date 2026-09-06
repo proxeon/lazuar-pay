@@ -12,9 +12,7 @@ workspace = true
 
 [dependencies]
 api.workspace = true
-chain.workspace = true
-domain.workspace = true
-obs.workspace = true
-rails.workspace = true
+axum.workspace = true
+sqlx.workspace = true
 storage.workspace = true
-workers.workspace = true
+tokio.workspace = true

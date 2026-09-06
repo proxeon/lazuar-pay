@@ -11,4 +11,25 @@ description = "axum TypeSpec /v1 adapter. No posting rules."
 workspace = true
 
 [dependencies]
+axum.workspace = true
 domain.workspace = true
+hex.workspace = true
+rails.workspace = true
+reqwest.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+hmac.workspace = true
+http-body-util = "0.1"
+testcontainers = { version = "0.25", features = ["blocking"] }
+testcontainers-modules = { version = "0.13", features = ["postgres"] }
+tower = { version = "0.5", features = ["util"] }

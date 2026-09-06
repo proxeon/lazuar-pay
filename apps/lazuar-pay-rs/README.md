@@ -24,8 +24,9 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 ## Build order
 
 1. `domain` + tests — done.
-2. `migrations/` + unique tests (P1 / 033/01) — done.
-2b. `storage::apply` TX + G4 races (P2 / 033/02) — this tree.
+2. `migrations/` + unique tests (P1) — done.
+2b. `storage::apply` TX + G4 races (P2) — done.
+3. Thin TypeSpec `/v1` adapter, test rail (P3 / 033/03) — this tree.
 3. `api` adapter: health, whoami, test rail, webhook ingest, public start.
 4. `workers`.
 5. Live rails one PR each.
@@ -34,8 +35,11 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 ```sh
 cargo test -p domain
 cargo test -p storage   # Docker: Postgres 16 via testcontainers
-cargo check --workspace
+cargo test -p api       # Docker + Fake One
+cargo run -p lazuar-pay-rs -- serve   # :8081, ConnectionStrings__Pay
 ```
+
+Testing `serve` uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set. Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two replicas = 2×.
 
 `domain` must compile with no `tokio`, `sqlx`, or `axum`. CI greps it.
 

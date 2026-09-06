@@ -40,6 +40,8 @@ async fn mint(
             monitoring_until: expires,
             payment_link_id,
             slot_key,
+            success_url: None,
+            cancel_url: None,
         }),
     )
     .await
@@ -218,6 +220,8 @@ async fn issue_011_same_slot_second_mint_conflicts() {
         monitoring_until: now + Duration::minutes(30),
         payment_link_id: Some(link_id),
         slot_key: Some("slot-1".into()),
+        success_url: None,
+        cancel_url: None,
     };
     let a = pool.clone();
     let b = pool.clone();

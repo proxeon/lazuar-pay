@@ -36,6 +36,8 @@ async fn mint_and_session(
             monitoring_until: expires,
             payment_link_id: None,
             slot_key: None,
+            success_url: None,
+            cancel_url: None,
         }),
     )
     .await

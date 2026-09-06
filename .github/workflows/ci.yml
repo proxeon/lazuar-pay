@@ -79,6 +79,12 @@ jobs:
         run: cargo test -p domain
       - name: test storage (Docker Postgres 16)
         run: cargo test -p storage
+      - name: test api (Docker Postgres 16)
+        run: cargo test -p api
+      - name: rails has no sqlx
+        run: |
+          set -euo pipefail
+          if cargo tree -p rails -i sqlx >/dev/null 2>&1; then echo "sqlx in rails"; exit 1; fi
       - name: check workspace
         run: cargo check --workspace
       - name: domain has no tokio/sqlx/axum

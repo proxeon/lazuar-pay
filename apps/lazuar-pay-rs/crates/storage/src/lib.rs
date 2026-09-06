@@ -5,10 +5,12 @@
 
 pub mod apply;
 pub mod error;
+pub mod read;
 pub mod rows;
 
 pub use apply::{apply, ApplyCmd, ApplyOutcome, MintSpec};
 pub use error::ApplyError;
+pub use read::{AttemptView, PaymentView};
 
 use sqlx::postgres::PgPool;
 
