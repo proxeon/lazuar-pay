@@ -1,0 +1,1 @@
+{"event_type":"purchase.preauthorized","id":"purch_1","purchase":{"id":"purch_1","total":0,"currency":"MYR","metadata":{"checkout_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"recurring_token":"tok"}

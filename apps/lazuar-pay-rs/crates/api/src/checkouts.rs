@@ -3,7 +3,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use domain::money::{Currency, Money};
-use domain::rail::RailId;
+use domain::rail::{rail_supports_currency, RailId};
 use domain::wire::buyer_status;
 use domain::{PublicToken, TenantId};
 use rust_decimal::Decimal;
@@ -59,8 +59,8 @@ pub async fn create(
                 "test processor is not enabled",
             );
         }
-    } else if provider == RailId::STRIPE.as_str() {
-        match storage::get_credential(&st.pool, &org_id, "stripe").await {
+    } else if provider == RailId::STRIPE.as_str() || provider == RailId::CHIP.as_str() {
+        match storage::get_credential(&st.pool, &org_id, &provider).await {
             Ok(Some(_)) => {}
             Ok(None) => {
                 return problem(
@@ -107,6 +107,14 @@ pub async fn create(
             );
         }
     };
+    let rail = RailId::parse(&provider).unwrap_or(RailId::TEST);
+    if !rail_supports_currency(rail, ccy) {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "currency not supported on this rail",
+        );
+    }
 
     let header_key = headers
         .get("Idempotency-Key")
@@ -152,7 +160,7 @@ pub async fn create(
             slot_key: None,
             success_url: body.success_url.clone(),
             cancel_url: body.cancel_url.clone(),
-            rail: RailId::parse(&provider).unwrap_or(RailId::TEST),
+            rail,
         }),
     )
     .await;

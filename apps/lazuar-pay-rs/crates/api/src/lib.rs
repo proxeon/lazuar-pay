@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test rail + Stripe (033/05).
+//! TypeSpec `/v1` adapter over `storage::apply`. Test rail + Stripe + CHIP (033/06).
 
 #![forbid(unsafe_code)]
 
@@ -24,6 +24,7 @@ use crate::boot::Env;
 use crate::identity::{FakeOne, OneClient, WhoamiCache};
 use crate::limiter::Limiter;
 use crate::stripe_http::FakeStripe;
+use rails::chip::FakeChip;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,6 +37,7 @@ pub struct AppState {
     pub limiter: Arc<Limiter>,
     pub wrap_key: [u8; 32],
     pub stripe: FakeStripe,
+    pub chip: FakeChip,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -54,6 +56,7 @@ pub fn router(state: AppState) -> Router {
             "/v1/webhooks/stripe/{org_id}",
             post(webhooks::stripe_webhook),
         )
+        .route("/v1/webhooks/chip/{org_id}", post(webhooks::chip_webhook))
         .route(
             "/v1/orgs/{org_id}/gateway",
             put(gateway::put).get(gateway::get),
@@ -77,5 +80,6 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         limiter: Arc::new(Limiter::new(start_max)),
         wrap_key: workers::secret_box::SecretBox::testing_fallback_key(),
         stripe: FakeStripe::default(),
+        chip: FakeChip::default(),
     }
 }

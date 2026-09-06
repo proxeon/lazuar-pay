@@ -52,7 +52,6 @@ pub async fn ensure_org_settings(pool: &PgPool, tenant_id: &str) -> Result<(), A
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn upsert_stripe(
     pool: &PgPool,
     tenant_id: &str,
@@ -61,10 +60,57 @@ pub async fn upsert_stripe(
     last4: &str,
     environment: Option<&str>,
 ) -> Result<CredentialRow, ApplyError> {
+    upsert_rail(
+        pool,
+        tenant_id,
+        "stripe",
+        ciphertext,
+        webhook_ciphertext,
+        last4,
+        environment,
+        None,
+    )
+    .await
+}
+
+pub async fn upsert_chip(
+    pool: &PgPool,
+    tenant_id: &str,
+    ciphertext: &[u8],
+    webhook_ciphertext: &[u8],
+    last4: &str,
+    environment: Option<&str>,
+    public_merchant_id: &str,
+) -> Result<CredentialRow, ApplyError> {
+    upsert_rail(
+        pool,
+        tenant_id,
+        "chip",
+        ciphertext,
+        webhook_ciphertext,
+        last4,
+        environment,
+        Some(public_merchant_id),
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn upsert_rail(
+    pool: &PgPool,
+    tenant_id: &str,
+    rail: &str,
+    ciphertext: &[u8],
+    webhook_ciphertext: &[u8],
+    last4: &str,
+    environment: Option<&str>,
+    public_merchant_id: Option<&str>,
+) -> Result<CredentialRow, ApplyError> {
     ensure_org_settings(pool, tenant_id).await?;
-    let existing = get_credential(pool, tenant_id, "stripe").await?;
+    let existing = get_credential(pool, tenant_id, rail).await?;
     if let Some(row) = existing {
         let env = environment.unwrap_or(&row.environment);
+        let brand = public_merchant_id.or(row.public_merchant_id.as_deref());
         sqlx::query(
             r#"
             UPDATE pay_rs.gateway_credentials
@@ -72,19 +118,21 @@ pub async fn upsert_stripe(
                    webhook_ciphertext = $4,
                    last4 = $5,
                    environment = $6,
+                   public_merchant_id = $7,
                    updated_at = now()
              WHERE tenant_id = $1 AND rail = $2
             "#,
         )
         .bind(tenant_id)
-        .bind("stripe")
+        .bind(rail)
         .bind(ciphertext)
         .bind(webhook_ciphertext)
         .bind(last4)
         .bind(env)
+        .bind(brand)
         .execute(pool)
         .await?;
-        return get_credential(pool, tenant_id, "stripe")
+        return get_credential(pool, tenant_id, rail)
             .await?
             .ok_or(ApplyError::NotFound);
     }
@@ -92,29 +140,46 @@ pub async fn upsert_stripe(
     let res = sqlx::query(
         r#"
         INSERT INTO pay_rs.gateway_credentials (
-            tenant_id, rail, ciphertext, last4, webhook_ciphertext, environment
-        ) VALUES ($1, 'stripe', $2, $3, $4, $5)
+            tenant_id, rail, ciphertext, last4, webhook_ciphertext, environment, public_merchant_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
     .bind(tenant_id)
+    .bind(rail)
     .bind(ciphertext)
     .bind(last4)
     .bind(webhook_ciphertext)
     .bind(env)
+    .bind(public_merchant_id)
     .execute(pool)
     .await;
     match res {
         Ok(_) => {}
         Err(e) if crate::error::is_unique_violation(&e) => {
-            return get_credential(pool, tenant_id, "stripe")
+            return get_credential(pool, tenant_id, rail)
                 .await?
                 .ok_or(ApplyError::NotFound);
         }
         Err(e) => return Err(e.into()),
     }
-    get_credential(pool, tenant_id, "stripe")
+    get_credential(pool, tenant_id, rail)
         .await?
         .ok_or(ApplyError::NotFound)
+}
+
+pub async fn update_payer(
+    pool: &PgPool,
+    payment_id: uuid::Uuid,
+    name: Option<&str>,
+    email: Option<&str>,
+) -> Result<(), ApplyError> {
+    sqlx::query("UPDATE pay_rs.payments SET payer_name = $2, payer_email = $3 WHERE id = $1")
+        .bind(payment_id)
+        .bind(name)
+        .bind(email)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 pub async fn audit_gateway(

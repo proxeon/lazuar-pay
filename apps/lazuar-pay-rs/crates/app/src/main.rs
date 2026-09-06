@@ -9,6 +9,7 @@ use api::limiter::Limiter;
 use api::stripe_http::FakeStripe;
 use api::AppState;
 use base64::Engine;
+use rails::chip::FakeChip;
 use workers::secret_box::SecretBox;
 
 #[tokio::main]
@@ -128,6 +129,7 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         limiter: Arc::new(Limiter::new(max)),
         wrap_key,
         stripe: FakeStripe::default(),
+        chip: FakeChip::default(),
     };
     let app = api::router(state);
     let port: u16 = std::env::var("PORT")

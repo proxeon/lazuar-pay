@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod chip_remote;
 pub mod expire;
 pub mod hmac;
 pub mod outbound;
@@ -17,7 +18,9 @@ use std::time::Duration as StdDuration;
 use sqlx::PgPool;
 use storage::RetentionCfg;
 
+use crate::chip_remote::ChipRemote;
 use crate::outbound::OutboundCfg;
+use crate::psync::Dispatch;
 use crate::secret_box::SecretBox;
 use crate::stripe_remote::StripeRemote;
 
@@ -58,7 +61,10 @@ pub async fn run(cfg: Config) {
                 }).await;
             }
             _ = psync_tick.tick() => {
-                let remote = StripeRemote::live(cfg.pool.clone(), cfg.wrap_key);
+                let remote = Dispatch {
+                    stripe: StripeRemote::live(cfg.pool.clone(), cfg.wrap_key),
+                    chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
+                };
                 let _ = psync::process_batch(&cfg.pool, &remote).await;
             }
             _ = settler_tick.tick() => {

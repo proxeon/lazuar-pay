@@ -70,6 +70,7 @@ Thumbs.db
 # Miscellaneous
 # ----------------------------------------------------------------------
 *.pem
+!apps/lazuar-pay-rs/crates/rails/tests/fixtures/**/*.pem
 plan/
 ctx.ignore
 system-architecture

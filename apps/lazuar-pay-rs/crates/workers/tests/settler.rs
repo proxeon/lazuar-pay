@@ -7,6 +7,7 @@ use domain::{ProofId, PublicToken, TenantId};
 use storage::{apply, ApplyCmd, ApplyOutcome, MintSpec};
 use support::pool;
 use time::{Duration, OffsetDateTime};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 use workers::secret_box::SecretBox;
 use workers::settler::{self, FakeSettled};
@@ -15,6 +16,8 @@ use workers::stripe_remote::StripeRemote;
 fn myr10() -> Money {
     Money::from_quoted_str("10.00", Currency::MYR).unwrap()
 }
+
+static SETTLER: Mutex<()> = Mutex::const_new(());
 
 async fn pending_refund(pool: &sqlx::PgPool, rail: &str, age: Duration) -> (String, Uuid) {
     let now = OffsetDateTime::now_utc();
@@ -72,6 +75,7 @@ async fn pending_refund(pool: &sqlx::PgPool, rail: &str, age: Duration) -> (Stri
 
 #[tokio::test]
 async fn chip_pending_is_never_claimed() {
+    let _g = SETTLER.lock().await;
     let pool = pool().await;
     let (_t, id) = pending_refund(&pool, "chip", Duration::minutes(1)).await;
     let n = settler::process_batch(&pool, &FakeSettled).await.unwrap();
@@ -86,6 +90,7 @@ async fn chip_pending_is_never_claimed() {
 
 #[tokio::test]
 async fn stripe_late_pay_fake_settles_and_enqueues() {
+    let _g = SETTLER.lock().await;
     let pool = pool().await;
     let (tenant, id) = pending_refund(&pool, "stripe", Duration::minutes(1)).await;
     let n = settler::process_batch(&pool, &FakeSettled).await.unwrap();
@@ -109,6 +114,7 @@ async fn stripe_late_pay_fake_settles_and_enqueues() {
 
 #[tokio::test]
 async fn older_than_24h_never_claimed() {
+    let _g = SETTLER.lock().await;
     let pool = pool().await;
     let (_t, id) = pending_refund(&pool, "stripe", Duration::hours(25)).await;
     let n = settler::process_batch(&pool, &FakeSettled).await.unwrap();
@@ -232,6 +238,7 @@ async fn paid_stripe_refund(pool: &sqlx::PgPool) -> (String, Uuid, rails::stripe
 
 #[tokio::test]
 async fn stripe_refund_uses_pi_not_cs() {
+    let _g = SETTLER.lock().await;
     let pool = pool().await;
     let (_tenant, id, fake) = paid_stripe_refund(&pool).await;
     let remote = StripeRemote::fake(
@@ -255,6 +262,7 @@ async fn stripe_refund_uses_pi_not_cs() {
 
 #[tokio::test]
 async fn stripe_refund_5xx_is_unknown() {
+    let _g = SETTLER.lock().await;
     let pool = pool().await;
     let (_tenant, id, fake) = paid_stripe_refund(&pool).await;
     fake.set_refund(500, r#"{"error":{"type":"api_error"}}"#);

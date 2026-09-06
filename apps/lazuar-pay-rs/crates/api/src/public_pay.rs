@@ -46,7 +46,7 @@ pub async fn start(
             "Too many start attempts",
         );
     }
-    let _body = body.map(|j| j.0).unwrap_or_default();
+    let req = body.map(|j| j.0).unwrap_or_default();
     let view = match storage::read::payment_by_public_token(&st.pool, &token).await {
         Ok(Some(v)) => v,
         Ok(None) => return problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),
@@ -60,6 +60,23 @@ pub async fn start(
         .as_deref()
         .and_then(|s| RailId::parse(s).ok())
         .unwrap_or(RailId::TEST);
+    let email = req
+        .email
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if rail.caps().requires_email && !email_usable(email) {
+        return problem(StatusCode::BAD_REQUEST, "Bad Request", "email is required");
+    }
+    if email_usable(email) || req.name.as_deref().is_some_and(|s| !s.trim().is_empty()) {
+        let _ = storage::update_payer(
+            &st.pool,
+            view.id.as_uuid(),
+            req.name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+            email,
+        )
+        .await;
+    }
     let started = match apply(
         &st.pool,
         ApplyCmd::StartAttempt {
@@ -112,6 +129,48 @@ pub async fn start(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "Service Unavailable",
                     "Stripe rejected the org key",
+                );
+            }
+        }
+    } else if rail == RailId::CHIP {
+        let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "chip").await {
+            Ok(Some(c)) => c,
+            _ => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        };
+        let brand = cred.public_merchant_id.as_deref().unwrap_or("");
+        if brand.is_empty() {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "rail not configured",
+            );
+        }
+        let mail = email.unwrap_or("");
+        let name = name_from(mail, req.name.as_deref());
+        let payload = rails::chip::purchase_body(
+            &view.id.to_wire(),
+            view.tenant_id.as_str(),
+            brand,
+            mail,
+            &name,
+            i64::try_from(view.quoted.minor()).unwrap_or(i64::MAX),
+            view.quoted.currency().code.as_str(),
+            &success,
+            &cancel,
+        );
+        match st.chip.create_purchase(&payload) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "CHIP rejected the org key",
                 );
             }
         }
@@ -170,6 +229,32 @@ fn public_json(view: &storage::PaymentView) -> Value {
         "payer_email": view.payer_email,
         "started": view.session_url.is_some(),
         "redirect_url": view.session_url,
-        "email_required": false,
+        "email_required": view
+            .provider
+            .as_deref()
+            .and_then(|s| RailId::parse(s).ok())
+            .map(|r| r.caps().requires_email)
+            .unwrap_or(false),
     })
+}
+
+const PLACEHOLDER_EMAIL: &str = "customer@example.com";
+
+fn email_usable(email: Option<&str>) -> bool {
+    match email {
+        Some(s) if !s.is_empty() => !s.eq_ignore_ascii_case(PLACEHOLDER_EMAIL),
+        _ => false,
+    }
+}
+
+fn name_from(email: &str, name: Option<&str>) -> String {
+    if let Some(n) = name.map(str::trim).filter(|s| !s.is_empty()) {
+        return n.to_string();
+    }
+    email
+        .split('@')
+        .next()
+        .filter(|s| !s.is_empty())
+        .unwrap_or("Customer")
+        .to_string()
 }

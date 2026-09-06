@@ -1464,6 +1464,7 @@ dependencies = [
  "api",
  "axum",
  "base64 0.22.1",
+ "rails",
  "sqlx",
  "storage",
  "tokio",
@@ -2037,9 +2038,11 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 name = "rails"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "domain",
  "hex",
  "hmac",
+ "rsa",
  "serde_json",
  "sha2",
  "subtle",
@@ -2273,6 +2276,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core 0.6.4",
+ "sha2",
  "signature",
  "spki",
  "subtle",

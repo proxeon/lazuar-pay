@@ -33,6 +33,21 @@ impl SyncRail for ConstSync {
     }
 }
 
+pub struct Dispatch<A, B> {
+    pub stripe: A,
+    pub chip: B,
+}
+
+impl<A: SyncRail, B: SyncRail> SyncRail for Dispatch<A, B> {
+    async fn retrieve(&self, tenant_id: &str, rail: &str, session_id: &str) -> SyncOutcome {
+        match rail {
+            "stripe" => self.stripe.retrieve(tenant_id, rail, session_id).await,
+            "chip" => self.chip.retrieve(tenant_id, rail, session_id).await,
+            _ => SyncOutcome::Unknown,
+        }
+    }
+}
+
 pub async fn process_batch<S: SyncRail>(pool: &PgPool, sync: &S) -> Result<usize, ApplyError> {
     let now = OffsetDateTime::now_utc();
     let claimed = storage::claim_psync(pool, now, 20).await?;

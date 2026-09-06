@@ -11,9 +11,11 @@ description = "Per-rail HTTP. No sqlx (032/10)."
 workspace = true
 
 [dependencies]
+base64.workspace = true
 domain.workspace = true
 hex.workspace = true
 hmac.workspace = true
+rsa.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 subtle.workspace = true

@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 api.workspace = true
 axum.workspace = true
+rails.workspace = true
 base64.workspace = true
 sqlx.workspace = true
 storage.workspace = true

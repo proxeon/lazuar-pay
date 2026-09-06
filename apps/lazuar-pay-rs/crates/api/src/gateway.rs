@@ -41,7 +41,7 @@ pub async fn put(
             "test processor does not take secrets",
         );
     }
-    if provider != "stripe" {
+    if provider != "stripe" && provider != "chip" {
         if domain::rail::RailId::parse(&provider).is_err() {
             return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown provider");
         }
@@ -51,15 +51,23 @@ pub async fn put(
             "rail not configured",
         );
     }
-    if body
+    let brand = body
         .public_merchant_id
         .as_deref()
-        .is_some_and(|s| !s.trim().is_empty())
-    {
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if provider == "stripe" && brand.is_some() {
         return problem(
             StatusCode::BAD_REQUEST,
             "Bad Request",
             "public_merchant_id is not used for this provider",
+        );
+    }
+    if provider == "chip" && brand.is_none() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "public_merchant_id is required",
         );
     }
     let secret = body.secret.as_deref().map(str::trim).unwrap_or("");
@@ -72,6 +80,13 @@ pub async fn put(
             StatusCode::BAD_REQUEST,
             "Bad Request",
             "webhook_secret is required",
+        );
+    }
+    if provider == "chip" && !rails::chip::pem_ok(whsec) {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "webhook_secret must be a CHIP PEM",
         );
     }
     let env_in = body
@@ -115,13 +130,27 @@ pub async fn put(
             );
         }
     };
-    match storage::upsert_stripe(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await {
+    let saved = if provider == "chip" {
+        storage::upsert_chip(
+            &st.pool,
+            &org_id,
+            &ct,
+            &wh,
+            last4,
+            env_in.as_deref(),
+            brand.unwrap_or(""),
+        )
+        .await
+    } else {
+        storage::upsert_stripe(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
+    };
+    match saved {
         Ok(row) => {
             let _ = storage::audit_gateway(
                 &st.pool,
                 &org_id,
                 &who.user_id,
-                "stripe",
+                &provider,
                 last4,
                 &row.environment,
                 true,
@@ -175,12 +204,12 @@ pub async fn get(
         return Json(json!({"org_id": org_id, "provider": "test", "configured": false}))
             .into_response();
     }
-    if provider != "stripe" {
+    if provider != "stripe" && provider != "chip" {
         return Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response();
     }
-    match storage::get_credential(&st.pool, &org_id, "stripe").await {
-        Ok(None) => Json(json!({"org_id": org_id, "provider": "stripe", "configured": false}))
+    match storage::get_credential(&st.pool, &org_id, &provider).await {
+        Ok(None) => Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response(),
         Ok(Some(row)) => Json(gateway_json(&org_id, &row)).into_response(),
         Err(_) => problem(
@@ -199,10 +228,6 @@ pub async fn list(
     if let Err(r) = require_member(&who, &org_id) {
         return r;
     }
-    let stripe = storage::get_credential(&st.pool, &org_id, "stripe")
-        .await
-        .ok()
-        .flatten();
     let mut processors = vec![];
     if st.env.allows_test() {
         processors.push(json!({
@@ -215,15 +240,17 @@ pub async fn list(
             "capability": "hosted_link",
         }));
     }
-    match stripe {
-        Some(row) => processors.push(gateway_json(&org_id, &row)),
-        None => processors.push(json!({
-            "org_id": org_id,
-            "provider": "stripe",
-            "configured": false,
-            "currency": "MYR",
-            "capability": "hosted_link",
-        })),
+    for rail in ["stripe", "chip"] {
+        match storage::get_credential(&st.pool, &org_id, rail).await {
+            Ok(Some(row)) => processors.push(gateway_json(&org_id, &row)),
+            _ => processors.push(json!({
+                "org_id": org_id,
+                "provider": rail,
+                "configured": false,
+                "currency": "MYR",
+                "capability": "hosted_link",
+            })),
+        }
     }
     Json(json!({"org_id": org_id, "processors": processors})).into_response()
 }
@@ -236,6 +263,7 @@ fn gateway_json(org_id: &str, row: &storage::CredentialRow) -> Value {
         "last4": row.last4,
         "environment": row.environment,
         "webhook_configured": row.webhook_ciphertext.as_ref().is_some_and(|c| !c.is_empty()),
+        "public_merchant_id": row.public_merchant_id,
         "currency": "MYR",
         "capability": "hosted_link",
     })
