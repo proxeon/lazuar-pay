@@ -73,6 +73,28 @@ pub async fn upsert_stripe(
     .await
 }
 
+pub async fn upsert_billplz(
+    pool: &PgPool,
+    tenant_id: &str,
+    ciphertext: &[u8],
+    webhook_ciphertext: &[u8],
+    last4: &str,
+    environment: Option<&str>,
+    public_merchant_id: &str,
+) -> Result<CredentialRow, ApplyError> {
+    upsert_rail(
+        pool,
+        tenant_id,
+        "billplz",
+        ciphertext,
+        webhook_ciphertext,
+        last4,
+        environment,
+        Some(public_merchant_id),
+    )
+    .await
+}
+
 pub async fn upsert_chip(
     pool: &PgPool,
     tenant_id: &str,

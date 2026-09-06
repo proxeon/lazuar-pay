@@ -59,7 +59,10 @@ pub async fn create(
                 "test processor is not enabled",
             );
         }
-    } else if provider == RailId::STRIPE.as_str() || provider == RailId::CHIP.as_str() {
+    } else if provider == RailId::STRIPE.as_str()
+        || provider == RailId::CHIP.as_str()
+        || provider == RailId::BILLPLZ.as_str()
+    {
         match storage::get_credential(&st.pool, &org_id, &provider).await {
             Ok(Some(_)) => {}
             Ok(None) => {

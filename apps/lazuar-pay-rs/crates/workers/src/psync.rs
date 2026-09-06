@@ -33,16 +33,18 @@ impl SyncRail for ConstSync {
     }
 }
 
-pub struct Dispatch<A, B> {
+pub struct Dispatch<A, B, C> {
     pub stripe: A,
     pub chip: B,
+    pub billplz: C,
 }
 
-impl<A: SyncRail, B: SyncRail> SyncRail for Dispatch<A, B> {
+impl<A: SyncRail, B: SyncRail, C: SyncRail> SyncRail for Dispatch<A, B, C> {
     async fn retrieve(&self, tenant_id: &str, rail: &str, session_id: &str) -> SyncOutcome {
         match rail {
             "stripe" => self.stripe.retrieve(tenant_id, rail, session_id).await,
             "chip" => self.chip.retrieve(tenant_id, rail, session_id).await,
+            "billplz" => self.billplz.retrieve(tenant_id, rail, session_id).await,
             _ => SyncOutcome::Unknown,
         }
     }

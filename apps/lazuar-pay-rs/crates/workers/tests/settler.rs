@@ -89,6 +89,21 @@ async fn chip_pending_is_never_claimed() {
 }
 
 #[tokio::test]
+async fn billplz_pending_is_never_claimed() {
+    let _g = SETTLER.lock().await;
+    let pool = pool().await;
+    let (_t, id) = pending_refund(&pool, "billplz", Duration::minutes(1)).await;
+    let n = settler::process_batch(&pool, &FakeSettled).await.unwrap();
+    assert_eq!(n, 0);
+    let st: String = sqlx::query_scalar("SELECT status FROM pay_rs.refunds WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(st, "pending");
+}
+
+#[tokio::test]
 async fn stripe_late_pay_fake_settles_and_enqueues() {
     let _g = SETTLER.lock().await;
     let pool = pool().await;

@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod billplz_remote;
 pub mod chip_remote;
 pub mod expire;
 pub mod hmac;
@@ -18,6 +19,7 @@ use std::time::Duration as StdDuration;
 use sqlx::PgPool;
 use storage::RetentionCfg;
 
+use crate::billplz_remote::BillplzRemote;
 use crate::chip_remote::ChipRemote;
 use crate::outbound::OutboundCfg;
 use crate::psync::Dispatch;
@@ -64,6 +66,7 @@ pub async fn run(cfg: Config) {
                 let remote = Dispatch {
                     stripe: StripeRemote::live(cfg.pool.clone(), cfg.wrap_key),
                     chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
+                    billplz: BillplzRemote::live(cfg.pool.clone(), cfg.wrap_key),
                 };
                 let _ = psync::process_batch(&cfg.pool, &remote).await;
             }

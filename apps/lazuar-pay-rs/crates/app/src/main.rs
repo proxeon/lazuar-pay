@@ -9,6 +9,7 @@ use api::limiter::Limiter;
 use api::stripe_http::FakeStripe;
 use api::AppState;
 use base64::Engine;
+use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
 use workers::secret_box::SecretBox;
 
@@ -130,6 +131,9 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         wrap_key,
         stripe: FakeStripe::default(),
         chip: FakeChip::default(),
+        billplz: FakeBillplz::default(),
+        public_base_url: std::env::var("Pay__PublicBaseUrl")
+            .unwrap_or_else(|_| "https://pay.example.test".into()),
     };
     let app = api::router(state);
     let port: u16 = std::env::var("PORT")

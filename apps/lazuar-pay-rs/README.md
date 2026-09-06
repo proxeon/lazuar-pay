@@ -29,9 +29,10 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 3. Thin TypeSpec `/v1` adapter, test rail (P3 / 033/03) — done.
 4. `workers` (expire, outbound HMAC, PSync skip test, CHIP never auto-settled) — done.
 5. Stripe hosted + webhook + PSync + refund (P5 / 033/05) — done. Fixture-backed; CI does not call `api.stripe.com`.
-6. CHIP hosted + PEM vault + webhook + PSync (P6 / 033/06) — this tree. PUT PEM + `public_merchant_id` then mint `provider=chip`. Settler never auto-claims CHIP. CI does not call `gate.chip-in.asia`.
-7. Billplz / Xendit / Razorpay, one PR each.
-8. `chain/` Solana watcher (`--watcher-only` capable).
+6. CHIP hosted + PEM vault + webhook + PSync (P6 / 033/06) — done.
+7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — this tree. PUT collection + `environment` then mint `provider=billplz`. Bind `reference_1` only. CI does not call Billplz hosts.
+8. Xendit / Razorpay, one PR each.
+9. `chain/` Solana watcher (`--watcher-only` capable).
 
 ```sh
 cargo test -p domain

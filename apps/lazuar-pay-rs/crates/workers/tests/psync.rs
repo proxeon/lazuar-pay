@@ -10,6 +10,7 @@ use storage::{apply, ApplyCmd, ApplyOutcome, MintSpec};
 use support::pool;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
+use workers::billplz_remote::BillplzRemote;
 use workers::chip_remote::ChipRemote;
 use workers::psync::{self, ConstSync};
 use workers::secret_box::SecretBox;
@@ -314,6 +315,66 @@ async fn missing_cred_is_not_failed() {
     let fake = rails::stripe::FakeStripe::default();
     fake.set_retrieve(200, &fixture("psync_paid.json"));
     let remote = StripeRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
+        .bind(attempt_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let pst: String = sqlx::query_scalar("SELECT status FROM pay_rs.payments WHERE id = $1")
+        .bind(payment_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ast, "session_live");
+    assert_eq!(pst, "open");
+}
+
+async fn vault_billplz(pool: &sqlx::PgPool, tenant: &str) {
+    let box_ = SecretBox::new(SecretBox::testing_fallback_key());
+    let ct = box_.protect_str("bp_sk").unwrap();
+    let wh = box_.protect_str("xsig").unwrap();
+    storage::upsert_billplz(pool, tenant, &ct, &wh, "p_sk", Some("test"), "col_1")
+        .await
+        .unwrap();
+}
+
+fn billplz_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!(
+        "{}/../rails/tests/fixtures/billplz/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn billplz_remote_paid_fixture_takes() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, _a, _s) = mint_session(&pool, RailId::BILLPLZ, true).await;
+    vault_billplz(&pool, tenant.as_str()).await;
+    let fake = rails::billplz::FakeBillplz::default();
+    fake.set_retrieve(200, &billplz_fixture("psync_paid.json"));
+    let remote = BillplzRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let charges: i64 =
+        sqlx::query_scalar("SELECT count(*)::bigint FROM pay_rs.charges WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(charges, 1);
+}
+
+#[tokio::test]
+async fn billplz_remote_due_stays_session_live() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, attempt_id, _s) = mint_session(&pool, RailId::BILLPLZ, true).await;
+    vault_billplz(&pool, tenant.as_str()).await;
+    let fake = rails::billplz::FakeBillplz::default();
+    fake.set_retrieve(200, &billplz_fixture("psync_due.json"));
+    let remote = BillplzRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
     psync::process_batch(&pool, &remote).await.unwrap();
     let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
         .bind(attempt_id.as_uuid())

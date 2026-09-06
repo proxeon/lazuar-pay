@@ -41,7 +41,7 @@ pub async fn put(
             "test processor does not take secrets",
         );
     }
-    if provider != "stripe" && provider != "chip" {
+    if provider != "stripe" && provider != "chip" && provider != "billplz" {
         if domain::rail::RailId::parse(&provider).is_err() {
             return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown provider");
         }
@@ -63,7 +63,7 @@ pub async fn put(
             "public_merchant_id is not used for this provider",
         );
     }
-    if provider == "chip" && brand.is_none() {
+    if (provider == "chip" || provider == "billplz") && brand.is_none() {
         return problem(
             StatusCode::BAD_REQUEST,
             "Bad Request",
@@ -104,6 +104,13 @@ pub async fn put(
             );
         }
     }
+    if provider == "billplz" && env_in.is_none() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "environment is required",
+        );
+    }
     let last4 = if secret.len() >= 4 {
         &secret[secret.len() - 4..]
     } else {
@@ -132,6 +139,17 @@ pub async fn put(
     };
     let saved = if provider == "chip" {
         storage::upsert_chip(
+            &st.pool,
+            &org_id,
+            &ct,
+            &wh,
+            last4,
+            env_in.as_deref(),
+            brand.unwrap_or(""),
+        )
+        .await
+    } else if provider == "billplz" {
+        storage::upsert_billplz(
             &st.pool,
             &org_id,
             &ct,
@@ -204,7 +222,7 @@ pub async fn get(
         return Json(json!({"org_id": org_id, "provider": "test", "configured": false}))
             .into_response();
     }
-    if provider != "stripe" && provider != "chip" {
+    if provider != "stripe" && provider != "chip" && provider != "billplz" {
         return Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response();
     }
@@ -240,7 +258,7 @@ pub async fn list(
             "capability": "hosted_link",
         }));
     }
-    for rail in ["stripe", "chip"] {
+    for rail in ["stripe", "chip", "billplz"] {
         match storage::get_credential(&st.pool, &org_id, rail).await {
             Ok(Some(row)) => processors.push(gateway_json(&org_id, &row)),
             _ => processors.push(json!({

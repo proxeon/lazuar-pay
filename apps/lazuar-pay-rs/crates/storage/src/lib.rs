@@ -21,7 +21,8 @@ pub use lease::{
 pub use read::{AttemptView, PaymentView};
 pub use vault::{
     audit_gateway, ensure_org_settings, get_credential, latest_attempt_refs, payment_by_session,
-    record_ignored_inbound, refund_amount, update_payer, upsert_chip, upsert_stripe, CredentialRow,
+    record_ignored_inbound, refund_amount, update_payer, upsert_billplz, upsert_chip,
+    upsert_stripe, CredentialRow,
 };
 
 use sqlx::postgres::PgPool;

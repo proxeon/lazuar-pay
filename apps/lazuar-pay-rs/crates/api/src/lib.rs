@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test rail + Stripe + CHIP (033/06).
+//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz (033/07).
 
 #![forbid(unsafe_code)]
 
@@ -24,6 +24,7 @@ use crate::boot::Env;
 use crate::identity::{FakeOne, OneClient, WhoamiCache};
 use crate::limiter::Limiter;
 use crate::stripe_http::FakeStripe;
+use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
 
 #[derive(Clone)]
@@ -38,6 +39,8 @@ pub struct AppState {
     pub wrap_key: [u8; 32],
     pub stripe: FakeStripe,
     pub chip: FakeChip,
+    pub billplz: FakeBillplz,
+    pub public_base_url: String,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -57,6 +60,10 @@ pub fn router(state: AppState) -> Router {
             post(webhooks::stripe_webhook),
         )
         .route("/v1/webhooks/chip/{org_id}", post(webhooks::chip_webhook))
+        .route(
+            "/v1/webhooks/billplz/{org_id}",
+            post(webhooks::billplz_webhook),
+        )
         .route(
             "/v1/orgs/{org_id}/gateway",
             put(gateway::put).get(gateway::get),
@@ -81,5 +88,7 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         wrap_key: workers::secret_box::SecretBox::testing_fallback_key(),
         stripe: FakeStripe::default(),
         chip: FakeChip::default(),
+        billplz: FakeBillplz::default(),
+        public_base_url: "https://pay.example.test".into(),
     }
 }

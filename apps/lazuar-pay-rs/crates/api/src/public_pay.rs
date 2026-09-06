@@ -68,6 +68,13 @@ pub async fn start(
     if rail.caps().requires_email && !email_usable(email) {
         return problem(StatusCode::BAD_REQUEST, "Bad Request", "email is required");
     }
+    if rail == RailId::BILLPLZ && !rails::billplz::public_base_ok(&st.public_base_url) {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "callback base not public",
+        );
+    }
     if email_usable(email) || req.name.as_deref().is_some_and(|s| !s.trim().is_empty()) {
         let _ = storage::update_payer(
             &st.pool,
@@ -171,6 +178,54 @@ pub async fn start(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "Service Unavailable",
                     "CHIP rejected the org key",
+                );
+            }
+        }
+    } else if rail == RailId::BILLPLZ {
+        let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "billplz").await
+        {
+            Ok(Some(c)) => c,
+            _ => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        };
+        let collection = cred.public_merchant_id.as_deref().unwrap_or("");
+        if collection.is_empty() {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "rail not configured",
+            );
+        }
+        let mail = email.unwrap_or("");
+        let name = name_from(mail, req.name.as_deref());
+        let base = st.public_base_url.trim_end_matches('/');
+        let callback = format!(
+            "{base}/v1/webhooks/billplz/{}?checkout_id={}",
+            view.tenant_id.as_str(),
+            view.id.to_wire()
+        );
+        let host = rails::billplz::api_host(&cred.environment);
+        let payload = rails::billplz::bill_body(
+            &view.id.to_wire(),
+            collection,
+            mail,
+            &name,
+            i64::try_from(view.quoted.minor()).unwrap_or(i64::MAX),
+            &callback,
+            &success,
+        );
+        match st.billplz.create_bill(host, &payload) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "Billplz rejected the org key",
                 );
             }
         }

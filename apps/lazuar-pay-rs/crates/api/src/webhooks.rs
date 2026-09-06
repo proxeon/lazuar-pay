@@ -367,3 +367,119 @@ pub async fn chip_webhook(
         Err(e) => from_apply(e, false),
     }
 }
+
+pub async fn billplz_webhook(
+    State(st): State<AppState>,
+    Path(org_id): Path<String>,
+    body: String,
+) -> Response {
+    let cred = match storage::get_credential(&st.pool, &org_id, "billplz").await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return problem(StatusCode::BAD_REQUEST, "Bad Request", "invalid signature");
+        }
+        Err(e) => return from_apply(e, false),
+    };
+    let box_ = workers::secret_box::SecretBox::new(st.wrap_key);
+    let secret = match cred.webhook_ciphertext.as_deref() {
+        Some(ct) if !ct.is_empty() => match box_.unprotect_str(ct) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "webhook secret undecryptable",
+                );
+            }
+        },
+        _ => {
+            return problem(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "webhook secret missing",
+            );
+        }
+    };
+    let (event_id, outcome) = match rails::billplz::parse_webhook(body.as_bytes(), &secret) {
+        Ok(v) => v,
+        Err(e) => {
+            return problem(StatusCode::BAD_REQUEST, "Bad Request", &e.to_string());
+        }
+    };
+    use domain::proof::{Binding, WebhookOutcome};
+    if let WebhookOutcome::Ignored { .. } = &outcome {
+        let reason = rails::billplz::ignore_detail(&outcome);
+        let _ =
+            storage::record_ignored_inbound(&st.pool, &org_id, "billplz", &event_id, &reason).await;
+        return Json(json!({"ignored": reason})).into_response();
+    }
+    let binding = match &outcome {
+        WebhookOutcome::Paid { binding, .. } | WebhookOutcome::Failed { binding, .. } => {
+            binding.clone()
+        }
+        WebhookOutcome::Ignored { .. } => unreachable!(),
+    };
+    let (payment_id, attempt_id) = match binding {
+        Binding::Payment { id } => {
+            let view = match storage::read::payment_by_id(&st.pool, id).await {
+                Ok(Some(v)) => v,
+                _ => {
+                    return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+                }
+            };
+            if view.tenant_id.as_str() != org_id {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+            }
+            if view.provider.as_deref() != Some("billplz") {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "provider mismatch");
+            }
+            let Some(aid) = view.attempt_id else {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+            };
+            (id, aid)
+        }
+        Binding::Session { session_id } => {
+            match storage::payment_by_session(&st.pool, &org_id, "billplz", &session_id).await {
+                Ok(Some((pid, aid))) => (
+                    domain::PaymentId::from_uuid(pid),
+                    domain::AttemptId::from_uuid(aid),
+                ),
+                _ => {
+                    return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+                }
+            }
+        }
+    };
+    let now = OffsetDateTime::now_utc();
+    let cmd = match outcome {
+        WebhookOutcome::Failed { .. } => ApplyCmd::InjectFailed {
+            tenant_id: TenantId::new(org_id),
+            rail: RailId::BILLPLZ,
+            proof_id: event_id,
+            payment_id,
+            attempt_id,
+            reason: TerminalReason::PspFailed,
+            now,
+        },
+        WebhookOutcome::Paid { received, refs, .. } => ApplyCmd::InjectPaid {
+            tenant_id: TenantId::new(org_id),
+            rail: RailId::BILLPLZ,
+            proof_id: event_id.clone(),
+            payment_id,
+            attempt_id,
+            received,
+            proof: Proof::PspWebhook {
+                rail: RailId::BILLPLZ,
+                event_id: ProofId::new(event_id),
+            },
+            now,
+            refs,
+        },
+        WebhookOutcome::Ignored { .. } => unreachable!(),
+    };
+    match apply(&st.pool, cmd).await {
+        Ok(ApplyOutcome::Duplicate) => Json(json!({"duplicate": true})).into_response(),
+        Ok(_) => Json(json!({"ok": true})).into_response(),
+        Err(e) => from_apply(e, false),
+    }
+}

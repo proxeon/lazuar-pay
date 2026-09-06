@@ -81,7 +81,7 @@ async fn put_test_processor_is_400() {
 }
 
 #[tokio::test]
-async fn put_billplz_is_rail_not_configured() {
+async fn put_xendit_is_rail_not_configured() {
     let _g = STRIPE_HTTP.lock().await;
     let pool = pool().await;
     let app = api::router(testing_state(pool, SECRET));
@@ -92,7 +92,7 @@ async fn put_billplz_is_rail_not_configured() {
             "/v1/orgs/t1/gateway",
             "test-writer",
             Some(json!({
-                "provider": "billplz",
+                "provider": "xendit",
                 "secret": "x",
                 "webhook_secret": "y",
             })),
@@ -169,10 +169,12 @@ async fn put_get_never_echoes_secrets_and_omit_env_keeps_live() {
 async fn mint_stripe_without_vault_is_400() {
     let _g = STRIPE_HTTP.lock().await;
     let pool = pool().await;
-    sqlx::query("DELETE FROM pay_rs.gateway_credentials WHERE tenant_id = 't1' AND rail = 'stripe'")
-        .execute(&pool)
-        .await
-        .unwrap();
+    sqlx::query(
+        "DELETE FROM pay_rs.gateway_credentials WHERE tenant_id = 't1' AND rail = 'stripe'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
     let app = api::router(testing_state(pool, SECRET));
     let (st, body) = call(
         app,
