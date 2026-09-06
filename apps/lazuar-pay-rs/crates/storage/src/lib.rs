@@ -8,6 +8,7 @@ pub mod error;
 pub mod lease;
 pub mod read;
 pub mod rows;
+pub mod vault;
 
 pub use apply::{apply, ApplyCmd, ApplyOutcome, MintSpec};
 pub use error::ApplyError;
@@ -18,6 +19,10 @@ pub use lease::{
     RetentionCfg,
 };
 pub use read::{AttemptView, PaymentView};
+pub use vault::{
+    audit_gateway, ensure_org_settings, get_credential, latest_attempt_refs, payment_by_session,
+    record_ignored_inbound, refund_amount, upsert_stripe, CredentialRow,
+};
 
 use sqlx::postgres::PgPool;
 

@@ -51,7 +51,27 @@ pub async fn create(
         );
     }
     let provider = body.provider.trim().to_ascii_lowercase();
-    if provider != RailId::TEST.as_str() {
+    if provider == RailId::TEST.as_str() {
+        if !st.env.allows_test() {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "test processor is not enabled",
+            );
+        }
+    } else if provider == RailId::STRIPE.as_str() {
+        match storage::get_credential(&st.pool, &org_id, "stripe").await {
+            Ok(Some(_)) => {}
+            Ok(None) => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+            Err(e) => return from_apply(e, true),
+        }
+    } else {
         if RailId::parse(&provider).is_err() {
             return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown provider");
         }
@@ -59,13 +79,6 @@ pub async fn create(
             StatusCode::BAD_REQUEST,
             "Bad Request",
             "rail not configured",
-        );
-    }
-    if !st.env.allows_test() {
-        return problem(
-            StatusCode::BAD_REQUEST,
-            "Bad Request",
-            "test processor is not enabled",
         );
     }
     match storage::read::charges_paused(&st.pool, &org_id).await {
@@ -139,6 +152,7 @@ pub async fn create(
             slot_key: None,
             success_url: body.success_url.clone(),
             cancel_url: body.cancel_url.clone(),
+            rail: RailId::parse(&provider).unwrap_or(RailId::TEST),
         }),
     )
     .await;

@@ -38,6 +38,7 @@ async fn mint_and_session(
             slot_key: None,
             success_url: None,
             cancel_url: None,
+            rail: RailId::TEST,
         }),
     )
     .await
@@ -93,6 +94,7 @@ fn paid_cmd(
             event_id: ProofId::new(proof_id),
         },
         now,
+        refs: Default::default(),
     }
 }
 
@@ -331,4 +333,68 @@ async fn clock_does_not_expire_failed() {
         .await
         .unwrap();
     assert_eq!(status, "failed");
+}
+
+#[tokio::test]
+async fn mint_pins_created_and_start_promotes() {
+    let pool = pool().await;
+    let tenant = tenant();
+    let now = OffsetDateTime::now_utc();
+    let minted = apply(
+        &pool,
+        ApplyCmd::Mint(MintSpec {
+            tenant_id: tenant,
+            public_token: PublicToken::new(token("p")),
+            quoted: myr10(),
+            expires_at: now + Duration::minutes(30),
+            monitoring_until: now + Duration::minutes(30),
+            payment_link_id: None,
+            slot_key: None,
+            success_url: None,
+            cancel_url: None,
+            rail: RailId::STRIPE,
+        }),
+    )
+    .await
+    .unwrap();
+    let ApplyOutcome::Minted { payment_id } = minted else {
+        panic!("minted");
+    };
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let n: i64 =
+        sqlx::query_scalar("SELECT count(*)::bigint FROM pay_rs.attempts WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(status, "created");
+    assert_eq!(n, 1);
+    apply(
+        &pool,
+        ApplyCmd::StartAttempt {
+            payment_id,
+            rail: RailId::STRIPE,
+        },
+    )
+    .await
+    .unwrap();
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let n: i64 =
+        sqlx::query_scalar("SELECT count(*)::bigint FROM pay_rs.attempts WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(status, "pending");
+    assert_eq!(n, 1);
 }

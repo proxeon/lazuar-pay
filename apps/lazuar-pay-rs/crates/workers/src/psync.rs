@@ -8,14 +8,19 @@ use storage::{apply, ApplyCmd, ApplyError};
 use time::{Duration, OffsetDateTime};
 
 pub trait SyncRail: Send + Sync {
-    fn retrieve(&self, session_id: &str) -> impl std::future::Future<Output = SyncOutcome> + Send;
+    fn retrieve(
+        &self,
+        tenant_id: &str,
+        rail: &str,
+        session_id: &str,
+    ) -> impl std::future::Future<Output = SyncOutcome> + Send;
 }
 
 #[derive(Clone, Copy, Default)]
 pub struct NoopSync;
 
 impl SyncRail for NoopSync {
-    async fn retrieve(&self, _session_id: &str) -> SyncOutcome {
+    async fn retrieve(&self, _tenant_id: &str, _rail: &str, _session_id: &str) -> SyncOutcome {
         SyncOutcome::Unknown
     }
 }
@@ -23,7 +28,7 @@ impl SyncRail for NoopSync {
 pub struct ConstSync(pub SyncOutcome);
 
 impl SyncRail for ConstSync {
-    async fn retrieve(&self, _session_id: &str) -> SyncOutcome {
+    async fn retrieve(&self, _tenant_id: &str, _rail: &str, _session_id: &str) -> SyncOutcome {
         self.0.clone()
     }
 }
@@ -39,7 +44,10 @@ pub async fn process_batch<S: SyncRail>(pool: &PgPool, sync: &S) -> Result<usize
         if !rail.caps().sync {
             continue;
         }
-        match sync.retrieve(&c.session_id).await {
+        match sync
+            .retrieve(c.tenant_id.as_str(), &c.rail, &c.session_id)
+            .await
+        {
             SyncOutcome::Unknown => {
                 let until = now + Duration::minutes(1) - Duration::seconds(30);
                 let _ = storage::defer_psync(pool, c.attempt_id, until).await;
@@ -81,6 +89,7 @@ pub async fn process_batch<S: SyncRail>(pool: &PgPool, sync: &S) -> Result<usize
                             connector_txn_id: txn,
                         },
                         now,
+                        refs,
                     },
                 )
                 .await

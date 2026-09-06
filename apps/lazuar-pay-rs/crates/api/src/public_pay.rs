@@ -55,11 +55,16 @@ pub async fn start(
     if let Some(url) = view.session_url.clone() {
         return Json(json!({"redirect_url": url})).into_response();
     }
+    let rail = view
+        .provider
+        .as_deref()
+        .and_then(|s| RailId::parse(s).ok())
+        .unwrap_or(RailId::TEST);
     let started = match apply(
         &st.pool,
         ApplyCmd::StartAttempt {
             payment_id: view.id,
-            rail: RailId::TEST,
+            rail,
         },
     )
     .await
@@ -77,23 +82,51 @@ pub async fn start(
         }
         Err(e) => return from_apply(e, false),
     };
-    let session_id = format!("test:{}", view.id.to_wire());
-    // C# TestHosted → CheckoutUrls.Success.
-    let url = view.success_url.clone().unwrap_or_else(|| {
+    let success = view.success_url.clone().unwrap_or_else(|| {
         format!(
             "{}/c/{}?status=verifying",
             st.checkout_base_url.trim_end_matches('/'),
             view.public_token.as_str()
         )
     });
+    let cancel = view.cancel_url.clone().unwrap_or_else(|| {
+        format!(
+            "{}/c/{}",
+            st.checkout_base_url.trim_end_matches('/'),
+            view.public_token.as_str()
+        )
+    });
+    let session = if rail == RailId::STRIPE {
+        let form = rails::stripe::checkout_form(
+            &view.id.to_wire(),
+            view.tenant_id.as_str(),
+            i64::try_from(view.quoted.minor()).unwrap_or(i64::MAX),
+            view.quoted.currency().code.as_str(),
+            &success,
+            &cancel,
+        );
+        match st.stripe.create_session(&form) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "Stripe rejected the org key",
+                );
+            }
+        }
+    } else {
+        HostedSession {
+            url: success,
+            session_id: format!("test:{}", view.id.to_wire()),
+        }
+    };
+    let url = session.url.clone();
     match apply(
         &st.pool,
         ApplyCmd::RecordSession {
             attempt_id: started,
-            session: HostedSession {
-                url: url.clone(),
-                session_id,
-            },
+            session,
         },
     )
     .await

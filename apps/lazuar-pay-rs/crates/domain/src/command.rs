@@ -44,8 +44,14 @@ pub enum Command {
     },
 }
 
-/// v1: payment Open|Processing, intake Open, no live attempt.
-pub fn check_start_attempt(payment: &Payment, attempts: &[Attempt]) -> Result<(), Illegal> {
+/// v1: payment Open|Processing, intake Open.
+/// A single `created` attempt on the same rail is the mint pin — start promotes it.
+/// Any other live attempt is illegal.
+pub fn check_start_attempt(
+    payment: &Payment,
+    attempts: &[Attempt],
+    rail: RailId,
+) -> Result<(), Illegal> {
     let startable = matches!(
         payment.status,
         PaymentStatus::Open | PaymentStatus::Processing
@@ -53,10 +59,12 @@ pub fn check_start_attempt(payment: &Payment, attempts: &[Attempt]) -> Result<()
     if !startable {
         return Err(Illegal::NotStartable);
     }
-    if attempts.iter().any(|a| a.status.is_live()) {
-        return Err(Illegal::LiveAttemptExists);
+    let live: Vec<_> = attempts.iter().filter(|a| a.status.is_live()).collect();
+    match live.as_slice() {
+        [] => Ok(()),
+        [a] if a.status == AttemptStatus::Created && a.rail == rail => Ok(()),
+        _ => Err(Illegal::LiveAttemptExists),
     }
-    Ok(())
 }
 
 /// Session already recorded: keep (issue 007 / 011 loser reloads the URL).
@@ -111,7 +119,7 @@ mod tests {
     #[test]
     fn second_live_attempt_is_illegal() {
         let p = open_payment();
-        let err = check_start_attempt(&p, &[live_attempt()]).unwrap_err();
+        let err = check_start_attempt(&p, &[live_attempt()], RailId::CHIP).unwrap_err();
         assert_eq!(err, Illegal::LiveAttemptExists);
     }
 
@@ -120,8 +128,29 @@ mod tests {
         let mut p = open_payment();
         p.status = PaymentStatus::Failed;
         assert_eq!(
-            check_start_attempt(&p, &[]).unwrap_err(),
+            check_start_attempt(&p, &[], RailId::TEST).unwrap_err(),
             Illegal::NotStartable
+        );
+    }
+
+    #[test]
+    fn created_pin_same_rail_is_promotable() {
+        let p = open_payment();
+        let mut a = live_attempt();
+        a.status = AttemptStatus::Created;
+        a.rail = RailId::STRIPE;
+        assert!(check_start_attempt(&p, &[a], RailId::STRIPE).is_ok());
+    }
+
+    #[test]
+    fn created_pin_other_rail_is_illegal() {
+        let p = open_payment();
+        let mut a = live_attempt();
+        a.status = AttemptStatus::Created;
+        a.rail = RailId::TEST;
+        assert_eq!(
+            check_start_attempt(&p, &[a], RailId::STRIPE).unwrap_err(),
+            Illegal::LiveAttemptExists
         );
     }
 }

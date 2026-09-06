@@ -26,6 +26,7 @@ thiserror.workspace = true
 time.workspace = true
 tokio.workspace = true
 uuid.workspace = true
+workers.workspace = true
 
 [dev-dependencies]
 hmac.workspace = true

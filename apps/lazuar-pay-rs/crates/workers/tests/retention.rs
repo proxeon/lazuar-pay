@@ -1,6 +1,7 @@
 mod support;
 
 use domain::money::{Currency, Money};
+use domain::rail::RailId;
 use domain::{PublicToken, TenantId};
 use storage::{apply, ApplyCmd, ApplyOutcome, MintSpec, RetentionCfg};
 use support::pool;
@@ -29,6 +30,7 @@ async fn sweep_deletes_old_inbound_keeps_charges() {
             slot_key: None,
             success_url: None,
             cancel_url: None,
+            rail: RailId::TEST,
         }),
     )
     .await

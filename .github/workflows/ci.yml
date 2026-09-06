@@ -77,6 +77,8 @@ jobs:
         run: cargo clippy -p domain --all-targets -- -D warnings
       - name: test domain
         run: cargo test -p domain
+      - name: test rails (parse + fixtures, no Docker)
+        run: cargo test -p rails
       - name: test storage (Docker Postgres 16)
         run: cargo test -p storage
       - name: test api (Docker Postgres 16)

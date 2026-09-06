@@ -37,6 +37,7 @@ pub struct MintSpec {
     pub slot_key: Option<String>,
     pub success_url: Option<String>,
     pub cancel_url: Option<String>,
+    pub rail: RailId,
 }
 
 pub enum ApplyCmd {
@@ -58,6 +59,7 @@ pub enum ApplyCmd {
         received: Money,
         proof: Proof,
         now: OffsetDateTime,
+        refs: ConnectorRefs,
     },
     InjectFailed {
         tenant_id: TenantId,
@@ -128,9 +130,11 @@ pub async fn apply(pool: &PgPool, cmd: ApplyCmd) -> Result<ApplyOutcome, ApplyEr
             received,
             proof,
             now,
+            refs,
         } => {
             inject_paid(
                 &mut tx, tenant_id, rail, proof_id, payment_id, attempt_id, received, proof, now,
+                refs,
             )
             .await?
         }
@@ -209,6 +213,30 @@ async fn mint(
     .execute(&mut **tx)
     .await
     .map_err(ApplyError::from_sql)?;
+    let attempt_id = AttemptId::from_uuid(Uuid::new_v4());
+    let method = MethodId::new(quoted.currency().code, spec.rail);
+    sqlx::query(
+        r#"
+        INSERT INTO pay_rs.attempts (
+            id, payment_id, tenant_id, rail, method,
+            amount_minor, currency, exponent, status, version
+        ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, 'created', 1
+        )
+        "#,
+    )
+    .bind(attempt_id.as_uuid())
+    .bind(id.as_uuid())
+    .bind(spec.tenant_id.as_str())
+    .bind(spec.rail.as_str())
+    .bind(method.to_string())
+    .bind(quoted.minor() as i64)
+    .bind(quoted.currency().code.as_str())
+    .bind(i16::from(quoted.currency().exponent))
+    .execute(&mut **tx)
+    .await
+    .map_err(ApplyError::from_sql)?;
     Ok(ApplyOutcome::Minted { payment_id: id })
 }
 
@@ -219,11 +247,30 @@ async fn start_attempt(
 ) -> Result<ApplyOutcome, ApplyError> {
     let payment = load_payment(tx, payment_id).await?;
     let attempts = load_attempts(tx, payment_id).await?;
-    match check_start_attempt(&payment, &attempts) {
+    match check_start_attempt(&payment, &attempts, rail) {
         Err(domain::Illegal::NotStartable) => return Err(ApplyError::NotStartable),
         Err(domain::Illegal::LiveAttemptExists) => return Err(ApplyError::LiveAttemptExists),
         Err(e) => return Err(ApplyError::Domain(e)),
         Ok(()) => {}
+    }
+    if let Some(existing) = attempts
+        .iter()
+        .find(|a| a.status == domain::AttemptStatus::Created && a.rail == rail)
+    {
+        sqlx::query(
+            r#"
+            UPDATE pay_rs.attempts
+               SET status = 'pending', updated_at = now(), version = version + 1
+             WHERE id = $1 AND status = 'created'
+            "#,
+        )
+        .bind(existing.id.as_uuid())
+        .execute(&mut **tx)
+        .await?;
+        return Ok(ApplyOutcome::Started {
+            payment_id,
+            attempt_id: existing.id,
+        });
     }
     let attempt_id = AttemptId::from_uuid(Uuid::new_v4());
     let method = MethodId::new(payment.quoted.currency().code, rail);
@@ -329,6 +376,7 @@ async fn inject_paid(
     received: Money,
     proof: Proof,
     now: OffsetDateTime,
+    refs: ConnectorRefs,
 ) -> Result<ApplyOutcome, ApplyError> {
     if !insert_inbound(tx, tenant_id.as_str(), rail.as_str(), &proof_id).await? {
         return Ok(ApplyOutcome::Duplicate);
@@ -374,6 +422,21 @@ async fn inject_paid(
         Some(&new_settlement),
         Some((&proof_id, rail)),
     )
+    .await?;
+    sqlx::query(
+        r#"
+        UPDATE pay_rs.attempts
+           SET capture_id = COALESCE($2, capture_id),
+               network_id = COALESCE($3, network_id),
+               session_id = COALESCE($4, session_id)
+         WHERE id = $1
+        "#,
+    )
+    .bind(attempt_id.as_uuid())
+    .bind(refs.capture_id.as_deref())
+    .bind(refs.network_id.as_deref())
+    .bind(refs.session_id.as_deref())
+    .execute(&mut **tx)
     .await?;
     Ok(ApplyOutcome::Applied {
         payment_id,

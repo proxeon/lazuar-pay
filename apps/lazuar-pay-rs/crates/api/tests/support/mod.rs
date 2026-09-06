@@ -43,6 +43,7 @@ pub async fn pool() -> PgPool {
     pool
 }
 
+#[allow(dead_code)]
 pub fn sign(secret: &str, body: &str) -> String {
     use hmac::{Hmac, Mac};
     use sha2::Sha256;

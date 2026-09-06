@@ -10,6 +10,7 @@ pub mod psync;
 pub mod retention;
 pub mod secret_box;
 pub mod settler;
+pub mod stripe_remote;
 
 use std::time::Duration as StdDuration;
 
@@ -17,9 +18,8 @@ use sqlx::PgPool;
 use storage::RetentionCfg;
 
 use crate::outbound::OutboundCfg;
-use crate::psync::NoopSync;
 use crate::secret_box::SecretBox;
-use crate::settler::NoopRefund;
+use crate::stripe_remote::StripeRemote;
 
 #[derive(Clone)]
 pub struct Config {
@@ -58,10 +58,12 @@ pub async fn run(cfg: Config) {
                 }).await;
             }
             _ = psync_tick.tick() => {
-                let _ = psync::process_batch(&cfg.pool, &NoopSync).await;
+                let remote = StripeRemote::live(cfg.pool.clone(), cfg.wrap_key);
+                let _ = psync::process_batch(&cfg.pool, &remote).await;
             }
             _ = settler_tick.tick() => {
-                let _ = settler::process_batch(&cfg.pool, &NoopRefund).await;
+                let remote = StripeRemote::live(cfg.pool.clone(), cfg.wrap_key);
+                let _ = settler::process_batch(&cfg.pool, &remote).await;
             }
         }
     }

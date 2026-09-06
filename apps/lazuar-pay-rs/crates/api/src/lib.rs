@@ -1,26 +1,29 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test rail only (033/03).
+//! TypeSpec `/v1` adapter over `storage::apply`. Test rail + Stripe (033/05).
 
 #![forbid(unsafe_code)]
 
 pub mod boot;
 pub mod checkouts;
 pub mod errors;
+pub mod gateway;
 pub mod health;
 pub mod identity;
 pub mod json;
 pub mod limiter;
 pub mod public_pay;
+pub mod stripe_http;
 pub mod webhooks;
 
 use std::sync::Arc;
 
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 use sqlx::PgPool;
 
 use crate::boot::Env;
 use crate::identity::{FakeOne, OneClient, WhoamiCache};
 use crate::limiter::Limiter;
+use crate::stripe_http::FakeStripe;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -31,6 +34,8 @@ pub struct AppState {
     pub one: OneClient,
     pub whoami_cache: Arc<WhoamiCache>,
     pub limiter: Arc<Limiter>,
+    pub wrap_key: [u8; 32],
+    pub stripe: FakeStripe,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -45,6 +50,15 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/pay/{token}/start", post(public_pay::start))
         .route("/v1/pay/{token}/confirm", post(public_pay::confirm))
         .route("/v1/webhooks/test/{org_id}", post(webhooks::test_webhook))
+        .route(
+            "/v1/webhooks/stripe/{org_id}",
+            post(webhooks::stripe_webhook),
+        )
+        .route(
+            "/v1/orgs/{org_id}/gateway",
+            put(gateway::put).get(gateway::get),
+        )
+        .route("/v1/orgs/{org_id}/gateways", get(gateway::list))
         .with_state(state)
 }
 
@@ -61,5 +75,7 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         one: OneClient::Fake(FakeOne::writer("t1")),
         whoami_cache: Arc::new(WhoamiCache::new()),
         limiter: Arc::new(Limiter::new(start_max)),
+        wrap_key: workers::secret_box::SecretBox::testing_fallback_key(),
+        stripe: FakeStripe::default(),
     }
 }

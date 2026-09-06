@@ -1,0 +1,1 @@
+{"id":"cs_test_1","object":"checkout.session","status":"complete","payment_status":"paid","amount_total":1000,"currency":"myr","payment_intent":"pi_1"}

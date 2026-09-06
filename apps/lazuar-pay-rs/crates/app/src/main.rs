@@ -6,6 +6,7 @@ use std::sync::Arc;
 use api::boot::{throw_if_misconfigured, wrap_key_testing_fallback, Env};
 use api::identity::{FakeOne, HttpOne, OneClient, WhoamiCache};
 use api::limiter::Limiter;
+use api::stripe_http::FakeStripe;
 use api::AppState;
 use base64::Engine;
 use workers::secret_box::SecretBox;
@@ -125,6 +126,8 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         one,
         whoami_cache: Arc::new(WhoamiCache::new()),
         limiter: Arc::new(Limiter::new(max)),
+        wrap_key,
+        stripe: FakeStripe::default(),
     };
     let app = api::router(state);
     let port: u16 = std::env::var("PORT")

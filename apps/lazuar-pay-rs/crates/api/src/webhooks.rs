@@ -94,7 +94,140 @@ pub async fn test_webhook(
                 event_id: ProofId::new(event.event_id),
             },
             now,
+            refs: Default::default(),
         }
+    };
+    match apply(&st.pool, cmd).await {
+        Ok(ApplyOutcome::Duplicate) => Json(json!({"duplicate": true})).into_response(),
+        Ok(_) => Json(json!({"ok": true})).into_response(),
+        Err(e) => from_apply(e, false),
+    }
+}
+
+pub async fn stripe_webhook(
+    State(st): State<AppState>,
+    Path(org_id): Path<String>,
+    headers: HeaderMap,
+    body: String,
+) -> Response {
+    let cred = match storage::get_credential(&st.pool, &org_id, "stripe").await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return problem(StatusCode::BAD_REQUEST, "Bad Request", "invalid signature");
+        }
+        Err(e) => return from_apply(e, false),
+    };
+    let box_ = workers::secret_box::SecretBox::new(st.wrap_key);
+    let secret = match cred.webhook_ciphertext.as_deref() {
+        Some(ct) if !ct.is_empty() => match box_.unprotect_str(ct) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "webhook secret undecryptable",
+                );
+            }
+        },
+        _ if st.env == crate::boot::Env::Testing && !st.test_webhook_secret.is_empty() => {
+            st.test_webhook_secret.clone()
+        }
+        _ => {
+            return problem(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "webhook secret missing",
+            );
+        }
+    };
+    let sig = headers
+        .get(rails::stripe::SIGNATURE_HEADER)
+        .and_then(|v| v.to_str().ok());
+    let now_unix = OffsetDateTime::now_utc().unix_timestamp();
+    let (event_id, outcome) =
+        match rails::stripe::parse_webhook(body.as_bytes(), sig, &secret, now_unix) {
+            Ok(v) => v,
+            Err(e) => {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", &e.to_string());
+            }
+        };
+    use domain::proof::{Binding, WebhookOutcome};
+    if let WebhookOutcome::Ignored { .. } = &outcome {
+        let typ = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))
+            .unwrap_or_default();
+        let session = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v.get("data").and_then(|d| d.get("object")).cloned());
+        let reason = rails::stripe::ignore_detail(&outcome, &typ, session.as_ref());
+        let _ =
+            storage::record_ignored_inbound(&st.pool, &org_id, "stripe", &event_id, &reason).await;
+        return Json(json!({"ignored": reason})).into_response();
+    }
+    let binding = match &outcome {
+        WebhookOutcome::Paid { binding, .. } | WebhookOutcome::Failed { binding, .. } => {
+            binding.clone()
+        }
+        WebhookOutcome::Ignored { .. } => unreachable!(),
+    };
+    let (payment_id, attempt_id) = match binding {
+        Binding::Payment { id } => {
+            let view = match storage::read::payment_by_id(&st.pool, id).await {
+                Ok(Some(v)) => v,
+                _ => {
+                    return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+                }
+            };
+            if view.tenant_id.as_str() != org_id {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+            }
+            if view.provider.as_deref() != Some("stripe") {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "provider mismatch");
+            }
+            let Some(aid) = view.attempt_id else {
+                return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+            };
+            (id, aid)
+        }
+        Binding::Session { session_id } => {
+            match storage::payment_by_session(&st.pool, &org_id, "stripe", &session_id).await {
+                Ok(Some((pid, aid))) => (
+                    domain::PaymentId::from_uuid(pid),
+                    domain::AttemptId::from_uuid(aid),
+                ),
+                _ => {
+                    return problem(StatusCode::BAD_REQUEST, "Bad Request", "checkout not found");
+                }
+            }
+        }
+    };
+    let now = OffsetDateTime::now_utc();
+    let cmd = match outcome {
+        WebhookOutcome::Failed { .. } => ApplyCmd::InjectFailed {
+            tenant_id: TenantId::new(org_id),
+            rail: RailId::STRIPE,
+            proof_id: event_id,
+            payment_id,
+            attempt_id,
+            reason: TerminalReason::PspFailed,
+            now,
+        },
+        WebhookOutcome::Paid { received, refs, .. } => ApplyCmd::InjectPaid {
+            tenant_id: TenantId::new(org_id),
+            rail: RailId::STRIPE,
+            proof_id: event_id.clone(),
+            payment_id,
+            attempt_id,
+            received,
+            proof: Proof::PspWebhook {
+                rail: RailId::STRIPE,
+                event_id: ProofId::new(event_id),
+            },
+            now,
+            refs,
+        },
+        WebhookOutcome::Ignored { .. } => unreachable!(),
     };
     match apply(&st.pool, cmd).await {
         Ok(ApplyOutcome::Duplicate) => Json(json!({"duplicate": true})).into_response(),

@@ -42,6 +42,7 @@ async fn mint(
             slot_key,
             success_url: None,
             cancel_url: None,
+            rail: RailId::TEST,
         }),
     )
     .await
@@ -99,6 +100,7 @@ fn paid(
             event_id: ProofId::new(proof_id),
         },
         now,
+        refs: Default::default(),
     }
 }
 
@@ -222,6 +224,7 @@ async fn issue_011_same_slot_second_mint_conflicts() {
         slot_key: Some("slot-1".into()),
         success_url: None,
         cancel_url: None,
+        rail: RailId::TEST,
     };
     let a = pool.clone();
     let b = pool.clone();

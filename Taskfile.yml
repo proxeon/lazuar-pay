@@ -72,6 +72,15 @@ tasks:
     cmds:
       - cargo test -p domain
 
+  pay-rs:rails:
+    desc: Stripe parse + fixtures (no sqlx, 033/05)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo test -p rails
+      - |
+        set -euo pipefail
+        if cargo tree -p rails -i sqlx >/dev/null 2>&1; then echo "sqlx in rails"; exit 1; fi
+
   pay-rs:storage:
     desc: Apply pay_rs migrations on Postgres 16 and assert unique locks (033/01)
     dir: apps/lazuar-pay-rs
@@ -107,6 +116,7 @@ tasks:
         if cargo tree -p domain -i tokio >/dev/null 2>&1; then echo "domain must not depend on tokio"; exit 1; fi
         if cargo tree -p domain -i sqlx >/dev/null 2>&1; then echo "domain must not depend on sqlx"; exit 1; fi
         if cargo tree -p domain -i axum >/dev/null 2>&1; then echo "domain must not depend on axum"; exit 1; fi
+        if cargo tree -p rails -i sqlx >/dev/null 2>&1; then echo "sqlx in rails"; exit 1; fi
         if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then echo "domain forbids f64"; exit 1; fi
 
   # ==========================================

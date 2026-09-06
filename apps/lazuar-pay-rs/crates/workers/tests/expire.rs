@@ -32,6 +32,7 @@ async fn expire_open_becomes_expired_without_charge() {
             slot_key: None,
             success_url: None,
             cancel_url: None,
+            rail: RailId::TEST,
         }),
     )
     .await
@@ -72,6 +73,7 @@ async fn expire_vs_paid_one_charge_xor_expired() {
             slot_key: None,
             success_url: None,
             cancel_url: None,
+            rail: RailId::TEST,
         }),
     )
     .await
@@ -122,6 +124,7 @@ async fn expire_vs_paid_one_charge_xor_expired() {
                     event_id: ProofId::new(format!("evt-{}", Uuid::new_v4().simple())),
                 },
                 now,
+                refs: Default::default(),
             },
         )
         .await
