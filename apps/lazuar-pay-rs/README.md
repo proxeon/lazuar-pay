@@ -26,9 +26,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 1. `domain` + tests — done.
 2. `migrations/` + unique tests (P1) — done.
 2b. `storage::apply` TX + G4 races (P2) — done.
-3. Thin TypeSpec `/v1` adapter, test rail (P3 / 033/03) — this tree.
-3. `api` adapter: health, whoami, test rail, webhook ingest, public start.
-4. `workers`.
+3. Thin TypeSpec `/v1` adapter, test rail (P3 / 033/03) — done.
+4. `workers` (expire, outbound HMAC, PSync skip test, CHIP never auto-settled) — this tree.
 5. Live rails one PR each.
 6. `chain/` Solana watcher (`--watcher-only` capable).
 
@@ -36,10 +35,13 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 cargo test -p domain
 cargo test -p storage   # Docker: Postgres 16 via testcontainers
 cargo test -p api       # Docker + Fake One
-cargo run -p lazuar-pay-rs -- serve   # :8081, ConnectionStrings__Pay
+cargo test -p workers   # Docker: SKIP LOCKED loops
+cargo run -p lazuar-pay-rs -- serve          # :8081 + workers
+cargo run -p lazuar-pay-rs -- --api-only     # :8081, no loops
+cargo run -p lazuar-pay-rs -- --worker-only  # loops, no bind
 ```
 
-Testing `serve` uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set. Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two replicas = 2×.
+Testing `serve` uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set. Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two **API** replicas = 2×. Two **worker** replicas are OK (SKIP LOCKED).
 
 `domain` must compile with no `tokio`, `sqlx`, or `axum`. CI greps it.
 

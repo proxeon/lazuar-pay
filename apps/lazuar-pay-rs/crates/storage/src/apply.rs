@@ -769,19 +769,23 @@ async fn persist_fold(
 
     if let Some(ev) = outbound_event(proj.intake_kind, proj.status, proj.terminal_reason) {
         let event_id = format!("{}:{ev}", payment.id.to_wire());
-        sqlx::query(
-            r#"
-            INSERT INTO pay_rs.org_webhook_deliveries (
-                tenant_id, event_id, event_type, payload_json, status, next_attempt_at
-            ) VALUES ($1, $2, $3, '{}'::jsonb, 'pending', now())
-            ON CONFLICT (tenant_id, event_id) DO NOTHING
-            "#,
+        let provider: String = sqlx::query_scalar(
+            "SELECT rail FROM pay_rs.attempts WHERE payment_id = $1 ORDER BY created_at DESC LIMIT 1",
         )
-        .bind(payment.tenant_id.as_str())
-        .bind(event_id)
-        .bind(ev)
-        .execute(&mut **tx)
-        .await?;
+        .bind(payment.id.as_uuid())
+        .fetch_optional(&mut **tx)
+        .await?
+        .unwrap_or_else(|| "test".into());
+        let payload = crate::lease::envelope(
+            &event_id,
+            ev,
+            payment.tenant_id.as_str(),
+            &payment.id.to_wire(),
+            payment.quoted,
+            &provider,
+        );
+        crate::lease::enqueue_outbound(tx, payment.tenant_id.as_str(), &event_id, ev, &payload)
+            .await?;
     }
     Ok(())
 }

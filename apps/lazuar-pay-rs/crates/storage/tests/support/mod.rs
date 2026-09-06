@@ -1,6 +1,8 @@
 //! Process-global Postgres 16 (sync testcontainers). Each tokio test owns its own pool
 //! so we never reuse a PgPool after a test runtime shuts down.
 
+#![allow(dead_code)]
+
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::OnceLock;

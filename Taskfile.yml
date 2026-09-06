@@ -84,6 +84,12 @@ tasks:
     cmds:
       - cargo test -p api
 
+  pay-rs:workers:
+    desc: SKIP LOCKED worker loops (expire, outbound, PSync, settler, retention)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo test -p workers
+
   pay-rs:serve:
     desc: Run lazuar-pay-rs on :8081 (Testing; needs ConnectionStrings__Pay)
     dir: apps/lazuar-pay-rs

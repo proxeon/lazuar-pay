@@ -81,6 +81,8 @@ jobs:
         run: cargo test -p storage
       - name: test api (Docker Postgres 16)
         run: cargo test -p api
+      - name: test workers (Docker Postgres 16)
+        run: cargo test -p workers
       - name: rails has no sqlx
         run: |
           set -euo pipefail

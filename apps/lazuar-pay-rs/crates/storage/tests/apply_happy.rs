@@ -103,6 +103,15 @@ async fn e1_inject_paid_takes_charge_and_journal() {
     let now = OffsetDateTime::now_utc();
     let (payment_id, attempt_id) =
         mint_and_session(&pool, &tenant, now + Duration::minutes(30)).await;
+    sqlx::query(
+        "INSERT INTO pay_rs.org_webhook_endpoints (tenant_id, url, secret_ciphertext)
+         VALUES ($1, 'http://127.0.0.1:9/hook', $2)",
+    )
+    .bind(tenant.as_str())
+    .bind(&[0u8][..])
+    .execute(&pool)
+    .await
+    .unwrap();
     apply(
         &pool,
         paid_cmd(&tenant, payment_id, attempt_id, myr10(), token("evt"), now),
