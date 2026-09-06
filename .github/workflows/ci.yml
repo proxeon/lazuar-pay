@@ -50,3 +50,38 @@ jobs:
           git diff --exit-code -- packages/pay-types-ts
       - name: Pay OpenAPI ↔ Map* honesty
         run: node scripts/check-pay-openapi-honesty.mjs
+
+  pay-rs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/lazuar-pay-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/lazuar-pay-rs
+      - name: Domain purity
+        run: |
+          set -euo pipefail
+          if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then
+            echo "domain forbids f64"
+            exit 1
+          fi
+      - name: fmt
+        run: cargo fmt --all -- --check
+      - name: clippy domain
+        run: cargo clippy -p domain --all-targets -- -D warnings
+      - name: test domain
+        run: cargo test -p domain
+      - name: check workspace
+        run: cargo check --workspace
+      - name: domain has no tokio/sqlx/axum
+        run: |
+          set -euo pipefail
+          if cargo tree -p domain -i tokio >/dev/null 2>&1; then echo "tokio in domain"; exit 1; fi
+          if cargo tree -p domain -i sqlx >/dev/null 2>&1; then echo "sqlx in domain"; exit 1; fi
+          if cargo tree -p domain -i axum >/dev/null 2>&1; then echo "axum in domain"; exit 1; fi

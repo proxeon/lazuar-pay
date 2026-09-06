@@ -64,6 +64,28 @@ tasks:
       - pnpm --filter lazuar-pay-checkout dev
 
   # ==========================================
+  # Rust rewrite (apps/lazuar-pay-rs) — 032/06
+  # ==========================================
+  pay-rs:domain:
+    desc: Test the no-I/O domain crate (032/07 fold + money)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo test -p domain
+
+  pay-rs:check:
+    desc: Workspace check + domain purity (no tokio/sqlx/axum)
+    dir: apps/lazuar-pay-rs
+    cmds:
+      - cargo check --workspace
+      - cargo tree -p domain --edges normal --prefix none
+      - |
+        set -euo pipefail
+        if cargo tree -p domain -i tokio >/dev/null 2>&1; then echo "domain must not depend on tokio"; exit 1; fi
+        if cargo tree -p domain -i sqlx >/dev/null 2>&1; then echo "domain must not depend on sqlx"; exit 1; fi
+        if cargo tree -p domain -i axum >/dev/null 2>&1; then echo "domain must not depend on axum"; exit 1; fi
+        if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then echo "domain forbids f64"; exit 1; fi
+
+  # ==========================================
   # Cloudflare named tunnel (preferred hop A for Billplz callbacks)
   # ==========================================
   tunnel:cf:

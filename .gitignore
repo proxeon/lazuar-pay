@@ -109,6 +109,9 @@ docs/payment/
 scripts/lhdn_sandbox/cookies.txt
 scripts/lhdn_sandbox/**/cookies.txt
 
+# Rust
+**/target/
+
 # Sample app local demo stores
 .data/
 

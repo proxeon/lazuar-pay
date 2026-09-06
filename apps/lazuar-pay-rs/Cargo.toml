@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/rails",
+    "crates/chain",
+    "crates/storage",
+    "crates/api",
+    "crates/workers",
+    "crates/obs",
+    "crates/app",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "UNLICENSED"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+float_arithmetic = "deny"
+
+[workspace.dependencies]
+domain = { path = "crates/domain" }
+rails = { path = "crates/rails" }
+chain = { path = "crates/chain" }
+storage = { path = "crates/storage" }
+api = { path = "crates/api" }
+workers = { path = "crates/workers" }
+obs = { path = "crates/obs" }
+rust_decimal = { version = "1.36", default-features = false, features = ["std"] }
+thiserror = "2"
+time = { version = "0.3.36", default-features = false, features = ["std"] }
+uuid = { version = "1.11", default-features = false, features = ["std"] }
