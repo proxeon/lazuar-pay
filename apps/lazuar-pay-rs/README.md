@@ -30,9 +30,10 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 4. `workers` (expire, outbound HMAC, PSync skip test, CHIP never auto-settled) — done.
 5. Stripe hosted + webhook + PSync + refund (P5 / 033/05) — done. Fixture-backed; CI does not call `api.stripe.com`.
 6. CHIP hosted + PEM vault + webhook + PSync (P6 / 033/06) — done.
-7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — this tree. PUT collection + `environment` then mint `provider=billplz`. Bind `reference_1` only. CI does not call Billplz hosts.
-8. Xendit / Razorpay, one PR each.
-9. `chain/` Solana watcher (`--watcher-only` capable).
+7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — done.
+8. Xendit hosted invoice + callback-token webhook + PSync (P8 / 033/08) — this tree. Mint wire amount is **major** (`10` not `1000`). CI does not call `api.xendit.co`.
+9. Razorpay, one PR.
+10. `chain/` Solana watcher (`--watcher-only` capable).
 
 ```sh
 cargo test -p domain

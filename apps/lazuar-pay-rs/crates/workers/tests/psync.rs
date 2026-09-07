@@ -15,6 +15,7 @@ use workers::chip_remote::ChipRemote;
 use workers::psync::{self, ConstSync};
 use workers::secret_box::SecretBox;
 use workers::stripe_remote::StripeRemote;
+use workers::xendit_remote::XenditRemote;
 
 fn myr10() -> Money {
     Money::from_quoted_str("10.00", Currency::MYR).unwrap()
@@ -375,6 +376,90 @@ async fn billplz_remote_due_stays_session_live() {
     let fake = rails::billplz::FakeBillplz::default();
     fake.set_retrieve(200, &billplz_fixture("psync_due.json"));
     let remote = BillplzRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
+        .bind(attempt_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let pst: String = sqlx::query_scalar("SELECT status FROM pay_rs.payments WHERE id = $1")
+        .bind(payment_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ast, "session_live");
+    assert_eq!(pst, "open");
+}
+
+async fn vault_xendit(pool: &sqlx::PgPool, tenant: &str) {
+    let box_ = SecretBox::new(SecretBox::testing_fallback_key());
+    let ct = box_.protect_str("xnd_sk").unwrap();
+    let wh = box_.protect_str("tok_1").unwrap();
+    storage::upsert_xendit(pool, tenant, &ct, &wh, "d_sk", Some("test"))
+        .await
+        .unwrap();
+}
+
+fn xendit_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!(
+        "{}/../rails/tests/fixtures/xendit/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn xendit_remote_paid_fixture_takes() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, _a, _s) = mint_session(&pool, RailId::XENDIT, true).await;
+    vault_xendit(&pool, tenant.as_str()).await;
+    let fake = rails::xendit::FakeXendit::default();
+    fake.set_retrieve(200, &xendit_fixture("psync_paid.json"));
+    let remote = XenditRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let charges: i64 =
+        sqlx::query_scalar("SELECT count(*)::bigint FROM pay_rs.charges WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(charges, 1);
+}
+
+#[tokio::test]
+async fn xendit_remote_pending_stays_session_live() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, attempt_id, _s) = mint_session(&pool, RailId::XENDIT, true).await;
+    vault_xendit(&pool, tenant.as_str()).await;
+    let fake = rails::xendit::FakeXendit::default();
+    fake.set_retrieve(200, &xendit_fixture("psync_pending.json"));
+    let remote = XenditRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
+        .bind(attempt_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let pst: String = sqlx::query_scalar("SELECT status FROM pay_rs.payments WHERE id = $1")
+        .bind(payment_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ast, "session_live");
+    assert_eq!(pst, "open");
+}
+
+#[tokio::test]
+async fn xendit_remote_expired_stays_session_live() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, attempt_id, _s) = mint_session(&pool, RailId::XENDIT, true).await;
+    vault_xendit(&pool, tenant.as_str()).await;
+    let fake = rails::xendit::FakeXendit::default();
+    fake.set_retrieve(200, &xendit_fixture("psync_expired.json"));
+    let remote = XenditRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
     psync::process_batch(&pool, &remote).await.unwrap();
     let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
         .bind(attempt_id.as_uuid())

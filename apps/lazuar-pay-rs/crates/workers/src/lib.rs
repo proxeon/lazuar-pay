@@ -13,6 +13,7 @@ pub mod retention;
 pub mod secret_box;
 pub mod settler;
 pub mod stripe_remote;
+pub mod xendit_remote;
 
 use std::time::Duration as StdDuration;
 
@@ -25,6 +26,7 @@ use crate::outbound::OutboundCfg;
 use crate::psync::Dispatch;
 use crate::secret_box::SecretBox;
 use crate::stripe_remote::StripeRemote;
+use crate::xendit_remote::XenditRemote;
 
 #[derive(Clone)]
 pub struct Config {
@@ -67,6 +69,7 @@ pub async fn run(cfg: Config) {
                     stripe: StripeRemote::live(cfg.pool.clone(), cfg.wrap_key),
                     chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
                     billplz: BillplzRemote::live(cfg.pool.clone(), cfg.wrap_key),
+                    xendit: XenditRemote::live(cfg.pool.clone(), cfg.wrap_key),
                 };
                 let _ = psync::process_batch(&cfg.pool, &remote).await;
             }

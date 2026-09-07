@@ -229,6 +229,37 @@ pub async fn start(
                 );
             }
         }
+    } else if rail == RailId::XENDIT {
+        match storage::get_credential(&st.pool, view.tenant_id.as_str(), "xendit").await {
+            Ok(Some(_)) => {}
+            _ => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        }
+        let mail = email.unwrap_or("");
+        let payload = rails::xendit::invoice_body(
+            &view.id.to_wire(),
+            view.tenant_id.as_str(),
+            mail,
+            crate::json::money_number(view.quoted),
+            view.quoted.currency().code.as_str(),
+            &success,
+            &cancel,
+        );
+        match st.xendit.create_invoice(rails::xendit::API_BASE, &payload) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "Xendit rejected the org key",
+                );
+            }
+        }
     } else {
         HostedSession {
             url: success,

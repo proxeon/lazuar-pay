@@ -41,7 +41,7 @@ pub async fn put(
             "test processor does not take secrets",
         );
     }
-    if provider != "stripe" && provider != "chip" && provider != "billplz" {
+    if provider != "stripe" && provider != "chip" && provider != "billplz" && provider != "xendit" {
         if domain::rail::RailId::parse(&provider).is_err() {
             return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown provider");
         }
@@ -56,7 +56,7 @@ pub async fn put(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    if provider == "stripe" && brand.is_some() {
+    if (provider == "stripe" || provider == "xendit") && brand.is_some() {
         return problem(
             StatusCode::BAD_REQUEST,
             "Bad Request",
@@ -159,6 +159,8 @@ pub async fn put(
             brand.unwrap_or(""),
         )
         .await
+    } else if provider == "xendit" {
+        storage::upsert_xendit(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
     } else {
         storage::upsert_stripe(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
     };
@@ -222,7 +224,7 @@ pub async fn get(
         return Json(json!({"org_id": org_id, "provider": "test", "configured": false}))
             .into_response();
     }
-    if provider != "stripe" && provider != "chip" && provider != "billplz" {
+    if provider != "stripe" && provider != "chip" && provider != "billplz" && provider != "xendit" {
         return Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response();
     }
@@ -258,7 +260,7 @@ pub async fn list(
             "capability": "hosted_link",
         }));
     }
-    for rail in ["stripe", "chip", "billplz"] {
+    for rail in ["stripe", "chip", "billplz", "xendit"] {
         match storage::get_credential(&st.pool, &org_id, rail).await {
             Ok(Some(row)) => processors.push(gateway_json(&org_id, &row)),
             _ => processors.push(json!({

@@ -11,6 +11,7 @@ use api::AppState;
 use base64::Engine;
 use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
+use rails::xendit::FakeXendit;
 use workers::secret_box::SecretBox;
 
 #[tokio::main]
@@ -132,6 +133,7 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         stripe: FakeStripe::default(),
         chip: FakeChip::default(),
         billplz: FakeBillplz::default(),
+        xendit: FakeXendit::default(),
         public_base_url: std::env::var("Pay__PublicBaseUrl")
             .unwrap_or_else(|_| "https://pay.example.test".into()),
     };

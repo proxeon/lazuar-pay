@@ -81,7 +81,7 @@ async fn put_test_processor_is_400() {
 }
 
 #[tokio::test]
-async fn put_xendit_is_rail_not_configured() {
+async fn put_razorpay_is_rail_not_configured() {
     let _g = STRIPE_HTTP.lock().await;
     let pool = pool().await;
     let app = api::router(testing_state(pool, SECRET));
@@ -92,7 +92,7 @@ async fn put_xendit_is_rail_not_configured() {
             "/v1/orgs/t1/gateway",
             "test-writer",
             Some(json!({
-                "provider": "xendit",
+                "provider": "razorpay",
                 "secret": "x",
                 "webhook_secret": "y",
             })),

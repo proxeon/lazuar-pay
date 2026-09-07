@@ -73,6 +73,27 @@ pub async fn upsert_stripe(
     .await
 }
 
+pub async fn upsert_xendit(
+    pool: &PgPool,
+    tenant_id: &str,
+    ciphertext: &[u8],
+    webhook_ciphertext: &[u8],
+    last4: &str,
+    environment: Option<&str>,
+) -> Result<CredentialRow, ApplyError> {
+    upsert_rail(
+        pool,
+        tenant_id,
+        "xendit",
+        ciphertext,
+        webhook_ciphertext,
+        last4,
+        environment,
+        None,
+    )
+    .await
+}
+
 pub async fn upsert_billplz(
     pool: &PgPool,
     tenant_id: &str,
