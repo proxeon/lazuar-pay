@@ -1,8 +1,9 @@
 use domain::money::{Currency, Money};
 use rails::solana::{
-    decode, decoy_json, encode, is_on_ed25519, looks_like_secret, mint, parse_webhook, pay_uri,
-    sample_address, try_normalize, try_to_atomic, tx_json, validate, DEVNET_MINT, MAINNET_MINT,
-    MEMO_PROGRAM, TOKEN_2022_PROGRAM, TOKEN_PROGRAM, WEBHOOK_THROW,
+    decode, decoy_json, encode, genesis_hash, is_on_ed25519, looks_like_secret, matches_vault,
+    mint, parse_genesis_hash, parse_webhook, pay_uri, sample_address, try_normalize, try_to_atomic,
+    tx_json, validate, DEVNET_GENESIS, DEVNET_MINT, MAINNET_GENESIS, MAINNET_MINT, MEMO_PROGRAM,
+    TOKEN_2022_PROGRAM, TOKEN_PROGRAM, WEBHOOK_THROW,
 };
 
 fn usdc10() -> Money {
@@ -188,4 +189,20 @@ fn mints_are_pinned() {
     assert_eq!(mint("devnet"), DEVNET_MINT);
     assert_eq!(mint("mainnet-beta"), MAINNET_MINT);
     assert!(MEMO_PROGRAM.starts_with("Memo"));
+}
+
+#[test]
+fn genesis_hash_is_pinned_per_cluster() {
+    assert_eq!(
+        parse_genesis_hash(
+            r#"{"jsonrpc":"2.0","result":"5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"}"#
+        )
+        .as_deref(),
+        Some(MAINNET_GENESIS)
+    );
+    assert_eq!(genesis_hash("devnet"), DEVNET_GENESIS);
+    assert_eq!(genesis_hash("mainnet-beta"), MAINNET_GENESIS);
+    assert!(matches_vault("devnet", "devnet"));
+    assert!(matches_vault("mainnet-beta", "mainnet"));
+    assert!(!matches_vault("devnet", "mainnet"));
 }

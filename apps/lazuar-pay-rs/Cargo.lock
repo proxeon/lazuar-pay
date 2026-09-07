@@ -72,6 +72,7 @@ name = "api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "domain",
  "hex",
  "hmac",
@@ -91,6 +92,7 @@ dependencies = [
  "time",
  "tokio",
  "tower",
+ "tower-http",
  "uuid",
  "workers",
 ]
@@ -1469,7 +1471,7 @@ version = "0.1.0"
 dependencies = [
  "api",
  "axum",
- "base64 0.22.1",
+ "chain",
  "rails",
  "sqlx",
  "storage",

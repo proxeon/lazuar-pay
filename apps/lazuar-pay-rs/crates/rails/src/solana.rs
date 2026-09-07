@@ -15,6 +15,8 @@ pub const TOKEN_PROGRAM: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 pub const TOKEN_2022_PROGRAM: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 pub const MAINNET_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 pub const DEVNET_MINT: &str = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+pub const MAINNET_GENESIS: &str = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
+pub const DEVNET_GENESIS: &str = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
 pub const MERCHANT_ATA: &str = "Dest11111111111111111111111111111111111112";
 pub const BUYER_ATA: &str = "Buyr11111111111111111111111111111111111112";
 pub const WEBHOOK_THROW: &str = "solana does not use inbound PSP webhooks";
@@ -77,6 +79,24 @@ pub fn mint(cluster: &str) -> &'static str {
         MAINNET_MINT
     } else {
         DEVNET_MINT
+    }
+}
+
+pub fn genesis_hash(cluster: &str) -> &'static str {
+    if vault_environment(cluster) == "mainnet" {
+        MAINNET_GENESIS
+    } else {
+        DEVNET_GENESIS
+    }
+}
+
+pub fn parse_genesis_hash(json: &str) -> Option<String> {
+    let v: Value = serde_json::from_str(json).ok()?;
+    let hash = v.get("result")?.as_str()?.trim();
+    if hash.is_empty() {
+        None
+    } else {
+        Some(hash.to_string())
     }
 }
 

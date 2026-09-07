@@ -32,7 +32,12 @@ use crate::secret_box::SecretBox;
 use crate::solana_watch::Rpc;
 use crate::stripe_remote::StripeRemote;
 use crate::xendit_remote::XenditRemote;
+use rails::billplz::FakeBillplz;
+use rails::chip::FakeChip;
+use rails::razorpay::FakeRazorpay;
 use rails::solana::FakeSolanaRpc;
+use rails::stripe::FakeStripe;
+use rails::xendit::FakeXendit;
 
 #[derive(Clone)]
 pub struct Config {
@@ -43,6 +48,39 @@ pub struct Config {
     pub solana_cluster: String,
     pub solana_rpc_url: Option<String>,
     pub solana_fake: Option<FakeSolanaRpc>,
+    /// Testing `serve`: Fake remotes. Staging/Production: live PSP HTTP.
+    pub use_live_psp: bool,
+    pub stripe_fake: FakeStripe,
+    pub chip_fake: FakeChip,
+    pub billplz_fake: FakeBillplz,
+    pub xendit_fake: FakeXendit,
+    pub razorpay_fake: FakeRazorpay,
+}
+
+fn psync_dispatch(
+    cfg: &Config,
+) -> Dispatch<StripeRemote, ChipRemote, BillplzRemote, XenditRemote, RazorpayRemote> {
+    if cfg.use_live_psp {
+        Dispatch {
+            stripe: StripeRemote::live(cfg.pool.clone(), cfg.wrap_key),
+            chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
+            billplz: BillplzRemote::live(cfg.pool.clone(), cfg.wrap_key),
+            xendit: XenditRemote::live(cfg.pool.clone(), cfg.wrap_key),
+            razorpay: RazorpayRemote::live(cfg.pool.clone(), cfg.wrap_key),
+        }
+    } else {
+        Dispatch {
+            stripe: StripeRemote::fake(cfg.pool.clone(), cfg.wrap_key, cfg.stripe_fake.clone()),
+            chip: ChipRemote::fake(cfg.pool.clone(), cfg.wrap_key, cfg.chip_fake.clone()),
+            billplz: BillplzRemote::fake(cfg.pool.clone(), cfg.wrap_key, cfg.billplz_fake.clone()),
+            xendit: XenditRemote::fake(cfg.pool.clone(), cfg.wrap_key, cfg.xendit_fake.clone()),
+            razorpay: RazorpayRemote::fake(
+                cfg.pool.clone(),
+                cfg.wrap_key,
+                cfg.razorpay_fake.clone(),
+            ),
+        }
+    }
 }
 
 pub async fn run(cfg: Config) {
@@ -83,17 +121,19 @@ pub async fn run(cfg: Config) {
                 }).await;
             }
             _ = psync_tick.tick() => {
-                let remote = Dispatch {
-                    stripe: StripeRemote::live(cfg.pool.clone(), cfg.wrap_key),
-                    chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
-                    billplz: BillplzRemote::live(cfg.pool.clone(), cfg.wrap_key),
-                    xendit: XenditRemote::live(cfg.pool.clone(), cfg.wrap_key),
-                    razorpay: RazorpayRemote::live(cfg.pool.clone(), cfg.wrap_key),
-                };
+                let remote = psync_dispatch(&cfg);
                 let _ = psync::process_batch(&cfg.pool, &remote).await;
             }
             _ = settler_tick.tick() => {
-                let remote = StripeRemote::live(cfg.pool.clone(), cfg.wrap_key);
+                let remote = if cfg.use_live_psp {
+                    StripeRemote::live(cfg.pool.clone(), cfg.wrap_key)
+                } else {
+                    StripeRemote::fake(
+                        cfg.pool.clone(),
+                        cfg.wrap_key,
+                        cfg.stripe_fake.clone(),
+                    )
+                };
                 let _ = settler::process_batch(&cfg.pool, &remote).await;
             }
             _ = watch_tick.tick() => {

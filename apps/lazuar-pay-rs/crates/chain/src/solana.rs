@@ -55,6 +55,11 @@ impl LiveRpc {
         .await
     }
 
+    pub async fn get_genesis_hash(&self) -> Result<String, SolanaError> {
+        let body = self.post("getGenesisHash", serde_json::json!([])).await?;
+        rails::solana::parse_genesis_hash(&body).ok_or(SolanaError::Rejected)
+    }
+
     pub async fn get_signatures(&self, reference: &str) -> Result<String, SolanaError> {
         self.post(
             "getSignaturesForAddress",

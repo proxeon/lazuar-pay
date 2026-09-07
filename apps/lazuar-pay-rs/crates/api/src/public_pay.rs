@@ -12,7 +12,24 @@ use time::{Duration, OffsetDateTime};
 
 use crate::errors::{from_apply, problem};
 use crate::json::money_number;
+use crate::mint_http;
 use crate::AppState;
+
+fn not_configured() -> Response {
+    problem(
+        StatusCode::BAD_REQUEST,
+        "Bad Request",
+        "rail not configured",
+    )
+}
+
+fn rejected(rail: &str) -> Response {
+    problem(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "Service Unavailable",
+        &format!("{rail} rejected the org key"),
+    )
+}
 
 #[derive(Default, Deserialize)]
 pub struct StartPayRequest {
@@ -153,48 +170,49 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             view.public_token.as_str()
         )
     });
+    let payment_id = view.id.to_wire();
     let session = if rail == RailId::STRIPE {
+        let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "stripe").await
+        {
+            Ok(Some(c)) => c,
+            _ => return not_configured(),
+        };
         let form = rails::stripe::checkout_form(
-            &view.id.to_wire(),
+            &payment_id,
             view.tenant_id.as_str(),
             i64::try_from(view.quoted.minor()).unwrap_or(i64::MAX),
             view.quoted.currency().code.as_str(),
             &success,
             &cancel,
         );
-        match st.stripe.create_session(&form) {
-            Ok(s) => s,
-            Err(_) => {
-                return problem(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service Unavailable",
-                    "Stripe rejected the org key",
-                );
+        let idem = rails::stripe::mint_idempotency_key(&payment_id);
+        if let Some(http) = st.live_http.as_ref() {
+            let Some(secret) = mint_http::unprotect(st.wrap_key, &cred) else {
+                return not_configured();
+            };
+            match mint_http::stripe_session(http, &secret, &form, &idem).await {
+                Ok(s) => s,
+                Err(()) => return rejected("Stripe"),
+            }
+        } else {
+            match st.stripe.create_session(&form) {
+                Ok(s) => s,
+                Err(_) => return rejected("Stripe"),
             }
         }
     } else if rail == RailId::CHIP {
         let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "chip").await {
             Ok(Some(c)) => c,
-            _ => {
-                return problem(
-                    StatusCode::BAD_REQUEST,
-                    "Bad Request",
-                    "rail not configured",
-                );
-            }
+            _ => return not_configured(),
         };
         let brand = cred.public_merchant_id.as_deref().unwrap_or("");
         if brand.is_empty() {
-            return problem(
-                StatusCode::BAD_REQUEST,
-                "Bad Request",
-                "rail not configured",
-            );
+            return not_configured();
         }
         let mail = email.unwrap_or("");
         let name = name_from(mail, req.name.as_deref());
         let payload = rails::chip::purchase_body(
-            &view.id.to_wire(),
+            &payment_id,
             view.tenant_id.as_str(),
             brand,
             mail,
@@ -204,35 +222,30 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             &success,
             &cancel,
         );
-        match st.chip.create_purchase(&payload) {
-            Ok(s) => s,
-            Err(_) => {
-                return problem(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service Unavailable",
-                    "CHIP rejected the org key",
-                );
+        let idem = rails::chip::mint_idempotency_key(&payment_id);
+        if let Some(http) = st.live_http.as_ref() {
+            let Some(secret) = mint_http::unprotect(st.wrap_key, &cred) else {
+                return not_configured();
+            };
+            match mint_http::chip_purchase(http, &secret, &payload, &idem).await {
+                Ok(s) => s,
+                Err(()) => return rejected("CHIP"),
+            }
+        } else {
+            match st.chip.create_purchase(&payload) {
+                Ok(s) => s,
+                Err(_) => return rejected("CHIP"),
             }
         }
     } else if rail == RailId::BILLPLZ {
         let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "billplz").await
         {
             Ok(Some(c)) => c,
-            _ => {
-                return problem(
-                    StatusCode::BAD_REQUEST,
-                    "Bad Request",
-                    "rail not configured",
-                );
-            }
+            _ => return not_configured(),
         };
         let collection = cred.public_merchant_id.as_deref().unwrap_or("");
         if collection.is_empty() {
-            return problem(
-                StatusCode::BAD_REQUEST,
-                "Bad Request",
-                "rail not configured",
-            );
+            return not_configured();
         }
         let mail = email.unwrap_or("");
         let name = name_from(mail, req.name.as_deref());
@@ -240,11 +253,11 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
         let callback = format!(
             "{base}/v1/webhooks/billplz/{}?checkout_id={}",
             view.tenant_id.as_str(),
-            view.id.to_wire()
+            payment_id
         );
         let host = rails::billplz::api_host(&cred.environment);
         let payload = rails::billplz::bill_body(
-            &view.id.to_wire(),
+            &payment_id,
             collection,
             mail,
             &name,
@@ -252,30 +265,30 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             &callback,
             &success,
         );
-        match st.billplz.create_bill(host, &payload) {
-            Ok(s) => s,
-            Err(_) => {
-                return problem(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service Unavailable",
-                    "Billplz rejected the org key",
-                );
+        let idem = rails::billplz::mint_idempotency_key(&payment_id);
+        if let Some(http) = st.live_http.as_ref() {
+            let Some(secret) = mint_http::unprotect(st.wrap_key, &cred) else {
+                return not_configured();
+            };
+            match mint_http::billplz_bill(http, &secret, host, &payload, &idem).await {
+                Ok(s) => s,
+                Err(()) => return rejected("Billplz"),
+            }
+        } else {
+            match st.billplz.create_bill(host, &payload) {
+                Ok(s) => s,
+                Err(_) => return rejected("Billplz"),
             }
         }
     } else if rail == RailId::XENDIT {
-        match storage::get_credential(&st.pool, view.tenant_id.as_str(), "xendit").await {
-            Ok(Some(_)) => {}
-            _ => {
-                return problem(
-                    StatusCode::BAD_REQUEST,
-                    "Bad Request",
-                    "rail not configured",
-                );
-            }
-        }
+        let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "xendit").await
+        {
+            Ok(Some(c)) => c,
+            _ => return not_configured(),
+        };
         let mail = email.unwrap_or("");
         let payload = rails::xendit::invoice_body(
-            &view.id.to_wire(),
+            &payment_id,
             view.tenant_id.as_str(),
             mail,
             crate::json::money_number(view.quoted),
@@ -283,31 +296,31 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             &success,
             &cancel,
         );
-        match st.xendit.create_invoice(rails::xendit::API_BASE, &payload) {
-            Ok(s) => s,
-            Err(_) => {
-                return problem(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service Unavailable",
-                    "Xendit rejected the org key",
-                );
+        let idem = rails::xendit::mint_idempotency_key(&payment_id);
+        if let Some(http) = st.live_http.as_ref() {
+            let Some(secret) = mint_http::unprotect(st.wrap_key, &cred) else {
+                return not_configured();
+            };
+            match mint_http::xendit_invoice(http, &secret, &payload, &idem).await {
+                Ok(s) => s,
+                Err(()) => return rejected("Xendit"),
+            }
+        } else {
+            match st.xendit.create_invoice(rails::xendit::API_BASE, &payload) {
+                Ok(s) => s,
+                Err(_) => return rejected("Xendit"),
             }
         }
     } else if rail == RailId::RAZORPAY {
-        match storage::get_credential(&st.pool, view.tenant_id.as_str(), "razorpay").await {
-            Ok(Some(_)) => {}
-            _ => {
-                return problem(
-                    StatusCode::BAD_REQUEST,
-                    "Bad Request",
-                    "rail not configured",
-                );
-            }
-        }
+        let cred =
+            match storage::get_credential(&st.pool, view.tenant_id.as_str(), "razorpay").await {
+                Ok(Some(c)) => c,
+                _ => return not_configured(),
+            };
         let mail = email.unwrap_or("");
         let name = name_from(mail, req.name.as_deref());
         let payload = rails::razorpay::link_body(
-            &view.id.to_wire(),
+            &payment_id,
             view.tenant_id.as_str(),
             mail,
             &name,
@@ -315,18 +328,25 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             view.quoted.currency().code.as_str(),
             &success,
         );
-        let idem = rails::razorpay::mint_idempotency_key(&view.id.to_wire());
-        match st
-            .razorpay
-            .create_link(rails::razorpay::API_BASE, &payload, &idem)
-        {
-            Ok(s) => s,
-            Err(_) => {
-                return problem(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service Unavailable",
-                    "Razorpay rejected the org key",
-                );
+        let idem = rails::razorpay::mint_idempotency_key(&payment_id);
+        if let Some(http) = st.live_http.as_ref() {
+            let Some(secret) = mint_http::unprotect(st.wrap_key, &cred) else {
+                return not_configured();
+            };
+            let Some((key_id, key_secret)) = rails::razorpay::try_split(&secret) else {
+                return not_configured();
+            };
+            match mint_http::razorpay_link(http, key_id, key_secret, &payload, &idem).await {
+                Ok(s) => s,
+                Err(()) => return rejected("Razorpay"),
+            }
+        } else {
+            match st
+                .razorpay
+                .create_link(rails::razorpay::API_BASE, &payload, &idem)
+            {
+                Ok(s) => s,
+                Err(_) => return rejected("Razorpay"),
             }
         }
     } else if rail == RailId::SOLANA {

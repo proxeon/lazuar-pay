@@ -37,7 +37,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 11. Payment-links + occupancy HTTP + `slot_key` child mint + MYR products (P11 / 033/11) — done.
 12. Merchant charges list + receipts + POST/GET/resolve refunds (P12 / 033/12) — done.
 13. Org webhook PUT/GET/rotate/test + One inbound + `GET /v1/orgs/{orgId}/ready` (P13 / 033/13) — done.
-14. Prometheus `GET /metrics` + `psp_parse_outcome` + pending-refund gauges (P14 / 033/14) — this tree. OTLP skipped. No JWKS / live-PSP serve.
+14. Prometheus `GET /metrics` + `psp_parse_outcome` + pending-refund gauges (P14 / 033/14) — done. OTLP skipped.
+15. `ThrowIfMisconfigured` + live mint HTTP in `serve` + CORS + `X-Request-Id` (P15 / 033/15) — this tree. Fake PSP only in Testing. No JWKS / drain.
 
 ```sh
 cargo test -p domain
@@ -51,7 +52,9 @@ cargo run -p lazuar-pay-rs -- --worker-only  # loops, no bind
 cargo run -p lazuar-pay-rs -- --watcher-only # Solana watch + bind only
 ```
 
-Testing `serve` uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set. Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two **API** replicas = 2×. Two **worker** replicas are OK (SKIP LOCKED).
+Testing `serve` (`ASPNETCORE_ENVIRONMENT=Testing`, default) uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set, Fake PSP mint, and Fake worker remotes. Staging/Production require `Pay__WrapKey` (32-byte base64), `ConnectionStrings__Pay`, public `One__BaseUrl`, https `Pay__CheckoutBaseUrl`, and `Pay__CorsOrigins` (must include the checkout origin). Live mint decrypts the vault and POSTs to the PSP; CI never calls `api.stripe.com`.
+
+Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two **API** replicas = 2×. Two **worker** replicas are OK (SKIP LOCKED). `Pay__MetricsToken` gates `/metrics`. `X-Request-Id` is echoed (printable ASCII, cap 64).
 
 `domain` must compile with no `tokio`, `sqlx`, or `axum`. CI greps it.
 

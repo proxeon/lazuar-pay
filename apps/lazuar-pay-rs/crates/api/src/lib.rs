@@ -1,9 +1,10 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/14).
+//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/15).
 
 #![forbid(unsafe_code)]
 
 pub mod boot;
 pub mod checkouts;
+pub mod cors;
 pub mod errors;
 pub mod gateway;
 pub mod health;
@@ -11,6 +12,7 @@ pub mod identity;
 pub mod json;
 pub mod limiter;
 pub mod metrics;
+pub mod mint_http;
 pub mod one_webhooks;
 pub mod org_ready;
 pub mod org_webhooks;
@@ -20,12 +22,14 @@ pub mod products;
 pub mod public_pay;
 pub mod receipts;
 pub mod refunds;
+pub mod request_id;
 pub mod stripe_http;
 pub mod subscriptions;
 pub mod webhooks;
 
 use std::sync::Arc;
 
+use axum::middleware;
 use axum::routing::{get, post, put};
 use axum::Router;
 use sqlx::PgPool;
@@ -62,6 +66,9 @@ pub struct AppState {
     pub one_webhook_secret: String,
     /// Empty → `/metrics` is open. Set `Pay__MetricsToken` in serve.
     pub metrics_token: String,
+    pub cors_origins: Vec<String>,
+    /// `None` → Fake mint (Testing). `Some` → live PSP HTTP.
+    pub live_http: Option<reqwest::Client>,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -140,6 +147,8 @@ pub fn router(state: AppState) -> Router {
             put(one_webhooks::put).get(one_webhooks::get),
         )
         .route("/v1/orgs/{org_id}/ready", get(org_ready::get))
+        .layer(cors::layer(&state.cors_origins))
+        .layer(middleware::from_fn(request_id::echo))
         .with_state(state)
 }
 
@@ -167,5 +176,10 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         public_base_url: "https://pay.example.test".into(),
         one_webhook_secret: String::new(),
         metrics_token: String::new(),
+        cors_origins: cors::DEVELOPMENT_ORIGINS
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect(),
+        live_http: None,
     }
 }
