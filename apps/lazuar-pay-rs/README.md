@@ -39,7 +39,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 13. Org webhook PUT/GET/rotate/test + One inbound + `GET /v1/orgs/{orgId}/ready` (P13 / 033/13) — done.
 14. Prometheus `GET /metrics` + `psp_parse_outcome` + pending-refund gauges (P14 / 033/14) — done. OTLP skipped.
 15. `ThrowIfMisconfigured` + live mint HTTP in `serve` + CORS + `X-Request-Id` (P15 / 033/15) — done. Fake PSP only in Testing.
-16. Offline terminal backfill `public` → `pay_rs` (P16 / 033/16) — this tree. Skips `open`. No JWKS / SPA flip.
+16. Offline terminal backfill `public` → `pay_rs` (P16 / 033/16) — done. Skips `open`. No JWKS / SPA flip.
+17. Dockerfile + compose overlay on `pay-db` (P17 / 033/17) — this tree. Does not replace .NET `pay`.
 
 ```sh
 cargo test -p domain
@@ -60,6 +61,22 @@ Testing `serve` (`ASPNETCORE_ENVIRONMENT=Testing`, default) uses Fake One (`Auth
 Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two **API** replicas = 2×. Two **worker** replicas are OK (SKIP LOCKED). `Pay__MetricsToken` gates `/metrics`. `X-Request-Id` is echoed (printable ASCII, cap 64).
 
 `domain` must compile with no `tokio`, `sqlx`, or `axum`. CI greps it.
+
+## Compose (G5 overlay)
+
+Does **not** replace .NET `pay` in `apps/lazuar-pay/docker-compose.pay.yml`. `:8081` is mutex: stop `cargo run` / `task pay:dev` / `--profile apps` `pay` first.
+
+```sh
+docker compose \
+  -f apps/lazuar-pay/docker-compose.pay.yml \
+  -f apps/lazuar-pay-rs/docker-compose.overlay.yml \
+  --profile pay-rs up -d --build
+# or: task pay-rs:compose
+```
+
+Laptop overlay defaults `ASPNETCORE_ENVIRONMENT=Testing` (Fake PSP mint) and
+`One__BaseUrl=http://host.docker.internal:8080/api/v1`. Image default is Production
+(ThrowIf fail-closed). Bake target `lazuar-pay-rs` is **not** in the default GHCR group.
 
 ## Honesty
 

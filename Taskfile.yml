@@ -105,6 +105,11 @@ tasks:
     cmds:
       - cargo run -p lazuar-pay-rs -- serve
 
+  pay-rs:compose:
+    desc: Build and run pay-rs on :8081 against pay-db (not .NET pay; stop cargo / pay:dev first)
+    cmds:
+      - docker compose -f apps/lazuar-pay/docker-compose.pay.yml -f apps/lazuar-pay-rs/docker-compose.overlay.yml --profile pay-rs up -d --build
+
   pay-rs:check:
     desc: Workspace check + domain purity (no tokio/sqlx/axum)
     dir: apps/lazuar-pay-rs

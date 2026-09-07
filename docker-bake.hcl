@@ -46,6 +46,10 @@ group "default" {
   targets = ["lazuar-pay", "lazuar-pay-merchant", "lazuar-pay-checkout"]
 }
 
+group "pay-rs" {
+  targets = ["lazuar-pay-rs"]
+}
+
 target "docker-metadata-action" {}
 
 target "_common" {
@@ -89,6 +93,19 @@ target "lazuar-pay-merchant" {
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-pay-merchant"
+  }
+}
+
+target "lazuar-pay-rs" {
+  inherits   = ["_common"]
+  context    = "apps/lazuar-pay-rs"
+  dockerfile = "Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-pay-rs:${TAG}",
+    "${REGISTRY}/lazuar-pay-rs:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-pay-rs"
   }
 }
 
