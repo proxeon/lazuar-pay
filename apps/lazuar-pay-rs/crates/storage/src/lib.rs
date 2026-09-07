@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod apply;
+pub mod backfill;
 pub mod catalog;
 pub mod chain;
 pub mod error;
@@ -16,6 +17,7 @@ pub mod rows;
 pub mod vault;
 
 pub use apply::{apply, stable_refund_id, ApplyCmd, ApplyOutcome, MintSpec};
+pub use backfill::{run as backfill, BackfillError, BackfillOpts, BackfillReport, PUBLIC_DDL};
 pub use chain::{
     bind_proof, claim_unbound_proofs, claim_watch_reservations, insert_proof,
     reservation_by_locator, ProofRow, WatchRow,

@@ -38,7 +38,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 12. Merchant charges list + receipts + POST/GET/resolve refunds (P12 / 033/12) — done.
 13. Org webhook PUT/GET/rotate/test + One inbound + `GET /v1/orgs/{orgId}/ready` (P13 / 033/13) — done.
 14. Prometheus `GET /metrics` + `psp_parse_outcome` + pending-refund gauges (P14 / 033/14) — done. OTLP skipped.
-15. `ThrowIfMisconfigured` + live mint HTTP in `serve` + CORS + `X-Request-Id` (P15 / 033/15) — this tree. Fake PSP only in Testing. No JWKS / drain.
+15. `ThrowIfMisconfigured` + live mint HTTP in `serve` + CORS + `X-Request-Id` (P15 / 033/15) — done. Fake PSP only in Testing.
+16. Offline terminal backfill `public` → `pay_rs` (P16 / 033/16) — this tree. Skips `open`. No JWKS / SPA flip.
 
 ```sh
 cargo test -p domain
@@ -50,6 +51,8 @@ cargo run -p lazuar-pay-rs -- serve          # :8081 + workers + watcher
 cargo run -p lazuar-pay-rs -- --api-only     # :8081, no loops
 cargo run -p lazuar-pay-rs -- --worker-only  # loops, no bind
 cargo run -p lazuar-pay-rs -- --watcher-only # Solana watch + bind only
+cargo run -p lazuar-pay-rs -- backfill        # dry-run terminal copy public → pay_rs
+cargo run -p lazuar-pay-rs -- backfill --apply
 ```
 
 Testing `serve` (`ASPNETCORE_ENVIRONMENT=Testing`, default) uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set, Fake PSP mint, and Fake worker remotes. Staging/Production require `Pay__WrapKey` (32-byte base64), `ConnectionStrings__Pay`, public `One__BaseUrl`, https `Pay__CheckoutBaseUrl`, and `Pay__CorsOrigins` (must include the checkout origin). Live mint decrypts the vault and POSTs to the PSP; CI never calls `api.stripe.com`.

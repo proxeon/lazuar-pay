@@ -29,7 +29,9 @@ async fn main() {
                    serve              api + workers\n\
                    --api-only         api, no loops\n\
                    --worker-only      loops, no :8081\n\
-                   --watcher-only     Solana watch + bind, no :8081\n"
+                   --watcher-only     Solana watch + bind, no :8081\n\
+                   backfill           copy terminal public.* → pay_rs (dry-run;\n\
+                                      --apply writes; does not copy open; no listen)\n"
             );
         }
         "serve" => {
@@ -55,6 +57,10 @@ async fn main() {
                 eprintln!("{e}");
                 std::process::exit(1);
             }
+        }
+        "backfill" | "--backfill" => {
+            let code = backfill_cmd(std::env::args().skip(2).collect()).await;
+            std::process::exit(code);
         }
         other => {
             eprintln!("unknown argument: {other}");
@@ -145,6 +151,76 @@ async fn connect_pool() -> Result<(Env, BootCfg, sqlx::PgPool, [u8; 32]), Box<dy
     storage::migrate(&pool).await?;
     probe_solana(&cfg).await?;
     Ok((env, cfg, pool, wrap_key))
+}
+
+async fn backfill_cmd(args: Vec<String>) -> i32 {
+    let mut apply = false;
+    let mut abort_open_minutes: i64 = 30;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--apply" => apply = true,
+            "--abort-open-minutes" => {
+                i += 1;
+                abort_open_minutes = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(30);
+            }
+            s if s.starts_with("--abort-open-minutes=") => {
+                abort_open_minutes = s
+                    .split_once('=')
+                    .and_then(|(_, v)| v.parse().ok())
+                    .unwrap_or(30);
+            }
+            "--help" | "-h" => {
+                eprintln!(
+                    "lazuar-pay-rs backfill [--apply] [--abort-open-minutes 30]\n\
+                     Offline terminal copy public → pay_rs. Does not listen. Does not copy open."
+                );
+                return 0;
+            }
+            other => {
+                eprintln!("unknown backfill argument: {other}");
+                return 2;
+            }
+        }
+        i += 1;
+    }
+    let url =
+        match std::env::var("ConnectionStrings__Pay").or_else(|_| std::env::var("DATABASE_URL")) {
+            Ok(u) if !u.trim().is_empty() => u,
+            _ => {
+                eprintln!("ConnectionStrings__Pay is required");
+                return 1;
+            }
+        };
+    let pool = match sqlx::postgres::PgPoolOptions::new()
+        .max_connections(4)
+        .connect(url.trim())
+        .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}");
+            return 1;
+        }
+    };
+    let opts = storage::BackfillOpts {
+        apply,
+        abort_open_minutes,
+    };
+    match storage::backfill(&pool, opts).await {
+        Ok(r) => {
+            println!("{r}");
+            0
+        }
+        Err(storage::BackfillError::DrainNotDone { open_young }) => {
+            eprintln!("drain not done: {open_young} open checkouts younger than TTL");
+            2
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            1
+        }
+    }
 }
 
 async fn watcher_only() -> Result<(), Box<dyn std::error::Error>> {
