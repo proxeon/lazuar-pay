@@ -12,3 +12,8 @@ workspace = true
 
 [dependencies]
 domain.workspace = true
+rails.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true

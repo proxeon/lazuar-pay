@@ -13,6 +13,8 @@ pub mod razorpay_remote;
 pub mod retention;
 pub mod secret_box;
 pub mod settler;
+pub mod solana_bind;
+pub mod solana_watch;
 pub mod stripe_remote;
 pub mod xendit_remote;
 
@@ -27,8 +29,10 @@ use crate::outbound::OutboundCfg;
 use crate::psync::Dispatch;
 use crate::razorpay_remote::RazorpayRemote;
 use crate::secret_box::SecretBox;
+use crate::solana_watch::Rpc;
 use crate::stripe_remote::StripeRemote;
 use crate::xendit_remote::XenditRemote;
+use rails::solana::FakeSolanaRpc;
 
 #[derive(Clone)]
 pub struct Config {
@@ -36,6 +40,9 @@ pub struct Config {
     pub wrap_key: [u8; 32],
     pub allow_loopback: bool,
     pub retention: RetentionCfg,
+    pub solana_cluster: String,
+    pub solana_rpc_url: Option<String>,
+    pub solana_fake: Option<FakeSolanaRpc>,
 }
 
 pub async fn run(cfg: Config) {
@@ -49,10 +56,19 @@ pub async fn run(cfg: Config) {
         }
     });
 
+    let rpc = if let Some(fake) = cfg.solana_fake.clone() {
+        Some(Rpc::Fake(fake))
+    } else {
+        cfg.solana_rpc_url
+            .clone()
+            .map(|u| Rpc::Live(chain::solana::LiveRpc::new(u)))
+    };
     let mut expire_tick = tokio::time::interval(StdDuration::from_secs(5));
     let mut outbound_tick = tokio::time::interval(StdDuration::from_secs(5));
     let mut psync_tick = tokio::time::interval(StdDuration::from_secs(5));
     let mut settler_tick = tokio::time::interval(StdDuration::from_secs(15));
+    let mut watch_tick = tokio::time::interval(StdDuration::from_secs(2));
+    let mut bind_tick = tokio::time::interval(StdDuration::from_secs(2));
     loop {
         tokio::select! {
             _ = expire_tick.tick() => {
@@ -79,6 +95,43 @@ pub async fn run(cfg: Config) {
             _ = settler_tick.tick() => {
                 let remote = StripeRemote::live(cfg.pool.clone(), cfg.wrap_key);
                 let _ = settler::process_batch(&cfg.pool, &remote).await;
+            }
+            _ = watch_tick.tick() => {
+                if let Some(rpc) = rpc.as_ref() {
+                    if let Err(storage::ApplyError::Conflict) =
+                        solana_watch::once(&cfg.pool, rpc, &cfg.solana_cluster).await
+                    {
+                        watch_tick = tokio::time::interval(StdDuration::from_secs(15));
+                        watch_tick.tick().await;
+                    }
+                }
+            }
+            _ = bind_tick.tick() => {
+                let _ = solana_bind::once(&cfg.pool).await;
+            }
+        }
+    }
+}
+
+pub async fn watcher_only(cfg: Config) {
+    let rpc = if let Some(fake) = cfg.solana_fake.clone() {
+        Some(Rpc::Fake(fake))
+    } else {
+        cfg.solana_rpc_url
+            .clone()
+            .map(|u| Rpc::Live(chain::solana::LiveRpc::new(u)))
+    };
+    let mut watch_tick = tokio::time::interval(StdDuration::from_secs(2));
+    let mut bind_tick = tokio::time::interval(StdDuration::from_secs(2));
+    loop {
+        tokio::select! {
+            _ = watch_tick.tick() => {
+                if let Some(rpc) = rpc.as_ref() {
+                    let _ = solana_watch::once(&cfg.pool, rpc, &cfg.solana_cluster).await;
+                }
+            }
+            _ = bind_tick.tick() => {
+                let _ = solana_bind::once(&cfg.pool).await;
             }
         }
     }

@@ -28,7 +28,7 @@ pub async fn get(State(st): State<AppState>, Path(token): Path<String>) -> Respo
         );
     }
     match storage::read::payment_by_public_token(&st.pool, &token).await {
-        Ok(Some(view)) => Json(public_json(&view)).into_response(),
+        Ok(Some(view)) => Json(public_json(&st, &view)).into_response(),
         Ok(None) => problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),
         Err(e) => from_apply(e, false),
     }
@@ -53,7 +53,7 @@ pub async fn start(
         Err(e) => return from_apply(e, false),
     };
     if let Some(url) = view.session_url.clone() {
-        return Json(json!({"redirect_url": url})).into_response();
+        return start_json(&url);
     }
     let rail = view
         .provider
@@ -100,7 +100,7 @@ pub async fn start(
         }
         Err(storage::ApplyError::LiveAttemptExists) => {
             if let Some(url) = view.session_url {
-                return Json(json!({"redirect_url": url})).into_response();
+                return start_json(&url);
             }
             return problem(StatusCode::CONFLICT, "Conflict", "not startable");
         }
@@ -296,6 +296,46 @@ pub async fn start(
                 );
             }
         }
+    } else if rail == RailId::SOLANA {
+        let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "solana").await
+        {
+            Ok(Some(c)) => c,
+            _ => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        };
+        let Some(vault) = cred
+            .public_merchant_id
+            .as_deref()
+            .and_then(rails::solana::try_normalize)
+        else {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "rail not configured",
+            );
+        };
+        if !rails::solana::matches_vault(&st.solana_cluster, &cred.environment) {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "solana cluster mismatch",
+            );
+        }
+        match rails::solana::pay_uri(&vault, view.quoted, &view.id.to_wire(), &st.solana_cluster) {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        }
     } else {
         HostedSession {
             url: success,
@@ -312,15 +352,22 @@ pub async fn start(
     )
     .await
     {
-        Ok(ApplyOutcome::SessionResume { url, .. }) => {
-            Json(json!({"redirect_url": url})).into_response()
-        }
-        Ok(_) => Json(json!({"redirect_url": url})).into_response(),
+        Ok(ApplyOutcome::SessionResume { url, .. }) => start_json(&url),
+        Ok(_) => start_json(&url),
         Err(e) => from_apply(e, false),
     }
 }
 
-pub async fn confirm(State(st): State<AppState>, Path(token): Path<String>) -> Response {
+#[derive(Default, Deserialize)]
+pub struct ConfirmPayRequest {
+    pub signature: Option<String>,
+}
+
+pub async fn confirm(
+    State(st): State<AppState>,
+    Path(token): Path<String>,
+    body: Option<Json<ConfirmPayRequest>>,
+) -> Response {
     let confirm_key = format!("confirm:{token}");
     if !st.limiter.try_acquire(&confirm_key) {
         return problem(
@@ -329,18 +376,150 @@ pub async fn confirm(State(st): State<AppState>, Path(token): Path<String>) -> R
             "Too many confirm attempts",
         );
     }
-    match storage::read::payment_by_public_token(&st.pool, &token).await {
-        Ok(None) => problem(StatusCode::NOT_FOUND, "Not Found", "Checkout not found"),
-        Ok(Some(_)) => problem(
+    let view = match storage::read::payment_by_public_token(&st.pool, &token).await {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            return problem(StatusCode::NOT_FOUND, "Not Found", "Checkout not found");
+        }
+        Err(e) => return from_apply(e, false),
+    };
+    if view.provider.as_deref() != Some(RailId::SOLANA.as_str()) {
+        return problem(
             StatusCode::BAD_REQUEST,
             "Bad Request",
             "not a solana checkout",
-        ),
-        Err(e) => from_apply(e, false),
+        );
+    }
+    if view.session_url.is_none() || view.session_id.is_none() || view.attempt_id.is_none() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "confirm a started checkout token",
+        );
+    }
+    let signature = body
+        .as_ref()
+        .and_then(|b| b.signature.as_deref())
+        .map(str::trim)
+        .unwrap_or("");
+    if signature.is_empty() || rails::solana::decode(signature).is_none() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "signature is required",
+        );
+    }
+    let cred = match storage::get_credential(&st.pool, view.tenant_id.as_str(), "solana").await {
+        Ok(Some(c)) => c,
+        _ => {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "rail not configured",
+            );
+        }
+    };
+    let Some(vault) = cred
+        .public_merchant_id
+        .as_deref()
+        .and_then(rails::solana::try_normalize)
+    else {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "rail not configured",
+        );
+    };
+    if !rails::solana::matches_vault(&st.solana_cluster, &cred.environment) {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "solana cluster mismatch",
+        );
+    }
+    let paused = storage::read::charges_paused(&st.pool, view.tenant_id.as_str())
+        .await
+        .unwrap_or(false);
+    if paused && matches!(view.status, domain::PaymentStatus::Open) {
+        return problem(StatusCode::CONFLICT, "Conflict", "Org charges are paused");
+    }
+    let tx = match st.solana.get_transaction(signature) {
+        Ok(t) => t,
+        Err(rails::solana::SolanaError::Throttled) => {
+            return problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Service Unavailable",
+                "solana RPC throttled",
+            );
+        }
+        Err(_) => {
+            return problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Service Unavailable",
+                "solana RPC rejected the method",
+            );
+        }
+    };
+    let expected = match rails::solana::try_to_atomic(view.quoted) {
+        Ok(v) => v,
+        Err(_) => {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "amount is not a valid USDC amount",
+            );
+        }
+    };
+    let reference = view.session_id.clone().unwrap_or_default();
+    if let Err(e) = rails::solana::validate(
+        &tx,
+        &vault,
+        expected,
+        rails::solana::mint(&st.solana_cluster),
+        &reference,
+        &view.id.to_wire(),
+        signature,
+    ) {
+        return problem(StatusCode::BAD_REQUEST, "Bad Request", &e.to_string());
+    }
+    let inserted = match storage::insert_proof(&st.pool, "solana", signature, &tx).await {
+        Ok(v) => v,
+        Err(e) => return from_apply(e, false),
+    };
+    let _ = workers::solana_bind::once(&st.pool).await;
+    if !inserted {
+        return Json(json!({"duplicate": true})).into_response();
+    }
+    let fresh = storage::read::payment_by_id(&st.pool, view.id)
+        .await
+        .ok()
+        .flatten();
+    if let Some(v) = fresh {
+        if matches!(
+            v.status,
+            domain::PaymentStatus::Failed | domain::PaymentStatus::Expired
+        ) {
+            return Json(json!({"refunded": false, "reason": "late_pay_manual"})).into_response();
+        }
+    }
+    Json(json!({"ok": true})).into_response()
+}
+
+fn start_json(url: &str) -> Response {
+    if url.starts_with("solana:") {
+        Json(json!({"solana_pay_url": url})).into_response()
+    } else {
+        Json(json!({"redirect_url": url})).into_response()
     }
 }
 
-fn public_json(view: &storage::PaymentView) -> Value {
+fn public_json(st: &AppState, view: &storage::PaymentView) -> Value {
+    let solana = view.provider.as_deref() == Some(RailId::SOLANA.as_str());
+    let (redirect, solana_pay) = match view.session_url.as_deref() {
+        Some(u) if u.starts_with("solana:") => (Value::Null, json!(u)),
+        Some(u) => (json!(u), Value::Null),
+        None => (Value::Null, Value::Null),
+    };
     json!({
         "token": view.public_token.as_str(),
         "amount": money_number(view.quoted),
@@ -350,7 +529,9 @@ fn public_json(view: &storage::PaymentView) -> Value {
         "payer_name": view.payer_name,
         "payer_email": view.payer_email,
         "started": view.session_url.is_some(),
-        "redirect_url": view.session_url,
+        "redirect_url": redirect,
+        "solana_pay_url": solana_pay,
+        "solana_cluster": if solana { json!(st.solana_cluster) } else { Value::Null },
         "email_required": view
             .provider
             .as_deref()

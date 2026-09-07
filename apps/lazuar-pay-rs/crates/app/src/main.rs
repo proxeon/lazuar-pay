@@ -1,4 +1,4 @@
-//! `serve` / `--api-only` / `--worker-only`: TypeSpec `/v1` + SKIP LOCKED loops.
+//! `serve` / `--api-only` / `--worker-only` / `--watcher-only`: TypeSpec `/v1` + SKIP LOCKED loops.
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -12,6 +12,7 @@ use base64::Engine;
 use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
 use rails::razorpay::FakeRazorpay;
+use rails::solana::FakeSolanaRpc;
 use rails::xendit::FakeXendit;
 use workers::secret_box::SecretBox;
 
@@ -27,7 +28,7 @@ async fn main() {
                    serve              api + workers (test rail)\n\
                    --api-only         api, no loops\n\
                    --worker-only      loops, no :8081\n\
-                   --watcher-only     not implemented\n"
+                   --watcher-only     Solana watch + bind, no :8081\n"
             );
         }
         "serve" => {
@@ -49,8 +50,10 @@ async fn main() {
             }
         }
         "--watcher-only" => {
-            eprintln!("lazuar-pay-rs: {arg} is not implemented.");
-            std::process::exit(2);
+            if let Err(e) = watcher_only().await {
+                eprintln!("{e}");
+                std::process::exit(1);
+            }
         }
         other => {
             eprintln!("unknown argument: {other}");
@@ -75,12 +78,28 @@ fn wrap_key_bytes(env: Env, configured: &str) -> [u8; 32] {
 }
 
 fn workers_cfg(pool: sqlx::PgPool, env: Env, wrap_key: [u8; 32]) -> workers::Config {
+    let cluster = std::env::var("Pay__Solana__Cluster").unwrap_or_else(|_| "devnet".into());
+    let rpc = std::env::var("Pay__Solana__RpcUrl")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
     workers::Config {
         pool,
         wrap_key,
         allow_loopback: env.allows_test(),
         retention: storage::RetentionCfg::default(),
+        solana_cluster: rails::solana::normalize_cluster(&cluster)
+            .unwrap_or_else(|| "devnet".into()),
+        solana_rpc_url: rpc,
+        solana_fake: None,
     }
+}
+
+async fn watcher_only() -> Result<(), Box<dyn std::error::Error>> {
+    let (env, pool, wrap_key) = connect_pool().await?;
+    eprintln!("lazuar-pay-rs watcher only");
+    workers::watcher_only(workers_cfg(pool, env, wrap_key)).await;
+    Ok(())
 }
 
 async fn connect_pool() -> Result<(Env, sqlx::PgPool, [u8; 32]), Box<dyn std::error::Error>> {
@@ -136,6 +155,11 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         billplz: FakeBillplz::default(),
         xendit: FakeXendit::default(),
         razorpay: FakeRazorpay::default(),
+        solana: FakeSolanaRpc::default(),
+        solana_cluster: rails::solana::normalize_cluster(
+            &std::env::var("Pay__Solana__Cluster").unwrap_or_else(|_| "devnet".into()),
+        )
+        .unwrap_or_else(|| "devnet".into()),
         public_base_url: std::env::var("Pay__PublicBaseUrl")
             .unwrap_or_else(|_| "https://pay.example.test".into()),
     };

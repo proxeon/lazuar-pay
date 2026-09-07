@@ -12,7 +12,7 @@ use domain::command::check_start_attempt;
 use domain::fold::{propose, FoldInput, IntakeKind, OccupancySnap, Projection};
 use domain::journal::JournalEntry;
 use domain::money::{integrity, AmountPolicy, Integrity, Money, RateLock};
-use domain::proof::Proof;
+use domain::proof::{sufficiency, ConfirmPolicy, Proof, ProofSufficiency};
 use domain::rail::{ConnectorRefs, HostedSession, MethodId, RailId};
 use domain::wire::outbound_event;
 use domain::{
@@ -335,6 +335,32 @@ async fn record_session(
     .execute(&mut **tx)
     .await?;
     if res.rows_affected() == 1 {
+        if session.url.starts_with("solana:") {
+            let row = sqlx::query(
+                r#"
+                SELECT a.payment_id, p.tenant_id
+                  FROM pay_rs.attempts a
+                  JOIN pay_rs.payments p ON p.id = a.payment_id
+                 WHERE a.id = $1
+                "#,
+            )
+            .bind(attempt_id.as_uuid())
+            .fetch_one(&mut **tx)
+            .await?;
+            let tenant: String = row.try_get("tenant_id")?;
+            sqlx::query(
+                r#"
+                INSERT INTO pay_rs.reservations (tenant_id, attempt_id, chain, locator)
+                VALUES ($1, $2, 'solana', $3)
+                "#,
+            )
+            .bind(&tenant)
+            .bind(attempt_id.as_uuid())
+            .bind(&session.session_id)
+            .execute(&mut **tx)
+            .await
+            .map_err(ApplyError::from_sql)?;
+        }
         let payment_id: Uuid =
             sqlx::query_scalar("SELECT payment_id FROM pay_rs.attempts WHERE id = $1")
                 .bind(attempt_id.as_uuid())
@@ -396,12 +422,16 @@ async fn inject_paid(
     }
 
     let paused = charges_paused(tx, payment.tenant_id.as_str()).await?;
+    let state = match sufficiency(&proof, &ConfirmPolicy::V1) {
+        ProofSufficiency::Confirmed => SettlementState::Confirmed,
+        _ => SettlementState::Seen,
+    };
     let new_settlement = Settlement {
         id: SettlementId::from_uuid(Uuid::new_v4()),
         attempt_id,
         received,
         proof,
-        state: SettlementState::Confirmed,
+        state,
     };
     settlements.push(new_settlement.clone());
     let proj = propose(&FoldInput {
@@ -699,7 +729,7 @@ async fn persist_fold(
                 amount_minor, currency, exponent, state, proof_kind, proof_id, finalized
             ) VALUES (
                 $1, $2, $3, $4,
-                $5, $6, $7, 'confirmed', $8, $9, true
+                $5, $6, $7, $10, $8, $9, $11
             )
             "#,
         )
@@ -712,6 +742,13 @@ async fn persist_fold(
         .bind(i16::from(s.received.currency().exponent))
         .bind(kind)
         .bind(pid)
+        .bind(match s.state {
+            SettlementState::Confirmed => "confirmed",
+            SettlementState::Seen => "seen",
+            SettlementState::Reorged => "reorged",
+            SettlementState::Ignored => "ignored",
+        })
+        .bind(s.state == SettlementState::Confirmed)
         .execute(&mut **tx)
         .await?;
     }

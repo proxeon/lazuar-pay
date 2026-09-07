@@ -73,6 +73,69 @@ pub async fn upsert_stripe(
     .await
 }
 
+pub async fn upsert_solana(
+    pool: &PgPool,
+    tenant_id: &str,
+    last4: &str,
+    environment: &str,
+    public_merchant_id: &str,
+) -> Result<CredentialRow, ApplyError> {
+    ensure_org_settings(pool, tenant_id).await?;
+    let empty: &[u8] = &[];
+    let existing = get_credential(pool, tenant_id, "solana").await?;
+    if existing.is_some() {
+        sqlx::query(
+            r#"
+            UPDATE pay_rs.gateway_credentials
+               SET ciphertext = $3,
+                   webhook_ciphertext = NULL,
+                   last4 = $4,
+                   environment = $5,
+                   public_merchant_id = $6,
+                   updated_at = now()
+             WHERE tenant_id = $1 AND rail = $2
+            "#,
+        )
+        .bind(tenant_id)
+        .bind("solana")
+        .bind(empty)
+        .bind(last4)
+        .bind(environment)
+        .bind(public_merchant_id)
+        .execute(pool)
+        .await?;
+        return get_credential(pool, tenant_id, "solana")
+            .await?
+            .ok_or(ApplyError::NotFound);
+    }
+    let res = sqlx::query(
+        r#"
+        INSERT INTO pay_rs.gateway_credentials (
+            tenant_id, rail, ciphertext, last4, webhook_ciphertext, environment, public_merchant_id
+        ) VALUES ($1, 'solana', $2, $3, NULL, $4, $5)
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(empty)
+    .bind(last4)
+    .bind(environment)
+    .bind(public_merchant_id)
+    .execute(pool)
+    .await;
+    match res {
+        Ok(_) => {}
+        Err(e) if crate::error::is_unique_violation(&e) => {
+            return get_credential(pool, tenant_id, "solana")
+                .await?
+                .ok_or(ApplyError::NotFound);
+        }
+        Err(e) => return Err(e.into()),
+    }
+    get_credential(pool, tenant_id, "solana")
+        .await?
+        .ok_or(ApplyError::NotFound)
+}
+
 pub async fn upsert_razorpay(
     pool: &PgPool,
     tenant_id: &str,

@@ -81,29 +81,6 @@ async fn put_test_processor_is_400() {
 }
 
 #[tokio::test]
-async fn put_solana_is_rail_not_configured() {
-    let _g = STRIPE_HTTP.lock().await;
-    let pool = pool().await;
-    let app = api::router(testing_state(pool, SECRET));
-    let (st, body) = call(
-        app,
-        authed(
-            "PUT",
-            "/v1/orgs/t1/gateway",
-            "test-writer",
-            Some(json!({
-                "provider": "solana",
-                "secret": "x",
-                "webhook_secret": "y",
-            })),
-        ),
-    )
-    .await;
-    assert_eq!(st, StatusCode::BAD_REQUEST);
-    assert_eq!(body["detail"], "rail not configured");
-}
-
-#[tokio::test]
 async fn put_get_never_echoes_secrets_and_omit_env_keeps_live() {
     let _g = STRIPE_HTTP.lock().await;
     let pool = pool().await;

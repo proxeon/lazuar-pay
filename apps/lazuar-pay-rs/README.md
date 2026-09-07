@@ -32,8 +32,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 6. CHIP hosted + PEM vault + webhook + PSync (P6 / 033/06) — done.
 7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — done.
 8. Xendit hosted invoice + callback-token webhook + PSync (P8 / 033/08) — done.
-9. Razorpay payment link + split-secret vault + HMAC webhook + PSync (P9 / 033/09) — this tree. Amount is **paise** (`1000` not `10`). Proof ids are body-derived. CI does not call `api.razorpay.com`.
-10. `chain/` Solana watcher (`--watcher-only` capable).
+9. Razorpay payment link + split-secret vault + HMAC webhook + PSync (P9 / 033/09) — done.
+10. Solana Pay URI + receive-address vault + reservation + `Proof::ChainTx` watcher (P10 / 033/10) — this tree. URI `amount=10` (display); tx atomic `10000000`. Watcher never writes `attempt_id`. CI does not call public Solana RPC.
 
 ```sh
 cargo test -p domain
@@ -41,9 +41,10 @@ cargo test -p rails     # Stripe parse + fixtures; no sqlx
 cargo test -p storage   # Docker: Postgres 16 via testcontainers
 cargo test -p api       # Docker + Fake One + Fake Stripe
 cargo test -p workers   # Docker: SKIP LOCKED loops
-cargo run -p lazuar-pay-rs -- serve          # :8081 + workers
+cargo run -p lazuar-pay-rs -- serve          # :8081 + workers + watcher
 cargo run -p lazuar-pay-rs -- --api-only     # :8081, no loops
 cargo run -p lazuar-pay-rs -- --worker-only  # loops, no bind
+cargo run -p lazuar-pay-rs -- --watcher-only # Solana watch + bind only
 ```
 
 Testing `serve` uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set. Public start limiter is per-process (`Pay__StartMaxPerMinute`, default 20); two **API** replicas = 2×. Two **worker** replicas are OK (SKIP LOCKED).

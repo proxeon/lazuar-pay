@@ -43,6 +43,9 @@ pub async fn put(
             "test processor does not take secrets",
         );
     }
+    if provider == "solana" {
+        return put_solana(&st, &who.user_id, &org_id, &body).await;
+    }
     if provider != "stripe"
         && provider != "chip"
         && provider != "billplz"
@@ -268,6 +271,7 @@ pub async fn get(
         && provider != "billplz"
         && provider != "xendit"
         && provider != "razorpay"
+        && provider != "solana"
     {
         return Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response();
@@ -304,7 +308,7 @@ pub async fn list(
             "capability": "hosted_link",
         }));
     }
-    for rail in ["stripe", "chip", "billplz", "xendit", "razorpay"] {
+    for rail in ["stripe", "chip", "billplz", "xendit", "razorpay", "solana"] {
         match storage::get_credential(&st.pool, &org_id, rail).await {
             Ok(Some(row)) => processors.push(gateway_json(&org_id, &row)),
             _ => processors.push(json!({
@@ -320,10 +324,18 @@ pub async fn list(
 }
 
 fn gateway_json(org_id: &str, row: &storage::CredentialRow) -> Value {
+    let configured = if row.rail == "solana" {
+        row.public_merchant_id
+            .as_deref()
+            .and_then(rails::solana::try_normalize)
+            .is_some()
+    } else {
+        true
+    };
     json!({
         "org_id": org_id,
         "provider": row.rail,
-        "configured": true,
+        "configured": configured,
         "last4": row.last4,
         "environment": row.environment,
         "webhook_configured": row.webhook_ciphertext.as_ref().is_some_and(|c| !c.is_empty()),
@@ -334,9 +346,84 @@ fn gateway_json(org_id: &str, row: &storage::CredentialRow) -> Value {
 }
 
 fn rail_currency(rail: &str) -> &'static str {
-    if rail == "razorpay" {
-        "INR"
-    } else {
-        "MYR"
+    match rail {
+        "razorpay" => "INR",
+        "solana" => "USDC",
+        _ => "MYR",
+    }
+}
+
+async fn put_solana(st: &AppState, actor: &str, org_id: &str, body: &PutGateway) -> Response {
+    let secret = body.secret.as_deref().map(str::trim).unwrap_or("");
+    let kid = body.key_id.as_deref().map(str::trim).unwrap_or("");
+    let ksec = body.key_secret.as_deref().map(str::trim).unwrap_or("");
+    if !secret.is_empty() || !kid.is_empty() || !ksec.is_empty() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "solana does not take an API secret",
+        );
+    }
+    if body
+        .webhook_secret
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|s| !s.is_empty())
+    {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "solana does not take a webhook secret",
+        );
+    }
+    let Some(address) = body
+        .public_merchant_id
+        .as_deref()
+        .and_then(rails::solana::try_normalize)
+    else {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "public_merchant_id must be a Solana wallet address",
+        );
+    };
+    let Some(env) = body
+        .environment
+        .as_deref()
+        .and_then(rails::solana::normalize_vault_env)
+    else {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "environment must be devnet or mainnet",
+        );
+    };
+    if !rails::solana::matches_vault(&st.solana_cluster, &env) {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "solana cluster mismatch",
+        );
+    }
+    let last4 = rails::solana::last4(&address).to_string();
+    match storage::upsert_solana(&st.pool, org_id, &last4, &env, &address).await {
+        Ok(row) => {
+            let _ = storage::audit_gateway(
+                &st.pool,
+                org_id,
+                actor,
+                "solana",
+                &last4,
+                &row.environment,
+                false,
+            )
+            .await;
+            Json(gateway_json(org_id, &row)).into_response()
+        }
+        Err(_) => problem(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            "vault",
+        ),
     }
 }

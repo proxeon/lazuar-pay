@@ -64,6 +64,7 @@ pub async fn create(
         || provider == RailId::BILLPLZ.as_str()
         || provider == RailId::XENDIT.as_str()
         || provider == RailId::RAZORPAY.as_str()
+        || provider == RailId::SOLANA.as_str()
     {
         match storage::get_credential(&st.pool, &org_id, &provider).await {
             Ok(Some(_)) => {}
@@ -98,12 +99,47 @@ pub async fn create(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .unwrap_or("MYR");
+        .unwrap_or(if provider == RailId::SOLANA.as_str() {
+            ""
+        } else {
+            "MYR"
+        });
+    if provider == RailId::SOLANA.as_str() {
+        let n = currency.to_ascii_uppercase();
+        if n.is_empty() || (n != "USDC" && n != "MYR" && n != "USD") {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "solana currency must be USDC",
+            );
+        }
+        if n == "MYR" {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "solana does not capture ringgit",
+            );
+        }
+        if n == "USD" {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "solana receives USDC, not USD",
+            );
+        }
+    }
     let Some(ccy) = Currency::by_code(currency) else {
         return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown currency");
     };
     let quoted = match Money::from_quoted_display(body.amount, ccy) {
         Ok(m) if m.minor() > 0 => m,
+        Err(domain::MoneyError::Inexact) if provider == RailId::SOLANA.as_str() => {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "solana amounts support at most 2 decimal places",
+            );
+        }
         _ => {
             return problem(
                 StatusCode::BAD_REQUEST,

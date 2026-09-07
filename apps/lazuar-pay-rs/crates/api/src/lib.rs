@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz + Xendit + Razorpay (033/09).
+//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz + Xendit + Razorpay + Solana (033/10).
 
 #![forbid(unsafe_code)]
 
@@ -27,6 +27,7 @@ use crate::stripe_http::FakeStripe;
 use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
 use rails::razorpay::FakeRazorpay;
+use rails::solana::FakeSolanaRpc;
 use rails::xendit::FakeXendit;
 
 #[derive(Clone)]
@@ -44,6 +45,8 @@ pub struct AppState {
     pub billplz: FakeBillplz,
     pub xendit: FakeXendit,
     pub razorpay: FakeRazorpay,
+    pub solana: FakeSolanaRpc,
+    pub solana_cluster: String,
     pub public_base_url: String,
 }
 
@@ -77,6 +80,10 @@ pub fn router(state: AppState) -> Router {
             post(webhooks::razorpay_webhook),
         )
         .route(
+            "/v1/webhooks/solana/{org_id}",
+            post(webhooks::solana_webhook),
+        )
+        .route(
             "/v1/orgs/{org_id}/gateway",
             put(gateway::put).get(gateway::get),
         )
@@ -103,6 +110,8 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         billplz: FakeBillplz::default(),
         xendit: FakeXendit::default(),
         razorpay: FakeRazorpay::default(),
+        solana: FakeSolanaRpc::default(),
+        solana_cluster: "devnet".into(),
         public_base_url: "https://pay.example.test".into(),
     }
 }

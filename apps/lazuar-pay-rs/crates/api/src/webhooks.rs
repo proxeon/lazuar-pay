@@ -727,3 +727,11 @@ pub async fn razorpay_webhook(
         Err(e) => from_apply(e, false),
     }
 }
+
+pub async fn solana_webhook(Path(_org_id): Path<String>) -> Response {
+    problem(
+        StatusCode::BAD_REQUEST,
+        "Bad Request",
+        rails::solana::WEBHOOK_THROW,
+    )
+}

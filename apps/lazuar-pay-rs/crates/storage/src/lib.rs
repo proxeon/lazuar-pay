@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod apply;
+pub mod chain;
 pub mod error;
 pub mod lease;
 pub mod read;
@@ -11,6 +12,10 @@ pub mod rows;
 pub mod vault;
 
 pub use apply::{apply, ApplyCmd, ApplyOutcome, MintSpec};
+pub use chain::{
+    bind_proof, claim_unbound_proofs, claim_watch_reservations, insert_proof,
+    reservation_by_locator, ProofRow, WatchRow,
+};
 pub use error::ApplyError;
 pub use lease::{
     claim_deliveries, claim_expired, claim_psync, claim_refunds, defer_psync, enqueue_outbound,
@@ -22,7 +27,7 @@ pub use read::{AttemptView, PaymentView};
 pub use vault::{
     audit_gateway, ensure_org_settings, get_credential, latest_attempt_refs, payment_by_session,
     record_ignored_inbound, refund_amount, update_payer, upsert_billplz, upsert_chip,
-    upsert_razorpay, upsert_stripe, upsert_xendit, CredentialRow,
+    upsert_razorpay, upsert_solana, upsert_stripe, upsert_xendit, CredentialRow,
 };
 
 use sqlx::postgres::PgPool;
