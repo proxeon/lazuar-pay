@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/13).
+//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/14).
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +10,7 @@ pub mod health;
 pub mod identity;
 pub mod json;
 pub mod limiter;
+pub mod metrics;
 pub mod one_webhooks;
 pub mod org_ready;
 pub mod org_webhooks;
@@ -59,6 +60,8 @@ pub struct AppState {
     pub public_base_url: String,
     /// Process One HMAC secret (`Pay__OneWebhookSecret`). Empty → org ciphertext.
     pub one_webhook_secret: String,
+    /// Empty → `/metrics` is open. Set `Pay__MetricsToken` in serve.
+    pub metrics_token: String,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -66,6 +69,7 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health::health))
         .route("/v1/health", get(health::health))
         .route("/ready", get(health::ready))
+        .route("/metrics", get(metrics::scrape))
         .route("/v1/whoami", get(identity::whoami))
         .route("/v1/checkouts", post(checkouts::create))
         .route("/v1/checkouts/{id}", get(checkouts::get))
@@ -162,5 +166,6 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         solana_cluster: "devnet".into(),
         public_base_url: "https://pay.example.test".into(),
         one_webhook_secret: String::new(),
+        metrics_token: String::new(),
     }
 }

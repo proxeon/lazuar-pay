@@ -63,3 +63,4 @@ aes-gcm = "0.10"
 base64 = "0.22"
 getrandom = "0.2"
 rsa = { version = "0.9", default-features = false, features = ["std", "pem", "sha2"] }
+prometheus = "0.13"

@@ -110,14 +110,12 @@ pub fn validate_outbound_url(raw: &str, allow_loopback: bool) -> Result<String, 
 }
 
 fn parse_host_ip(host: &str) -> Option<IpAddr> {
-    host.parse()
-        .ok()
-        .or_else(|| {
-            host.trim_start_matches('[')
-                .trim_end_matches(']')
-                .parse()
-                .ok()
-        })
+    host.parse().ok().or_else(|| {
+        host.trim_start_matches('[')
+            .trim_end_matches(']')
+            .parse()
+            .ok()
+    })
 }
 
 #[cfg(test)]

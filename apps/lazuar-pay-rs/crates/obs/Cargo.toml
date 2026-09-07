@@ -9,3 +9,6 @@ description = "/metrics + OTLP. Exporters from the first HTTP PR."
 
 [lints]
 workspace = true
+
+[dependencies]
+prometheus.workspace = true
