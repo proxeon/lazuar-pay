@@ -1,0 +1,1 @@
+{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1","amount":1000,"currency":"INR","tax":12,"fee":30,"notes":{"checkout_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}}

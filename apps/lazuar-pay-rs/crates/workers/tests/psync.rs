@@ -13,6 +13,7 @@ use uuid::Uuid;
 use workers::billplz_remote::BillplzRemote;
 use workers::chip_remote::ChipRemote;
 use workers::psync::{self, ConstSync};
+use workers::razorpay_remote::RazorpayRemote;
 use workers::secret_box::SecretBox;
 use workers::stripe_remote::StripeRemote;
 use workers::xendit_remote::XenditRemote;
@@ -35,7 +36,11 @@ async fn mint_session(
         ApplyCmd::Mint(MintSpec {
             tenant_id: tenant.clone(),
             public_token: PublicToken::new(format!("p-{}", Uuid::new_v4().simple())),
-            quoted: myr10(),
+            quoted: if rail == RailId::RAZORPAY {
+                Money::from_quoted_str("10.00", Currency::INR).unwrap()
+            } else {
+                myr10()
+            },
             expires_at: now + Duration::minutes(30),
             monitoring_until: now + Duration::minutes(30),
             payment_link_id: None,
@@ -460,6 +465,90 @@ async fn xendit_remote_expired_stays_session_live() {
     let fake = rails::xendit::FakeXendit::default();
     fake.set_retrieve(200, &xendit_fixture("psync_expired.json"));
     let remote = XenditRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
+        .bind(attempt_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let pst: String = sqlx::query_scalar("SELECT status FROM pay_rs.payments WHERE id = $1")
+        .bind(payment_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ast, "session_live");
+    assert_eq!(pst, "open");
+}
+
+async fn vault_razorpay(pool: &sqlx::PgPool, tenant: &str) {
+    let box_ = SecretBox::new(SecretBox::testing_fallback_key());
+    let ct = box_.protect_str("rzp_test:secret").unwrap();
+    let wh = box_.protect_str("wh_rzp").unwrap();
+    storage::upsert_razorpay(pool, tenant, &ct, &wh, "test", Some("test"))
+        .await
+        .unwrap();
+}
+
+fn razorpay_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!(
+        "{}/../rails/tests/fixtures/razorpay/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn razorpay_remote_paid_fixture_takes() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, _a, _s) = mint_session(&pool, RailId::RAZORPAY, true).await;
+    vault_razorpay(&pool, tenant.as_str()).await;
+    let fake = rails::razorpay::FakeRazorpay::default();
+    fake.set_retrieve(200, &razorpay_fixture("psync_paid.json"));
+    let remote = RazorpayRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let charges: i64 =
+        sqlx::query_scalar("SELECT count(*)::bigint FROM pay_rs.charges WHERE payment_id = $1")
+            .bind(payment_id.as_uuid())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(charges, 1);
+}
+
+#[tokio::test]
+async fn razorpay_remote_created_stays_session_live() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, attempt_id, _s) = mint_session(&pool, RailId::RAZORPAY, true).await;
+    vault_razorpay(&pool, tenant.as_str()).await;
+    let fake = rails::razorpay::FakeRazorpay::default();
+    fake.set_retrieve(200, &razorpay_fixture("psync_created.json"));
+    let remote = RazorpayRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
+    psync::process_batch(&pool, &remote).await.unwrap();
+    let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
+        .bind(attempt_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let pst: String = sqlx::query_scalar("SELECT status FROM pay_rs.payments WHERE id = $1")
+        .bind(payment_id.as_uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(ast, "session_live");
+    assert_eq!(pst, "open");
+}
+
+#[tokio::test]
+async fn razorpay_remote_expired_stays_session_live() {
+    let _g = PSYNC.lock().await;
+    let pool = pool().await;
+    let (tenant, payment_id, attempt_id, _s) = mint_session(&pool, RailId::RAZORPAY, true).await;
+    vault_razorpay(&pool, tenant.as_str()).await;
+    let fake = rails::razorpay::FakeRazorpay::default();
+    fake.set_retrieve(200, &razorpay_fixture("psync_expired.json"));
+    let remote = RazorpayRemote::fake(pool.clone(), SecretBox::testing_fallback_key(), fake);
     psync::process_batch(&pool, &remote).await.unwrap();
     let ast: String = sqlx::query_scalar("SELECT status FROM pay_rs.attempts WHERE id = $1")
         .bind(attempt_id.as_uuid())

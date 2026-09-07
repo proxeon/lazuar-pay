@@ -31,8 +31,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 5. Stripe hosted + webhook + PSync + refund (P5 / 033/05) — done. Fixture-backed; CI does not call `api.stripe.com`.
 6. CHIP hosted + PEM vault + webhook + PSync (P6 / 033/06) — done.
 7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — done.
-8. Xendit hosted invoice + callback-token webhook + PSync (P8 / 033/08) — this tree. Mint wire amount is **major** (`10` not `1000`). CI does not call `api.xendit.co`.
-9. Razorpay, one PR.
+8. Xendit hosted invoice + callback-token webhook + PSync (P8 / 033/08) — done.
+9. Razorpay payment link + split-secret vault + HMAC webhook + PSync (P9 / 033/09) — this tree. Amount is **paise** (`1000` not `10`). Proof ids are body-derived. CI does not call `api.razorpay.com`.
 10. `chain/` Solana watcher (`--watcher-only` capable).
 
 ```sh

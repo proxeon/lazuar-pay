@@ -63,6 +63,7 @@ pub async fn create(
         || provider == RailId::CHIP.as_str()
         || provider == RailId::BILLPLZ.as_str()
         || provider == RailId::XENDIT.as_str()
+        || provider == RailId::RAZORPAY.as_str()
     {
         match storage::get_credential(&st.pool, &org_id, &provider).await {
             Ok(Some(_)) => {}

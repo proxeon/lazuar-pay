@@ -260,6 +260,42 @@ pub async fn start(
                 );
             }
         }
+    } else if rail == RailId::RAZORPAY {
+        match storage::get_credential(&st.pool, view.tenant_id.as_str(), "razorpay").await {
+            Ok(Some(_)) => {}
+            _ => {
+                return problem(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "rail not configured",
+                );
+            }
+        }
+        let mail = email.unwrap_or("");
+        let name = name_from(mail, req.name.as_deref());
+        let payload = rails::razorpay::link_body(
+            &view.id.to_wire(),
+            view.tenant_id.as_str(),
+            mail,
+            &name,
+            i64::try_from(view.quoted.minor()).unwrap_or(i64::MAX),
+            view.quoted.currency().code.as_str(),
+            &success,
+        );
+        let idem = rails::razorpay::mint_idempotency_key(&view.id.to_wire());
+        match st
+            .razorpay
+            .create_link(rails::razorpay::API_BASE, &payload, &idem)
+        {
+            Ok(s) => s,
+            Err(_) => {
+                return problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Service Unavailable",
+                    "Razorpay rejected the org key",
+                );
+            }
+        }
     } else {
         HostedSession {
             url: success,

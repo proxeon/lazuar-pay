@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz + Xendit (033/08).
+//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz + Xendit + Razorpay (033/09).
 
 #![forbid(unsafe_code)]
 
@@ -26,6 +26,7 @@ use crate::limiter::Limiter;
 use crate::stripe_http::FakeStripe;
 use rails::billplz::FakeBillplz;
 use rails::chip::FakeChip;
+use rails::razorpay::FakeRazorpay;
 use rails::xendit::FakeXendit;
 
 #[derive(Clone)]
@@ -42,6 +43,7 @@ pub struct AppState {
     pub chip: FakeChip,
     pub billplz: FakeBillplz,
     pub xendit: FakeXendit,
+    pub razorpay: FakeRazorpay,
     pub public_base_url: String,
 }
 
@@ -71,6 +73,10 @@ pub fn router(state: AppState) -> Router {
             post(webhooks::xendit_webhook),
         )
         .route(
+            "/v1/webhooks/razorpay/{org_id}",
+            post(webhooks::razorpay_webhook),
+        )
+        .route(
             "/v1/orgs/{org_id}/gateway",
             put(gateway::put).get(gateway::get),
         )
@@ -96,6 +102,7 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         chip: FakeChip::default(),
         billplz: FakeBillplz::default(),
         xendit: FakeXendit::default(),
+        razorpay: FakeRazorpay::default(),
         public_base_url: "https://pay.example.test".into(),
     }
 }

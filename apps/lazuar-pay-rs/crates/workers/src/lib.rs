@@ -9,6 +9,7 @@ pub mod hmac;
 pub mod outbound;
 pub mod outbound_url;
 pub mod psync;
+pub mod razorpay_remote;
 pub mod retention;
 pub mod secret_box;
 pub mod settler;
@@ -24,6 +25,7 @@ use crate::billplz_remote::BillplzRemote;
 use crate::chip_remote::ChipRemote;
 use crate::outbound::OutboundCfg;
 use crate::psync::Dispatch;
+use crate::razorpay_remote::RazorpayRemote;
 use crate::secret_box::SecretBox;
 use crate::stripe_remote::StripeRemote;
 use crate::xendit_remote::XenditRemote;
@@ -70,6 +72,7 @@ pub async fn run(cfg: Config) {
                     chip: ChipRemote::live(cfg.pool.clone(), cfg.wrap_key),
                     billplz: BillplzRemote::live(cfg.pool.clone(), cfg.wrap_key),
                     xendit: XenditRemote::live(cfg.pool.clone(), cfg.wrap_key),
+                    razorpay: RazorpayRemote::live(cfg.pool.clone(), cfg.wrap_key),
                 };
                 let _ = psync::process_batch(&cfg.pool, &remote).await;
             }

@@ -17,6 +17,8 @@ pub struct PutGateway {
     pub webhook_secret: Option<String>,
     pub public_merchant_id: Option<String>,
     pub environment: Option<String>,
+    pub key_id: Option<String>,
+    pub key_secret: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -41,7 +43,12 @@ pub async fn put(
             "test processor does not take secrets",
         );
     }
-    if provider != "stripe" && provider != "chip" && provider != "billplz" && provider != "xendit" {
+    if provider != "stripe"
+        && provider != "chip"
+        && provider != "billplz"
+        && provider != "xendit"
+        && provider != "razorpay"
+    {
         if domain::rail::RailId::parse(&provider).is_err() {
             return problem(StatusCode::BAD_REQUEST, "Bad Request", "unknown provider");
         }
@@ -56,7 +63,7 @@ pub async fn put(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    if (provider == "stripe" || provider == "xendit") && brand.is_some() {
+    if (provider == "stripe" || provider == "xendit" || provider == "razorpay") && brand.is_some() {
         return problem(
             StatusCode::BAD_REQUEST,
             "Bad Request",
@@ -70,10 +77,29 @@ pub async fn put(
             "public_merchant_id is required",
         );
     }
-    let secret = body.secret.as_deref().map(str::trim).unwrap_or("");
+    let mut secret = body
+        .secret
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("")
+        .to_string();
+    if secret.is_empty() {
+        let kid = body.key_id.as_deref().map(str::trim).unwrap_or("");
+        let ksec = body.key_secret.as_deref().map(str::trim).unwrap_or("");
+        if !kid.is_empty() && !ksec.is_empty() {
+            secret = format!("{kid}:{ksec}");
+        }
+    }
     let whsec = body.webhook_secret.as_deref().map(str::trim).unwrap_or("");
     if secret.is_empty() {
         return problem(StatusCode::BAD_REQUEST, "Bad Request", "secret is required");
+    }
+    if provider == "razorpay" && rails::razorpay::try_split(&secret).is_none() {
+        return problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "secret must be key_id:key_secret",
+        );
     }
     if whsec.is_empty() {
         return problem(
@@ -111,13 +137,24 @@ pub async fn put(
             "environment is required",
         );
     }
-    let last4 = if secret.len() >= 4 {
-        &secret[secret.len() - 4..]
+    let last4_owned = if provider == "razorpay" {
+        rails::razorpay::try_split(&secret)
+            .map(|(id, _)| {
+                if id.len() >= 4 {
+                    id[id.len() - 4..].to_string()
+                } else {
+                    id.to_string()
+                }
+            })
+            .unwrap_or_default()
+    } else if secret.len() >= 4 {
+        secret[secret.len() - 4..].to_string()
     } else {
-        secret
+        secret.clone()
     };
+    let last4 = last4_owned.as_str();
     let box_ = SecretBox::new(st.wrap_key);
-    let ct = match box_.protect_str(secret) {
+    let ct = match box_.protect_str(&secret) {
         Ok(v) => v,
         Err(_) => {
             return problem(
@@ -161,6 +198,8 @@ pub async fn put(
         .await
     } else if provider == "xendit" {
         storage::upsert_xendit(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
+    } else if provider == "razorpay" {
+        storage::upsert_razorpay(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
     } else {
         storage::upsert_stripe(&st.pool, &org_id, &ct, &wh, last4, env_in.as_deref()).await
     };
@@ -224,7 +263,12 @@ pub async fn get(
         return Json(json!({"org_id": org_id, "provider": "test", "configured": false}))
             .into_response();
     }
-    if provider != "stripe" && provider != "chip" && provider != "billplz" && provider != "xendit" {
+    if provider != "stripe"
+        && provider != "chip"
+        && provider != "billplz"
+        && provider != "xendit"
+        && provider != "razorpay"
+    {
         return Json(json!({"org_id": org_id, "provider": provider, "configured": false}))
             .into_response();
     }
@@ -260,14 +304,14 @@ pub async fn list(
             "capability": "hosted_link",
         }));
     }
-    for rail in ["stripe", "chip", "billplz", "xendit"] {
+    for rail in ["stripe", "chip", "billplz", "xendit", "razorpay"] {
         match storage::get_credential(&st.pool, &org_id, rail).await {
             Ok(Some(row)) => processors.push(gateway_json(&org_id, &row)),
             _ => processors.push(json!({
                 "org_id": org_id,
                 "provider": rail,
                 "configured": false,
-                "currency": "MYR",
+                "currency": rail_currency(rail),
                 "capability": "hosted_link",
             })),
         }
@@ -284,7 +328,15 @@ fn gateway_json(org_id: &str, row: &storage::CredentialRow) -> Value {
         "environment": row.environment,
         "webhook_configured": row.webhook_ciphertext.as_ref().is_some_and(|c| !c.is_empty()),
         "public_merchant_id": row.public_merchant_id,
-        "currency": "MYR",
+        "currency": rail_currency(&row.rail),
         "capability": "hosted_link",
     })
+}
+
+fn rail_currency(rail: &str) -> &'static str {
+    if rail == "razorpay" {
+        "INR"
+    } else {
+        "MYR"
+    }
 }

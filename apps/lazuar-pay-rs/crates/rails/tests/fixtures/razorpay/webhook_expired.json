@@ -1,0 +1,1 @@
+{"event":"payment_link.expired","payload":{"payment_link":{"entity":{"id":"plink_1","status":"expired"}}}}
