@@ -9,6 +9,7 @@ pub mod chain;
 pub mod error;
 pub mod lease;
 pub mod money_query;
+pub mod org_settings;
 pub mod read;
 pub mod refund_settle;
 pub mod rows;

@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/12).
+//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/13).
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +10,9 @@ pub mod health;
 pub mod identity;
 pub mod json;
 pub mod limiter;
+pub mod one_webhooks;
+pub mod org_ready;
+pub mod org_webhooks;
 pub mod payment_links;
 pub mod payments;
 pub mod products;
@@ -54,6 +57,8 @@ pub struct AppState {
     pub solana: FakeSolanaRpc,
     pub solana_cluster: String,
     pub public_base_url: String,
+    /// Process One HMAC secret (`Pay__OneWebhookSecret`). Empty → org ciphertext.
+    pub one_webhook_secret: String,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -113,6 +118,24 @@ pub fn router(state: AppState) -> Router {
             put(gateway::put).get(gateway::get),
         )
         .route("/v1/orgs/{org_id}/gateways", get(gateway::list))
+        .route(
+            "/v1/orgs/{org_id}/webhooks",
+            put(org_webhooks::put).get(org_webhooks::get),
+        )
+        .route(
+            "/v1/orgs/{org_id}/webhooks/rotate",
+            post(org_webhooks::rotate),
+        )
+        .route(
+            "/v1/orgs/{org_id}/webhooks/test",
+            post(org_webhooks::test_ping),
+        )
+        .route("/v1/one/webhooks", post(one_webhooks::inbound))
+        .route(
+            "/v1/orgs/{org_id}/one-webhook",
+            put(one_webhooks::put).get(one_webhooks::get),
+        )
+        .route("/v1/orgs/{org_id}/ready", get(org_ready::get))
         .with_state(state)
 }
 
@@ -138,5 +161,6 @@ pub fn testing_state_with_limit(pool: PgPool, secret: &str, start_max: u32) -> A
         solana: FakeSolanaRpc::default(),
         solana_cluster: "devnet".into(),
         public_base_url: "https://pay.example.test".into(),
+        one_webhook_secret: String::new(),
     }
 }

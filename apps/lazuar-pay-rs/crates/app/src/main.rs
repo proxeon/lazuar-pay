@@ -162,6 +162,7 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| "devnet".into()),
         public_base_url: std::env::var("Pay__PublicBaseUrl")
             .unwrap_or_else(|_| "https://pay.example.test".into()),
+        one_webhook_secret: std::env::var("Pay__OneWebhookSecret").unwrap_or_default(),
     };
     let app = api::router(state);
     let port: u16 = std::env::var("PORT")

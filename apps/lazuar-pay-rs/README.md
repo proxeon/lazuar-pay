@@ -35,7 +35,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 9. Razorpay payment link + split-secret vault + HMAC webhook + PSync (P9 / 033/09) — done.
 10. Solana Pay URI + receive-address vault + reservation + `Proof::ChainTx` watcher (P10 / 033/10) — done.
 11. Payment-links + occupancy HTTP + `slot_key` child mint + MYR products (P11 / 033/11) — done.
-12. Merchant charges list + receipts + POST/GET/resolve refunds (P12 / 033/12) — this tree. TypeSpec Payment is a charge. No One webhooks.
+12. Merchant charges list + receipts + POST/GET/resolve refunds (P12 / 033/12) — done.
+13. Org webhook PUT/GET/rotate/test + One inbound + `GET /v1/orgs/{orgId}/ready` (P13 / 033/13) — this tree. Not host `/ready`. No `/metrics`.
 
 ```sh
 cargo test -p domain

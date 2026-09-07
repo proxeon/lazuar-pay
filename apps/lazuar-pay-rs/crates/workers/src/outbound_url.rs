@@ -1,6 +1,6 @@
 //! Port of `OutboundUrl.cs` private-range checks (issue 017 / 028 P1-15).
 
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, ToSocketAddrs};
 
 pub fn allows_loopback(testing_or_dev: bool) -> bool {
     testing_or_dev
@@ -70,6 +70,56 @@ pub fn host_is_loopback_name(host: &str) -> bool {
     host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1" || host == "::1"
 }
 
+/// Registration check including DNS. Unresolvable hostnames are accepted
+/// (dispatcher re-resolves). Error strings match C# `OutboundUrl`.
+pub fn validate_outbound_url(raw: &str, allow_loopback: bool) -> Result<String, &'static str> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err("url is required");
+    }
+    let Ok(uri) = reqwest::Url::parse(raw) else {
+        return Err("url is required");
+    };
+    if uri.scheme() != "http" && uri.scheme() != "https" {
+        return Err("url must be http or https");
+    }
+    let Some(host) = uri.host_str() else {
+        return Err("url is required");
+    };
+    let parsed_ip = parse_host_ip(host);
+    if let Some(ip) = parsed_ip {
+        if is_disallowed(ip, allow_loopback) {
+            return Err("url is not allowed");
+        }
+        return Ok(uri.to_string());
+    }
+    if host_is_loopback_name(host) {
+        if allow_loopback {
+            return Ok(uri.to_string());
+        }
+        return Err("url is not allowed");
+    }
+    if let Ok(addrs) = (host, 0u16).to_socket_addrs() {
+        for sa in addrs {
+            if is_disallowed(sa.ip(), allow_loopback) {
+                return Err("url is not allowed");
+            }
+        }
+    }
+    Ok(uri.to_string())
+}
+
+fn parse_host_ip(host: &str) -> Option<IpAddr> {
+    host.parse()
+        .ok()
+        .or_else(|| {
+            host.trim_start_matches('[')
+                .trim_end_matches(']')
+                .parse()
+                .ok()
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,5 +160,31 @@ mod tests {
     fn public_v4_allowed() {
         assert!(!is_private_or_loopback(v4("8.8.8.8")));
         assert!(!is_disallowed(v4("8.8.8.8"), false));
+    }
+
+    #[test]
+    fn validate_loopback_and_metadata() {
+        assert!(validate_outbound_url("http://127.0.0.1:9/x", true).is_ok());
+        assert_eq!(
+            validate_outbound_url("http://127.0.0.1/hook", false).unwrap_err(),
+            "url is not allowed"
+        );
+        assert_eq!(
+            validate_outbound_url("http://169.254.169.254/", false).unwrap_err(),
+            "url is not allowed"
+        );
+        assert_eq!(
+            validate_outbound_url("http://[::1]/hook", false).unwrap_err(),
+            "url is not allowed"
+        );
+        assert!(validate_outbound_url("https://app.example/hook", false).is_ok());
+        assert_eq!(
+            validate_outbound_url("", true).unwrap_err(),
+            "url is required"
+        );
+        assert_eq!(
+            validate_outbound_url("ftp://app.example/hook", false).unwrap_err(),
+            "url must be http or https"
+        );
     }
 }

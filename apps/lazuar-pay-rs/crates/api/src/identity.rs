@@ -1,6 +1,6 @@
 //! One doors. v1 forwards Bearer; tests inject [`FakeOne`] (032/13).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -263,7 +263,14 @@ fn map_me(me: OneMe) -> Option<WhoamiResponse> {
 /// SHA-256 of the full Authorization header; 60s TTL; machine keys only.
 #[derive(Default)]
 pub struct WhoamiCache {
-    inner: Mutex<HashMap<[u8; 32], (WhoamiResponse, Instant)>>,
+    inner: Mutex<CacheInner>,
+}
+
+#[derive(Default)]
+struct CacheInner {
+    by_auth: HashMap<[u8; 32], (WhoamiResponse, Instant)>,
+    by_org: HashMap<String, HashSet<[u8; 32]>>,
+    by_key: HashMap<String, HashSet<[u8; 32]>>,
 }
 
 impl WhoamiCache {
@@ -274,7 +281,7 @@ impl WhoamiCache {
     pub fn get(&self, authorization: &str) -> Option<WhoamiResponse> {
         let key = cache_key(authorization);
         let map = self.inner.lock().ok()?;
-        let (who, at) = map.get(&key)?;
+        let (who, at) = map.by_auth.get(&key)?;
         if at.elapsed() < Duration::from_secs(60) {
             Some(who.clone())
         } else {
@@ -283,14 +290,77 @@ impl WhoamiCache {
     }
 
     pub fn set(&self, authorization: &str, who: WhoamiResponse) {
-        if let Ok(mut map) = self.inner.lock() {
-            map.insert(cache_key(authorization), (who, Instant::now()));
+        let Ok(mut map) = self.inner.lock() else {
+            return;
+        };
+        let hash = cache_key(authorization);
+        forget_hash(&mut map, hash);
+        for t in &who.tenants {
+            map.by_org.entry(t.id.clone()).or_default().insert(hash);
         }
+        if !who.user_id.is_empty() {
+            map.by_key
+                .entry(who.user_id.clone())
+                .or_default()
+                .insert(hash);
+        }
+        map.by_auth.insert(hash, (who, Instant::now()));
     }
 
     pub fn remove(&self, authorization: &str) {
-        if let Ok(mut map) = self.inner.lock() {
-            map.remove(&cache_key(authorization));
+        let Ok(mut map) = self.inner.lock() else {
+            return;
+        };
+        forget_hash(&mut map, cache_key(authorization));
+    }
+
+    pub fn invalidate_org(&self, org_id: &str) {
+        let Ok(mut map) = self.inner.lock() else {
+            return;
+        };
+        let hashes: Vec<[u8; 32]> = map
+            .by_org
+            .remove(org_id)
+            .map(|s| s.into_iter().collect())
+            .unwrap_or_default();
+        for h in hashes {
+            forget_hash(&mut map, h);
+        }
+    }
+
+    pub fn invalidate_key(&self, key_id: &str) {
+        if key_id.is_empty() {
+            return;
+        }
+        let Ok(mut map) = self.inner.lock() else {
+            return;
+        };
+        let hashes: Vec<[u8; 32]> = map
+            .by_key
+            .remove(key_id)
+            .map(|s| s.into_iter().collect())
+            .unwrap_or_default();
+        for h in hashes {
+            forget_hash(&mut map, h);
+        }
+    }
+}
+
+fn forget_hash(map: &mut CacheInner, hash: [u8; 32]) {
+    if let Some((who, _)) = map.by_auth.remove(&hash) {
+        for t in &who.tenants {
+            if let Some(set) = map.by_org.get_mut(&t.id) {
+                set.remove(&hash);
+                if set.is_empty() {
+                    map.by_org.remove(&t.id);
+                }
+            }
+        }
+        if let Some(set) = map.by_key.get_mut(&who.user_id) {
+            set.remove(&hash);
+            if set.is_empty() {
+                map.by_key.remove(&who.user_id);
+            }
         }
     }
 }
