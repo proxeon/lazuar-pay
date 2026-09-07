@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod apply;
+pub mod catalog;
 pub mod chain;
 pub mod error;
 pub mod lease;

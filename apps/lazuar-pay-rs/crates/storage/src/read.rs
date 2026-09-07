@@ -25,6 +25,8 @@ pub struct PaymentView {
     pub session_url: Option<String>,
     pub session_id: Option<String>,
     pub attempt_id: Option<AttemptId>,
+    pub payment_link_id: Option<uuid::Uuid>,
+    pub slot_key: Option<String>,
 }
 
 pub async fn payment_by_id(
@@ -176,5 +178,7 @@ async fn load(pool: &PgPool, sql: &str, id: uuid::Uuid) -> Result<Option<Payment
         session_url: row.try_get("session_url")?,
         session_id: row.try_get("session_id")?,
         attempt_id: attempt_id.map(AttemptId::from_uuid),
+        payment_link_id: row.try_get("payment_link_id")?,
+        slot_key: row.try_get("slot_key")?,
     }))
 }

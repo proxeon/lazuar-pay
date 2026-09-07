@@ -124,10 +124,26 @@ impl FakeOne {
             }],
             machine_key: false,
         };
+        let member = WhoamiResponse {
+            user_id: "u3".into(),
+            email: None,
+            name: None,
+            is_platform_admin: false,
+            active_org_id: Some(org_id.into()),
+            tenants: vec![WhoamiTenant {
+                id: org_id.into(),
+                slug: None,
+                name: Some("Test org".into()),
+                role: Some("member".into()),
+                status: Some("active".into()),
+            }],
+            machine_key: false,
+        };
         Self::default()
             .with("test-writer", owner)
             .with("lzr_sk_test", machine)
             .with("test-other", other)
+            .with("test-member", member)
     }
 
     pub fn with(mut self, bearer: &str, whoami: WhoamiResponse) -> Self {

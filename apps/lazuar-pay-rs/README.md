@@ -33,7 +33,8 @@ v1 does **not** ship `acquiring`, `lazuar-vault`, or Bitcoin crates (032/19).
 7. Billplz hosted + collection vault + form HMAC + PSync (P7 / 033/07) — done.
 8. Xendit hosted invoice + callback-token webhook + PSync (P8 / 033/08) — done.
 9. Razorpay payment link + split-secret vault + HMAC webhook + PSync (P9 / 033/09) — done.
-10. Solana Pay URI + receive-address vault + reservation + `Proof::ChainTx` watcher (P10 / 033/10) — this tree. URI `amount=10` (display); tx atomic `10000000`. Watcher never writes `attempt_id`. CI does not call public Solana RPC.
+10. Solana Pay URI + receive-address vault + reservation + `Proof::ChainTx` watcher (P10 / 033/10) — done.
+11. Payment-links + occupancy HTTP + `slot_key` child mint + MYR products (P11 / 033/11) — this tree. Link GET is occupancy, not fold. No refunds HTTP.
 
 ```sh
 cargo test -p domain

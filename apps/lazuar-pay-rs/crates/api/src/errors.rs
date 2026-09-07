@@ -23,6 +23,7 @@ pub fn problem(status: StatusCode, title: &str, detail: &str) -> Response {
 pub fn from_apply(err: ApplyError, pause_as_mint: bool) -> Response {
     match err {
         ApplyError::NotFound => problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),
+        ApplyError::LinkFull => problem(StatusCode::CONFLICT, "Conflict", "This pay link is full"),
         ApplyError::Integrity => problem(StatusCode::BAD_REQUEST, "Bad Request", "amount mismatch"),
         ApplyError::Paused if pause_as_mint => {
             problem(StatusCode::FORBIDDEN, "Forbidden", "Org charges are paused")

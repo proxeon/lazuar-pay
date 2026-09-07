@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -15,8 +15,9 @@ use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::errors::{from_apply, problem};
-use crate::identity::{require_writer, Bearer};
+use crate::identity::{require_member, require_writer, Bearer};
 use crate::json::{de_decimal, money_number};
+use crate::payment_links::ListQuery;
 use crate::AppState;
 
 #[derive(Deserialize)]
@@ -249,6 +250,55 @@ pub async fn get(
         }
         Ok(None) => problem(StatusCode::NOT_FOUND, "Not Found", "Checkout not found"),
         Err(e) => from_apply(e, true),
+    }
+}
+
+pub async fn list(
+    State(st): State<AppState>,
+    Bearer(who): Bearer,
+    Path(org_id): Path<String>,
+    Query(q): Query<ListQuery>,
+) -> Response {
+    if let Err(r) = require_member(&who, &org_id) {
+        return r;
+    }
+    let limit = storage::catalog::clamp_limit(q.limit);
+    let after = q
+        .after
+        .as_deref()
+        .and_then(|s| domain::PaymentId::from_wire(s).ok().map(|id| id.as_uuid()));
+    match storage::catalog::list_standalone_checkouts(&st.pool, &org_id, limit, after).await {
+        Ok((rows, next)) => {
+            let mut items = Vec::new();
+            for r in rows {
+                let status = match r.status.as_str() {
+                    "settled" => "paid",
+                    "processing" => "open",
+                    s => s,
+                };
+                let label = if let Some(pid) = r.product_id {
+                    storage::catalog::product_name(&st.pool, &org_id, pid)
+                        .await
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+                items.push(json!({
+                    "id": r.id.to_wire(),
+                    "org_id": r.tenant_id,
+                    "provider": r.provider.unwrap_or_else(|| "test".into()),
+                    "amount": money_number(r.quoted),
+                    "currency": r.quoted.currency().code.as_str(),
+                    "status": status,
+                    "public_token": r.public_token,
+                    "created_at": r.created_at.format(&time::format_description::well_known::Rfc3339).unwrap_or_default(),
+                    "label": label,
+                }));
+            }
+            Json(json!({"items": items, "next_cursor": next})).into_response()
+        }
+        Err(e) => from_apply(e, false),
     }
 }
 

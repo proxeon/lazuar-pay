@@ -1,12 +1,14 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use domain::rail::{HostedSession, RailId};
 use domain::wire::buyer_status;
+use domain::PaymentStatus;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use storage::{apply, ApplyCmd, ApplyOutcome};
+use time::{Duration, OffsetDateTime};
 
 use crate::errors::{from_apply, problem};
 use crate::json::money_number;
@@ -19,7 +21,16 @@ pub struct StartPayRequest {
     pub slot_key: Option<String>,
 }
 
-pub async fn get(State(st): State<AppState>, Path(token): Path<String>) -> Response {
+#[derive(Default, Deserialize)]
+pub struct PayQuery {
+    pub slot_key: Option<String>,
+}
+
+pub async fn get(
+    State(st): State<AppState>,
+    Path(token): Path<String>,
+    Query(q): Query<PayQuery>,
+) -> Response {
     if !st.limiter.try_acquire(&token) {
         return problem(
             StatusCode::TOO_MANY_REQUESTS,
@@ -27,8 +38,18 @@ pub async fn get(State(st): State<AppState>, Path(token): Path<String>) -> Respo
             "Too many start attempts",
         );
     }
+    if let Ok(Some(link)) = storage::catalog::get_link_by_token(&st.pool, &token).await {
+        return get_link(&st, &link, q.slot_key.as_deref()).await;
+    }
     match storage::read::payment_by_public_token(&st.pool, &token).await {
-        Ok(Some(view)) => Json(public_json(&st, &view)).into_response(),
+        Ok(Some(view)) => {
+            if let Some(lid) = view.payment_link_id {
+                if let Ok(Some(link)) = storage::catalog::get_link_by_id(&st.pool, lid).await {
+                    return get_link(&st, &link, view.slot_key.as_deref()).await;
+                }
+            }
+            Json(public_json(&st, &view)).into_response()
+        }
         Ok(None) => problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),
         Err(e) => from_apply(e, false),
     }
@@ -47,11 +68,23 @@ pub async fn start(
         );
     }
     let req = body.map(|j| j.0).unwrap_or_default();
+    if let Ok(Some(link)) = storage::catalog::get_link_by_token(&st.pool, &token).await {
+        match mint_or_resume(&st, &link, &req).await {
+            Ok(view) => {
+                return start_hosted(st, view, req).await;
+            }
+            Err(r) => return r,
+        }
+    }
     let view = match storage::read::payment_by_public_token(&st.pool, &token).await {
         Ok(Some(v)) => v,
         Ok(None) => return problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),
         Err(e) => return from_apply(e, false),
     };
+    start_hosted(st, view, req).await
+}
+
+async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayRequest) -> Response {
     if let Some(url) = view.session_url.clone() {
         return start_json(&url);
     }
@@ -376,6 +409,20 @@ pub async fn confirm(
             "Too many confirm attempts",
         );
     }
+    if let Ok(Some(_)) = storage::catalog::get_link_by_token(&st.pool, &token).await {
+        if storage::read::payment_by_public_token(&st.pool, &token)
+            .await
+            .ok()
+            .flatten()
+            .is_none()
+        {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "confirm a started checkout token",
+            );
+        }
+    }
     let view = match storage::read::payment_by_public_token(&st.pool, &token).await {
         Ok(Some(v)) => v,
         Ok(None) => {
@@ -505,6 +552,247 @@ pub async fn confirm(
     Json(json!({"ok": true})).into_response()
 }
 
+async fn get_link(
+    st: &AppState,
+    link: &storage::catalog::PaymentLinkRow,
+    slot_key: Option<&str>,
+) -> Response {
+    expire_link_children(st, link).await;
+    let occ = storage::catalog::occupancy(&st.pool, link.id)
+        .await
+        .unwrap_or(storage::catalog::Occupancy { taken: 0, paid: 0 });
+    let slot = normalize_slot_key(slot_key);
+    if let Some(slot) = slot {
+        if let Ok(Some(pid)) = storage::catalog::child_by_slot(&st.pool, link.id, &slot).await {
+            if let Ok(Some(view)) = storage::read::payment_by_id(&st.pool, pid).await {
+                if !matches!(view.status, PaymentStatus::Expired | PaymentStatus::Failed) {
+                    return Json(checkout_on_link(st, link, &view, &occ, true)).into_response();
+                }
+            }
+        }
+    }
+    let status = if link.max_payers == Some(1) && occ.paid >= 1 {
+        "already_paid"
+    } else if occ.is_full(link.max_payers) {
+        "full"
+    } else {
+        "open"
+    };
+    Json(link_pay_json(st, link, status, &occ)).into_response()
+}
+
+async fn expire_link_children(st: &AppState, link: &storage::catalog::PaymentLinkRow) {
+    let paused = storage::read::charges_paused(&st.pool, link.tenant_id.as_str())
+        .await
+        .unwrap_or(false);
+    let now = OffsetDateTime::now_utc();
+    let ids = if paused {
+        storage::catalog::open_child_ids(&st.pool, link.id, None)
+            .await
+            .unwrap_or_default()
+    } else {
+        storage::catalog::open_child_ids(&st.pool, link.id, Some(now))
+            .await
+            .unwrap_or_default()
+    };
+    for id in ids {
+        let cmd = if paused {
+            ApplyCmd::WatchTimeout {
+                payment_id: id,
+                now,
+            }
+        } else {
+            ApplyCmd::ExpireClock {
+                payment_id: id,
+                now,
+            }
+        };
+        let _ = apply(&st.pool, cmd).await;
+    }
+}
+
+async fn mint_or_resume(
+    st: &AppState,
+    link: &storage::catalog::PaymentLinkRow,
+    req: &StartPayRequest,
+) -> Result<storage::PaymentView, Response> {
+    if storage::read::charges_paused(&st.pool, link.tenant_id.as_str())
+        .await
+        .unwrap_or(false)
+    {
+        return Err(problem(
+            StatusCode::FORBIDDEN,
+            "Forbidden",
+            "Org charges are paused",
+        ));
+    }
+    let Some(slot) = normalize_slot_key(req.slot_key.as_deref()) else {
+        return Err(problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "slot_key is required",
+        ));
+    };
+    let rail = RailId::parse(&link.rail).unwrap_or(RailId::TEST);
+    let email = req
+        .email
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if rail.caps().requires_email && !email_usable(email) {
+        return Err(problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "email is required",
+        ));
+    }
+    if rail == RailId::BILLPLZ && !rails::billplz::public_base_ok(&st.public_base_url) {
+        return Err(problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "callback base not public",
+        ));
+    }
+    expire_link_children(st, link).await;
+    let occ = storage::catalog::occupancy(&st.pool, link.id)
+        .await
+        .unwrap_or(storage::catalog::Occupancy { taken: 0, paid: 0 });
+    if let Ok(Some(pid)) = storage::catalog::child_by_slot(&st.pool, link.id, &slot).await {
+        if let Ok(Some(view)) = storage::read::payment_by_id(&st.pool, pid).await {
+            match view.status {
+                PaymentStatus::Settled => {
+                    return Err(problem(
+                        StatusCode::CONFLICT,
+                        "Conflict",
+                        "Checkout is not open",
+                    ));
+                }
+                PaymentStatus::Expired | PaymentStatus::Failed => {
+                    let _ = storage::catalog::burn_slot(&st.pool, pid, &slot).await;
+                }
+                _ => return Ok(view),
+            }
+        }
+    }
+    if occ.is_full(link.max_payers) {
+        return Err(from_apply(storage::ApplyError::LinkFull, false));
+    }
+    let now = OffsetDateTime::now_utc();
+    let ttl = Duration::minutes(30);
+    let base = st.checkout_base_url.trim_end_matches('/');
+    let token = format!(
+        "{}{}",
+        uuid::Uuid::new_v4().simple(),
+        uuid::Uuid::new_v4().simple()
+    );
+    let minted = apply(
+        &st.pool,
+        ApplyCmd::Mint(storage::MintSpec {
+            tenant_id: link.tenant_id.clone(),
+            public_token: domain::PublicToken::new(token),
+            quoted: link.quoted,
+            expires_at: now + ttl,
+            monitoring_until: now + ttl,
+            payment_link_id: Some(link.id),
+            slot_key: Some(slot.clone()),
+            success_url: Some(format!("{base}/c/{}?status=verifying", link.public_token)),
+            cancel_url: Some(format!("{base}/c/{}", link.public_token)),
+            rail,
+        }),
+    )
+    .await;
+    let payment_id = match minted {
+        Ok(ApplyOutcome::Minted { payment_id }) => payment_id,
+        Err(storage::ApplyError::LinkFull) => {
+            return Err(from_apply(storage::ApplyError::LinkFull, false));
+        }
+        Err(storage::ApplyError::Conflict) => {
+            if let Ok(Some(pid)) = storage::catalog::child_by_slot(&st.pool, link.id, &slot).await {
+                if let Ok(Some(view)) = storage::read::payment_by_id(&st.pool, pid).await {
+                    if !matches!(
+                        view.status,
+                        PaymentStatus::Settled | PaymentStatus::Expired | PaymentStatus::Failed
+                    ) {
+                        return Ok(view);
+                    }
+                }
+            }
+            return Err(from_apply(storage::ApplyError::LinkFull, false));
+        }
+        Err(e) => return Err(from_apply(e, false)),
+        Ok(_) => {
+            return Err(problem(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "mint",
+            ));
+        }
+    };
+    let _ = storage::update_payer(
+        &st.pool,
+        payment_id.as_uuid(),
+        req.name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+        email,
+    )
+    .await;
+    storage::read::payment_by_id(&st.pool, payment_id)
+        .await
+        .ok()
+        .flatten()
+        .ok_or_else(|| problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"))
+}
+
+fn normalize_slot_key(raw: Option<&str>) -> Option<String> {
+    let slot = raw.map(str::trim).filter(|s| !s.is_empty())?;
+    if slot.len() < 8 || slot.len() > 128 {
+        return None;
+    }
+    Some(slot.to_string())
+}
+
+fn link_pay_json(
+    st: &AppState,
+    link: &storage::catalog::PaymentLinkRow,
+    status: &str,
+    occ: &storage::catalog::Occupancy,
+) -> Value {
+    let solana = link.rail == RailId::SOLANA.as_str();
+    json!({
+        "token": link.public_token,
+        "amount": money_number(link.quoted),
+        "currency": link.quoted.currency().code.as_str(),
+        "status": status,
+        "email_required": RailId::parse(&link.rail).map(|r| r.caps().requires_email).unwrap_or(false),
+        "started": false,
+        "mine": false,
+        "provider": link.rail,
+        "redirect_url": Value::Null,
+        "solana_pay_url": Value::Null,
+        "solana_cluster": if solana { json!(st.solana_cluster) } else { Value::Null },
+        "remaining": occ.remaining_clamped(link.max_payers),
+        "max_payers": link.max_payers,
+        "paid_count": occ.paid,
+        "taken_count": occ.taken,
+    })
+}
+
+fn checkout_on_link(
+    st: &AppState,
+    link: &storage::catalog::PaymentLinkRow,
+    view: &storage::PaymentView,
+    occ: &storage::catalog::Occupancy,
+    mine: bool,
+) -> Value {
+    let mut v = public_json(st, view);
+    v["token"] = json!(link.public_token);
+    v["mine"] = json!(mine);
+    v["remaining"] = json!(occ.remaining_clamped(link.max_payers));
+    v["max_payers"] = json!(link.max_payers);
+    v["paid_count"] = json!(occ.paid);
+    v["taken_count"] = json!(occ.taken);
+    v
+}
+
 fn start_json(url: &str) -> Response {
     if url.starts_with("solana:") {
         Json(json!({"solana_pay_url": url})).into_response()
@@ -529,6 +817,7 @@ fn public_json(st: &AppState, view: &storage::PaymentView) -> Value {
         "payer_name": view.payer_name,
         "payer_email": view.payer_email,
         "started": view.session_url.is_some(),
+        "mine": true,
         "redirect_url": redirect,
         "solana_pay_url": solana_pay,
         "solana_cluster": if solana { json!(st.solana_cluster) } else { Value::Null },

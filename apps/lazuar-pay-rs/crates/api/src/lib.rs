@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Test + Stripe + CHIP + Billplz + Xendit + Razorpay + Solana (033/10).
+//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + payment-links (033/11).
 
 #![forbid(unsafe_code)]
 
@@ -10,8 +10,11 @@ pub mod health;
 pub mod identity;
 pub mod json;
 pub mod limiter;
+pub mod payment_links;
+pub mod products;
 pub mod public_pay;
 pub mod stripe_http;
+pub mod subscriptions;
 pub mod webhooks;
 
 use std::sync::Arc;
@@ -58,6 +61,14 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/whoami", get(identity::whoami))
         .route("/v1/checkouts", post(checkouts::create))
         .route("/v1/checkouts/{id}", get(checkouts::get))
+        .route("/v1/orgs/{org_id}/checkouts", get(checkouts::list))
+        .route("/v1/payment-links", post(payment_links::create))
+        .route("/v1/orgs/{org_id}/payment-links", get(payment_links::list))
+        .route(
+            "/v1/orgs/{org_id}/products",
+            post(products::create).get(products::list),
+        )
+        .route("/v1/orgs/{org_id}/subscriptions", get(subscriptions::list))
         .route("/v1/pay/{token}", get(public_pay::get))
         .route("/v1/pay/{token}/start", post(public_pay::start))
         .route("/v1/pay/{token}/confirm", post(public_pay::confirm))

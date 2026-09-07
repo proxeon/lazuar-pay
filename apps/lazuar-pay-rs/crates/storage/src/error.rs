@@ -18,6 +18,8 @@ pub enum ApplyError {
     NotStartable,
     #[error("a live attempt already exists")]
     LiveAttemptExists,
+    #[error("pay link is full")]
+    LinkFull,
     #[error(transparent)]
     Domain(#[from] Illegal),
     #[error(transparent)]

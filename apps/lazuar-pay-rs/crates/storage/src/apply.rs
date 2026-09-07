@@ -867,6 +867,21 @@ async fn persist_fold(
         return Err(ApplyError::Conflict);
     }
 
+    if matches!(proj.status, PaymentStatus::Failed | PaymentStatus::Expired) {
+        if let Some(occ) = &payment.occupancy {
+            if let Some(slot) = occ.slot_key.as_deref() {
+                if !slot.contains(":burned:") {
+                    let burned = format!("{slot}:burned:{}", payment.id.to_wire());
+                    sqlx::query("UPDATE pay_rs.payments SET slot_key = $2 WHERE id = $1")
+                        .bind(payment.id.as_uuid())
+                        .bind(burned)
+                        .execute(&mut **tx)
+                        .await?;
+                }
+            }
+        }
+    }
+
     if let Some(ev) = outbound_event(proj.intake_kind, proj.status, proj.terminal_reason) {
         let event_id = format!("{}:{ev}", payment.id.to_wire());
         let provider: String = sqlx::query_scalar(
