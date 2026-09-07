@@ -8,11 +8,13 @@ pub mod catalog;
 pub mod chain;
 pub mod error;
 pub mod lease;
+pub mod money_query;
 pub mod read;
+pub mod refund_settle;
 pub mod rows;
 pub mod vault;
 
-pub use apply::{apply, ApplyCmd, ApplyOutcome, MintSpec};
+pub use apply::{apply, stable_refund_id, ApplyCmd, ApplyOutcome, MintSpec};
 pub use chain::{
     bind_proof, claim_unbound_proofs, claim_watch_reservations, insert_proof,
     reservation_by_locator, ProofRow, WatchRow,

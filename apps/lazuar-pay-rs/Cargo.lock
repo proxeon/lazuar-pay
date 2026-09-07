@@ -2871,6 +2871,7 @@ dependencies = [
  "domain",
  "rust_decimal",
  "serde_json",
+ "sha2",
  "sqlx",
  "testcontainers",
  "testcontainers-modules",

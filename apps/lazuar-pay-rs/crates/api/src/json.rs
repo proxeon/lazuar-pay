@@ -25,3 +25,20 @@ where
         _ => Err(de::Error::custom("amount must be a number")),
     }
 }
+
+pub fn de_opt_decimal<'de, D>(d: D) -> Result<Option<Decimal>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v = Option::<Value>::deserialize(d)?;
+    match v {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => Decimal::from_str_exact(&n.to_string())
+            .map(Some)
+            .map_err(de::Error::custom),
+        Some(Value::String(s)) => Decimal::from_str_exact(&s)
+            .map(Some)
+            .map_err(de::Error::custom),
+        Some(_) => Err(de::Error::custom("amount must be a number")),
+    }
+}

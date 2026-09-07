@@ -20,6 +20,10 @@ pub enum ApplyError {
     LiveAttemptExists,
     #[error("pay link is full")]
     LinkFull,
+    #[error("refund is not pending")]
+    RefundNotPending,
+    #[error("refund is being settled; retry shortly")]
+    RefundInFlight,
     #[error(transparent)]
     Domain(#[from] Illegal),
     #[error(transparent)]

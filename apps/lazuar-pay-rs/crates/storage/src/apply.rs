@@ -20,11 +20,12 @@ use domain::{
     PaymentStatus, PublicToken, RefundId, Settlement, SettlementId, SettlementState, TenantId,
     TerminalReason,
 };
+use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::error::ApplyError;
+use crate::error::{is_unique_violation, ApplyError};
 use crate::rows;
 
 pub struct MintSpec {
@@ -106,6 +107,9 @@ pub enum ApplyOutcome {
         session_id: String,
     },
     RefundReplay {
+        refund_id: RefundId,
+    },
+    MerchantRefunded {
         refund_id: RefundId,
     },
 }
@@ -559,7 +563,50 @@ async fn fold_no_new_money(
     })
 }
 
+/// SHA-256(`lazuar-refund:{org}:{key}`) first 16 bytes as RFC UUID (issue 001).
+pub fn stable_refund_id(org_id: &str, key: &str) -> Uuid {
+    let mut h = Sha256::new();
+    h.update(b"lazuar-refund:");
+    h.update(org_id.as_bytes());
+    h.update(b":");
+    h.update(key.as_bytes());
+    let digest = h.finalize();
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&digest[..16]);
+    Uuid::from_bytes(bytes)
+}
+
+async fn refund_replay(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant: &str,
+    idempotency_key: &str,
+    request_hash: &str,
+) -> Result<ApplyOutcome, ApplyError> {
+    let row = sqlx::query(
+        r#"
+        SELECT resource_id, request_hash FROM pay_rs.idempotency_keys
+         WHERE tenant_id = $1 AND key = $2
+        "#,
+    )
+    .bind(tenant)
+    .bind(idempotency_key)
+    .fetch_optional(&mut **tx)
+    .await?;
+    let Some(row) = row else {
+        return Err(ApplyError::Conflict);
+    };
+    let hash: String = row.try_get("request_hash")?;
+    if hash != request_hash {
+        return Err(ApplyError::IdempotencyMismatch);
+    }
+    let rid: Uuid = row.try_get("resource_id")?;
+    Ok(ApplyOutcome::RefundReplay {
+        refund_id: RefundId::from_uuid(rid),
+    })
+}
+
 /// Issue 010 remainder under `FOR UPDATE` on the charge. 012 idempotency key+hash.
+/// Re-read the key after the charge lock so the same-key loser replays (C# ReplayOrAsync).
 async fn merchant_refund(
     tx: &mut Transaction<'_, Postgres>,
     payment_id: PaymentId,
@@ -570,27 +617,6 @@ async fn merchant_refund(
 ) -> Result<ApplyOutcome, ApplyError> {
     let payment = load_payment(tx, payment_id).await?;
     let tenant = payment.tenant_id.as_str();
-    let existing = sqlx::query(
-        r#"
-        SELECT resource_id, request_hash FROM pay_rs.idempotency_keys
-         WHERE tenant_id = $1 AND key = $2
-        "#,
-    )
-    .bind(tenant)
-    .bind(idempotency_key)
-    .fetch_optional(&mut **tx)
-    .await?;
-    if let Some(row) = existing {
-        let hash: String = row.try_get("request_hash")?;
-        if hash != request_hash {
-            return Err(ApplyError::IdempotencyMismatch);
-        }
-        let rid: Uuid = row.try_get("resource_id")?;
-        return Ok(ApplyOutcome::RefundReplay {
-            refund_id: RefundId::from_uuid(rid),
-        });
-    }
-
     let charge = sqlx::query(
         r#"
         SELECT id, amount_minor, currency, exponent
@@ -603,6 +629,11 @@ async fn merchant_refund(
     .fetch_optional(&mut **tx)
     .await?
     .ok_or(ApplyError::NotFound)?;
+    match refund_replay(tx, tenant, idempotency_key, request_hash).await {
+        Ok(replay) => return Ok(replay),
+        Err(ApplyError::Conflict) => {}
+        Err(e) => return Err(e),
+    }
     let charge_id: Uuid = charge.try_get("id")?;
     let charge_amt = rows::money_from_parts(
         charge.try_get("amount_minor")?,
@@ -621,10 +652,14 @@ async fn merchant_refund(
     .await?;
     let remainder = charge_amt.minor() - i128::from(used);
     if amount.minor() > remainder {
-        return Err(ApplyError::AlreadyRefunded);
+        return match refund_replay(tx, tenant, idempotency_key, request_hash).await {
+            Ok(replay) => Ok(replay),
+            Err(ApplyError::Conflict) => Err(ApplyError::AlreadyRefunded),
+            Err(e) => Err(e),
+        };
     }
-    let refund_id = RefundId::from_uuid(Uuid::new_v4());
-    sqlx::query(
+    let refund_id = RefundId::from_uuid(stable_refund_id(tenant, idempotency_key));
+    let ins = sqlx::query(
         r#"
         INSERT INTO pay_rs.idempotency_keys (
             tenant_id, key, resource_kind, resource_id, request_hash
@@ -636,8 +671,13 @@ async fn merchant_refund(
     .bind(refund_id.as_uuid())
     .bind(request_hash)
     .execute(&mut **tx)
-    .await
-    .map_err(ApplyError::from_sql)?;
+    .await;
+    if let Err(e) = ins {
+        if is_unique_violation(&e) {
+            return refund_replay(tx, tenant, idempotency_key, request_hash).await;
+        }
+        return Err(e.into());
+    }
     let rail: String = sqlx::query_scalar(
         r#"
         SELECT rail FROM pay_rs.attempts
@@ -670,18 +710,9 @@ async fn merchant_refund(
     .bind(rail)
     .bind(idempotency_key)
     .execute(&mut **tx)
-    .await?;
-    Ok(ApplyOutcome::Applied {
-        payment_id,
-        projection: Projection {
-            status: payment.status,
-            exception: payment.exception,
-            intake: payment.intake,
-            intake_kind: IntakeKind::Keep,
-            terminal_reason: payment.terminal_reason,
-            attempt_updates: vec![],
-        },
-    })
+    .await
+    .map_err(ApplyError::from_sql)?;
+    Ok(ApplyOutcome::MerchantRefunded { refund_id })
 }
 
 async fn insert_inbound(

@@ -1,4 +1,4 @@
-//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + payment-links (033/11).
+//! TypeSpec `/v1` adapter over `storage::apply`. Hosted rails + catalog (033/12).
 
 #![forbid(unsafe_code)]
 
@@ -11,8 +11,11 @@ pub mod identity;
 pub mod json;
 pub mod limiter;
 pub mod payment_links;
+pub mod payments;
 pub mod products;
 pub mod public_pay;
+pub mod receipts;
+pub mod refunds;
 pub mod stripe_http;
 pub mod subscriptions;
 pub mod webhooks;
@@ -69,6 +72,17 @@ pub fn router(state: AppState) -> Router {
             post(products::create).get(products::list),
         )
         .route("/v1/orgs/{org_id}/subscriptions", get(subscriptions::list))
+        .route("/v1/orgs/{org_id}/payments", get(payments::list))
+        .route("/v1/orgs/{org_id}/receipts", get(receipts::list))
+        .route("/v1/orgs/{org_id}/receipts/{id}", get(receipts::get))
+        .route(
+            "/v1/orgs/{org_id}/refunds",
+            post(refunds::create).get(refunds::list),
+        )
+        .route(
+            "/v1/orgs/{org_id}/refunds/{id}/resolve",
+            post(refunds::resolve),
+        )
         .route("/v1/pay/{token}", get(public_pay::get))
         .route("/v1/pay/{token}/start", post(public_pay::start))
         .route("/v1/pay/{token}/confirm", post(public_pay::confirm))

@@ -38,6 +38,17 @@ pub fn from_apply(err: ApplyError, pause_as_mint: bool) -> Response {
             "Conflict",
             "Idempotency-Key reused with a different body",
         ),
+        ApplyError::AlreadyRefunded => {
+            problem(StatusCode::CONFLICT, "Conflict", "already refunded")
+        }
+        ApplyError::RefundNotPending => {
+            problem(StatusCode::CONFLICT, "Conflict", "refund is not pending")
+        }
+        ApplyError::RefundInFlight => problem(
+            StatusCode::CONFLICT,
+            "Conflict",
+            "refund is being settled; retry shortly",
+        ),
         other => problem(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Internal Server Error",
