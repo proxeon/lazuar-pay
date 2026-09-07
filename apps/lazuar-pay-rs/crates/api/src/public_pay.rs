@@ -4,7 +4,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use domain::rail::{HostedSession, RailId};
 use domain::wire::buyer_status;
-use domain::PaymentStatus;
+use domain::{AttemptId, PaymentStatus, Proof, ProofId};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use storage::{apply, ApplyCmd, ApplyOutcome};
@@ -103,6 +103,11 @@ pub async fn start(
 
 async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayRequest) -> Response {
     if let Some(url) = view.session_url.clone() {
+        if let Some(attempt_id) = view.attempt_id {
+            if let Err(r) = fulfill_test(&st, &view, attempt_id).await {
+                return r;
+            }
+        }
         return start_json(&url);
     }
     let rail = view
@@ -390,6 +395,13 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
             }
         }
     } else {
+        if !st.env.allows_test() {
+            return problem(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "test processor is not enabled",
+            );
+        }
         HostedSession {
             url: success,
             session_id: format!("test:{}", view.id.to_wire()),
@@ -405,9 +417,73 @@ async fn start_hosted(st: AppState, view: storage::PaymentView, req: StartPayReq
     )
     .await
     {
-        Ok(ApplyOutcome::SessionResume { url, .. }) => start_json(&url),
-        Ok(_) => start_json(&url),
+        Ok(ApplyOutcome::SessionResume { url, .. }) => {
+            if let Err(r) = fulfill_test(&st, &view, started).await {
+                return r;
+            }
+            start_json(&url)
+        }
+        Ok(_) => {
+            if let Err(r) = fulfill_test(&st, &view, started).await {
+                return r;
+            }
+            start_json(&url)
+        }
         Err(e) => from_apply(e, false),
+    }
+}
+
+/// .NET `TestHosted` + `FulfillPaid` on start: no PSP, no webhook. SPA `?status=verifying`
+/// polls GET until `paid`. Without this Take, the buyer tab waits forever.
+async fn fulfill_test(
+    st: &AppState,
+    view: &storage::PaymentView,
+    attempt_id: AttemptId,
+) -> Result<(), Response> {
+    let rail = view
+        .provider
+        .as_deref()
+        .and_then(|s| RailId::parse(s).ok())
+        .unwrap_or(RailId::TEST);
+    if rail != RailId::TEST {
+        return Ok(());
+    }
+    if !st.env.allows_test() {
+        return Err(problem(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "test processor is not enabled",
+        ));
+    }
+    if !matches!(view.status, PaymentStatus::Open | PaymentStatus::Processing) {
+        return Ok(());
+    }
+    let proof_id = view
+        .session_id
+        .clone()
+        .unwrap_or_else(|| format!("test:{}", view.id.to_wire()));
+    match apply(
+        &st.pool,
+        ApplyCmd::InjectPaid {
+            tenant_id: view.tenant_id.clone(),
+            rail: RailId::TEST,
+            proof_id: proof_id.clone(),
+            payment_id: view.id,
+            attempt_id,
+            received: view.quoted,
+            proof: Proof::PspWebhook {
+                rail: RailId::TEST,
+                event_id: ProofId::new(proof_id),
+            },
+            now: OffsetDateTime::now_utc(),
+            refs: Default::default(),
+        },
+    )
+    .await
+    {
+        Ok(ApplyOutcome::Duplicate | ApplyOutcome::Applied { .. }) => Ok(()),
+        Ok(_) => Ok(()),
+        Err(e) => Err(from_apply(e, false)),
     }
 }
 
@@ -681,6 +757,9 @@ async fn mint_or_resume(
         if let Ok(Some(view)) = storage::read::payment_by_id(&st.pool, pid).await {
             match view.status {
                 PaymentStatus::Settled => {
+                    if view.session_url.as_deref().is_some_and(|s| !s.is_empty()) {
+                        return Ok(view);
+                    }
                     return Err(problem(
                         StatusCode::CONFLICT,
                         "Conflict",

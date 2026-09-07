@@ -99,6 +99,84 @@ async fn whoami_ok() {
     assert_eq!(body["active_org_id"], "t1");
 }
 
+/// .NET `Mint_and_start_pays_without_keys`. SPA `?status=verifying` polls GET `/v1/pay/{token}`
+/// until `paid`. Test rail has no webhook; start must Take or the buyer tab waits forever.
+#[tokio::test]
+async fn mint_and_start_pays_without_webhook() {
+    let pool = pool().await;
+    let app = api::router(testing_state(pool, SECRET));
+
+    let (st, minted) = call(
+        app.clone(),
+        authed(
+            "POST",
+            "/v1/checkouts",
+            "test-writer",
+            Some(json!({
+                "org_id": "t1",
+                "provider": "test",
+                "amount": 10.00,
+                "currency": "MYR"
+            })),
+        ),
+    )
+    .await;
+    assert_eq!(st, StatusCode::CREATED, "{minted}");
+    let id = minted["id"].as_str().unwrap().to_string();
+    let token = minted["public_token"].as_str().unwrap().to_string();
+
+    let (st, started) = call(
+        app.clone(),
+        Request::builder()
+            .method("POST")
+            .uri(format!("/v1/pay/{token}/start"))
+            .header("Content-Type", "application/json")
+            .body(Body::from(r#"{"name":"Ada"}"#))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{started}");
+    let redirect = started["redirect_url"].as_str().unwrap();
+    assert!(redirect.contains("status=verifying"), "{started}");
+    assert!(started.get("solana_pay_url").is_none());
+
+    let (st, pay) = call(app.clone(), get(&format!("/v1/pay/{token}"))).await;
+    assert_eq!(st, StatusCode::OK, "{pay}");
+    assert_eq!(pay["status"], "paid", "{pay}");
+    assert_eq!(pay["provider"], "test");
+    assert_eq!(pay["started"], true);
+
+    let (st, charges) = call(
+        app.clone(),
+        authed("GET", "/v1/orgs/t1/payments?limit=50", "test-writer", None),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{charges}");
+    let charge = charges["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["checkout_id"] == id)
+        .expect("charge for started checkout");
+    assert_eq!(charge["status"], "paid");
+    assert_ne!(charge["status"], "settled");
+
+    let (st, receipts) = call(
+        app,
+        authed("GET", "/v1/orgs/t1/receipts?limit=50", "test-writer", None),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{receipts}");
+    assert!(
+        receipts["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["checkout_id"] == id),
+        "{receipts}"
+    );
+}
+
 #[tokio::test]
 async fn mint_start_webhook_paid() {
     let pool = pool().await;
@@ -147,7 +225,12 @@ async fn mint_start_webhook_paid() {
     .await;
     assert_eq!(st, StatusCode::OK);
     let redirect = started["redirect_url"].as_str().unwrap().to_string();
-    assert!(redirect.len() > 4);
+    assert!(redirect.contains("status=verifying"), "{started}");
+
+    let (st, after_start) = call(app.clone(), get(&format!("/v1/pay/{token}"))).await;
+    assert_eq!(st, StatusCode::OK, "{after_start}");
+    assert_eq!(after_start["status"], "paid", "{after_start}");
+    assert_eq!(after_start["provider"], "test");
 
     let (st, again) = call(
         app.clone(),
