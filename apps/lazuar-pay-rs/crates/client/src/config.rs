@@ -107,6 +107,13 @@ fn normalize_key(raw: &str) -> Result<String, Error> {
             "Authorization must be an One lzr_sk_ key, not a Stripe/Hub sk_".into(),
         ));
     }
+    // 036/006 #34: SPA JWT is not a machine key for this binary.
+    let machine = token.starts_with("lzr_sk_") || token == "test-writer" || token == "test-member";
+    if !machine {
+        return Err(Error::Config(
+            "Authorization must be an One lzr_sk_ key (or Testing test-writer)".into(),
+        ));
+    }
     Ok(token.to_string())
 }
 
@@ -137,6 +144,13 @@ mod tests {
     fn accepts_lzr_sk_and_test_writer() {
         Config::new("http://localhost:8081", "lzr_sk_test", None).unwrap();
         Config::new("http://localhost:8081", "test-writer", None).unwrap();
+    }
+
+    #[test]
+    fn rejects_jwt() {
+        let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig";
+        let err = Config::new("http://localhost:8081", jwt, None).unwrap_err();
+        assert!(err.to_string().contains("lzr_sk_"), "{err}");
     }
 
     #[test]
