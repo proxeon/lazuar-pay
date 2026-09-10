@@ -53,13 +53,9 @@ pub enum Command {
     /// Occupancy mint (SPA Pay links).
     #[command(name = "payment-link", subcommand)]
     PaymentLink(PaymentLinkCmd),
-    /// `GET /v1/orgs/{orgId}/payments`
-    Payments {
-        #[arg(long)]
-        limit: Option<u32>,
-        #[arg(long)]
-        after: Option<String>,
-    },
+    /// `GET /v1/orgs/{orgId}/payments` — `list` matches `receipts list` (036/006 #12).
+    #[command(subcommand)]
+    Payments(PaymentsCmd),
     #[command(subcommand)]
     Receipts(ReceiptsCmd),
     /// BYOK vault. Write only via `--file` (035/03). No `--secret` flags.
@@ -125,6 +121,17 @@ pub enum PaymentLinkCmd {
         unlimited: bool,
         #[arg(long)]
         label: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PaymentsCmd {
+    /// `GET /v1/orgs/{orgId}/payments`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
     },
 }
 
@@ -248,7 +255,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                 )
                 .await
         }
-        Command::Payments { limit, after } => client.payments_list(limit, after.as_deref()).await,
+        Command::Payments(PaymentsCmd::List { limit, after }) => {
+            client.payments_list(limit, after.as_deref()).await
+        }
         Command::Receipts(ReceiptsCmd::List { limit, after }) => {
             client.receipts_list(limit, after.as_deref()).await
         }
@@ -497,6 +506,30 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn payments_list_matches_receipts_shape() {
+        let err = Cli::try_parse_from(["lazuar-pay", "payments"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("list") || msg.contains("required"), "{msg}");
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "payments",
+            "list",
+            "--limit",
+            "10",
+            "--after",
+            "abc",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Payments(PaymentsCmd::List { limit, after }) => {
+                assert_eq!(limit, Some(10));
+                assert_eq!(after.as_deref(), Some("abc"));
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]

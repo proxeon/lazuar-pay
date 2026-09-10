@@ -97,6 +97,7 @@ async fn whoami_ready_checkout() {
         "--org-id",
         "t1",
         "payments",
+        "list",
         "--limit",
         "10",
     ]))
