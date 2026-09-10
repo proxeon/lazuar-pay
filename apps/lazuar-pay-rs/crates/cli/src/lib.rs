@@ -81,6 +81,9 @@ pub enum Command {
     /// Plane C delivery cursor (`GET /v1/orgs/{org}/events`).
     #[command(subcommand)]
     Events(EventsCmd),
+    /// Recurring is not offered; list is honest-empty (036/006 #30).
+    #[command(subcommand)]
+    Subscription(SubscriptionCmd),
     /// Poll events and POST each envelope to a loopback URL (Testing).
     Listen {
         #[arg(long)]
@@ -271,6 +274,17 @@ pub enum ProductCmd {
 #[derive(Debug, Subcommand)]
 pub enum EventsCmd {
     /// `GET /v1/orgs/{orgId}/events`. `after` is event_id; results are newer, oldest first.
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SubscriptionCmd {
+    /// `GET /v1/orgs/{orgId}/subscriptions` — items always [].
     List {
         #[arg(long)]
         limit: Option<u32>,
@@ -600,6 +614,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         }
         Command::Events(EventsCmd::List { limit, after }) => {
             client.events_list(limit, after.as_deref()).await
+        }
+        Command::Subscription(SubscriptionCmd::List { limit, after }) => {
+            client.subscription_list(limit, after.as_deref()).await
         }
         Command::Listen {
             forward_to,
@@ -1094,6 +1111,7 @@ mod tests {
             Command::Checkout(CheckoutCmd::List { .. }) => {}
             other => panic!("{other:?}"),
         }
+        assert!(Cli::try_parse_from(["lazuar-pay", "subscription", "list"]).is_ok());
         let ev = Cli::try_parse_from(["lazuar-pay", "events", "list", "--after", "evt_1"]).unwrap();
         match ev.command {
             Command::Events(EventsCmd::List { after, .. }) => {

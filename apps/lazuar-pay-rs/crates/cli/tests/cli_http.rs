@@ -29,6 +29,20 @@ async fn whoami_ready_checkout() {
     .await
     .unwrap();
     assert_eq!(me["user_id"], "k1");
+    let subs = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "subscription",
+        "list",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(subs["items"], json!([]));
 
     let ready = run(parse(&[
         "lazuar-pay",

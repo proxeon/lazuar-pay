@@ -317,6 +317,17 @@ impl Client {
             .await
     }
 
+    /// `GET /v1/orgs/{org}/subscriptions` — honest empty until recurring exists (036/006 #30).
+    pub async fn subscription_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/subscriptions"), limit, after)
+            .await
+    }
+
     /// `GET /v1/orgs/{org}/events` — Plane C cursor, newer than `after` (036/006 #29).
     pub async fn events_list(
         &self,

@@ -332,6 +332,14 @@ async fn product_create_list_then_payment_link() {
 }
 
 #[tokio::test]
+async fn subscription_list_is_honest_empty() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let page = c.subscription_list(Some(10), None).await.unwrap();
+    assert!(page["items"].as_array().unwrap().is_empty(), "{page}");
+}
+
+#[tokio::test]
 async fn payments_list_empty_page() {
     let (base, _h) = serve().await;
     let c = machine(&base);
