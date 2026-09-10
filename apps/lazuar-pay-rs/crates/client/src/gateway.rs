@@ -44,9 +44,15 @@ pub fn validate_gateway_put(body: &Value) -> Result<(), Error> {
                 "solana does not take a webhook secret".into(),
             ));
         }
-        if brand.is_empty() {
+        if rails::solana::try_normalize(brand).is_none() {
             return Err(Error::Config(
                 "public_merchant_id must be a Solana wallet address".into(),
+            ));
+        }
+        // Host requires devnet|mainnet (mainnet-beta → mainnet).
+        if rails::solana::normalize_vault_env(field(body, "environment")).is_none() {
+            return Err(Error::Config(
+                "environment must be devnet or mainnet".into(),
             ));
         }
         return Ok(());
@@ -62,12 +68,29 @@ pub fn validate_gateway_put(body: &Value) -> Result<(), Error> {
         return Err(Error::Config("public_merchant_id is required".into()));
     }
 
+    let mut assembled = secret.to_string();
     let has_split = !kid.is_empty() && !ksec.is_empty();
-    if secret.is_empty() && !has_split {
+    if assembled.is_empty() && has_split {
+        assembled = format!("{kid}:{ksec}");
+    }
+    if assembled.is_empty() {
         return Err(Error::Config("secret is required".into()));
+    }
+    if provider == "razorpay" && rails::razorpay::try_split(&assembled).is_none() {
+        return Err(Error::Config("secret must be key_id:key_secret".into()));
     }
     if webhook.is_empty() {
         return Err(Error::Config("webhook_secret is required".into()));
+    }
+    if provider == "chip" && !rails::chip::pem_ok(webhook) {
+        return Err(Error::Config("webhook_secret must be a CHIP PEM".into()));
+    }
+    let env_in = field(body, "environment").to_ascii_lowercase();
+    if !env_in.is_empty() && env_in != "test" && env_in != "live" {
+        return Err(Error::Config("environment must be test or live".into()));
+    }
+    if provider == "billplz" && env_in.is_empty() {
+        return Err(Error::Config("environment is required".into()));
     }
     let _ = obj;
     Ok(())
@@ -152,5 +175,52 @@ mod tests {
         }))
         .unwrap_err();
         assert!(err.to_string().contains("public_merchant_id"), "{err}");
+    }
+
+    #[test]
+    fn chip_rejects_non_pem() {
+        let err = validate_gateway_put(&json!({
+            "provider": "chip",
+            "secret": "chipkey",
+            "webhook_secret": "not-a-pem",
+            "public_merchant_id": "brand_1",
+            "environment": "test"
+        }))
+        .unwrap_err();
+        assert!(err.to_string().contains("CHIP PEM"), "{err}");
+    }
+
+    #[test]
+    fn billplz_requires_environment() {
+        let err = validate_gateway_put(&json!({
+            "provider": "billplz",
+            "secret": "bp_sk",
+            "webhook_secret": "xsig",
+            "public_merchant_id": "col_1"
+        }))
+        .unwrap_err();
+        assert!(err.to_string().contains("environment"), "{err}");
+    }
+
+    #[test]
+    fn razorpay_requires_colon_secret() {
+        let err = validate_gateway_put(&json!({
+            "provider": "razorpay",
+            "secret": "rzp_only",
+            "webhook_secret": "hook",
+            "environment": "test"
+        }))
+        .unwrap_err();
+        assert!(err.to_string().contains("key_id:key_secret"), "{err}");
+    }
+
+    #[test]
+    fn solana_requires_environment() {
+        let err = validate_gateway_put(&json!({
+            "provider": "solana",
+            "public_merchant_id": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+        }))
+        .unwrap_err();
+        assert!(err.to_string().contains("devnet or mainnet"), "{err}");
     }
 }
