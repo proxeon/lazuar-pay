@@ -739,6 +739,84 @@ async fn webhook_put_get_rotate_test() {
     );
 }
 
+#[tokio::test]
+async fn listen_forwards_loopback() {
+    let (base, _h) = serve().await;
+    let hits: std::sync::Arc<tokio::sync::Mutex<Vec<String>>> =
+        std::sync::Arc::new(tokio::sync::Mutex::new(Vec::new()));
+    let hits2 = hits.clone();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let fwd = format!("http://{addr}/hook");
+    tokio::spawn(async move {
+        let app = axum::Router::new().route(
+            "/hook",
+            axum::routing::post({
+                let hits = hits2;
+                move |body: String| {
+                    let hits = hits.clone();
+                    async move {
+                        hits.lock().await.push(body);
+                        "ok"
+                    }
+                }
+            }),
+        );
+        let _ = axum::serve(listener, app).await;
+    });
+    let _ = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "put",
+        "--url",
+        &fwd,
+    ]))
+    .await
+    .unwrap();
+    let _ = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "test",
+    ]))
+    .await
+    .unwrap();
+    let out = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "listen",
+        "--forward-to",
+        &fwd,
+        "--timeout-secs",
+        "2",
+        "--interval-ms",
+        "50",
+    ]))
+    .await
+    .unwrap();
+    assert!(
+        out["forwarded"].as_u64().unwrap() >= 1,
+        "{out} hits={:?}",
+        hits.lock().await
+    );
+}
+
 fn chip_pem() -> String {
     std::fs::read_to_string(format!(
         "{}/../rails/tests/fixtures/chip/test_public.pem",

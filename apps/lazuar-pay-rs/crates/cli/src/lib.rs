@@ -81,6 +81,16 @@ pub enum Command {
     /// Plane C delivery cursor (`GET /v1/orgs/{org}/events`).
     #[command(subcommand)]
     Events(EventsCmd),
+    /// Poll events and POST each envelope to a loopback URL (Testing).
+    Listen {
+        #[arg(long)]
+        forward_to: String,
+        /// 0 = run until killed. Tests use a small value.
+        #[arg(long, default_value_t = 0)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 500)]
+        interval_ms: u64,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -591,7 +601,81 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         Command::Events(EventsCmd::List { limit, after }) => {
             client.events_list(limit, after.as_deref()).await
         }
+        Command::Listen {
+            forward_to,
+            timeout_secs,
+            interval_ms,
+        } => listen_loop(&client, &forward_to, timeout_secs, interval_ms).await,
     }
+}
+
+/// Testing-only forwarder (036/006 #28). Host loopback PUT is separate; we poll events.
+async fn listen_loop(
+    client: &Client,
+    forward_to: &str,
+    timeout_secs: u64,
+    interval_ms: u64,
+) -> Result<Value, Error> {
+    require_loopback(forward_to)?;
+    let http = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(Error::Transport)?;
+    let _ = client.webhook_put(forward_to).await;
+    let deadline = if timeout_secs == 0 {
+        None
+    } else {
+        Some(std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs))
+    };
+    let mut after: Option<String> = None;
+    let mut forwarded = 0u64;
+    loop {
+        if deadline.is_some_and(|d| std::time::Instant::now() >= d) {
+            break;
+        }
+        let page = client.events_list(Some(50), after.as_deref()).await?;
+        if let Some(items) = page.get("items").and_then(Value::as_array) {
+            for ev in items {
+                let body = ev.get("data").cloned().unwrap_or_else(|| ev.clone());
+                let res = http
+                    .post(forward_to)
+                    .header("Content-Type", "application/json")
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(Error::Transport)?;
+                if !res.status().is_success() {
+                    return Err(Error::Config(format!(
+                        "forward-to returned {}",
+                        res.status()
+                    )));
+                }
+                forwarded += 1;
+                if let Some(id) = ev.get("event_id").and_then(Value::as_str) {
+                    after = Some(id.to_string());
+                }
+            }
+        }
+        if deadline.is_none() || deadline.is_some_and(|d| std::time::Instant::now() < d) {
+            tokio::time::sleep(std::time::Duration::from_millis(interval_ms.max(50))).await;
+        }
+    }
+    Ok(serde_json::json!({ "forwarded": forwarded, "after": after }))
+}
+
+fn require_loopback(url: &str) -> Result<(), Error> {
+    let u = url.trim();
+    let rest = u.strip_prefix("http://").ok_or_else(|| {
+        Error::Config("listen --forward-to must be loopback http (Testing only)".into())
+    })?;
+    let hostport = rest.split('/').next().unwrap_or("");
+    let host = hostport.split(':').next().unwrap_or("");
+    if host == "127.0.0.1" || host.eq_ignore_ascii_case("localhost") {
+        return Ok(());
+    }
+    Err(Error::Config(
+        "listen --forward-to must be loopback http (Testing only)".into(),
+    ))
 }
 
 /// Read PutGateway JSON. Errors name the path, never the file bytes (sk_ / PEM).
@@ -660,6 +744,28 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn listen_requires_loopback_forward_to() {
+        assert!(require_loopback("http://127.0.0.1:9/hook").is_ok());
+        assert!(require_loopback("http://localhost:3021/hook").is_ok());
+        let err = require_loopback("https://example.com/hook").unwrap_err();
+        assert!(err.to_string().contains("loopback"), "{err}");
+        assert!(require_loopback("http://127.0.0.1.evil.example/hook").is_err());
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "listen",
+            "--forward-to",
+            "http://127.0.0.1:9/hook",
+            "--timeout-secs",
+            "1",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Listen { timeout_secs, .. } => assert_eq!(timeout_secs, 1),
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]
