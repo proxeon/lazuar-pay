@@ -121,6 +121,7 @@ tasks:
     dir: apps/lazuar-pay-rs
     cmds:
       - cargo check --workspace
+      - cargo clippy -p pay-client -p pay-cli -p pay-mcp --all-targets -- -D warnings
       - cargo tree -p domain --edges normal --prefix none
       - |
         set -euo pipefail

@@ -3,7 +3,9 @@
 #![forbid(unsafe_code)]
 
 use clap::Subcommand;
-use pay_client::{env_first, validate_gateway_put, CheckoutExtras, Client, Config, Error};
+use pay_client::{
+    env_first, validate_gateway_put, CheckoutExtras, Client, Config, Error, PaymentLinkExtras,
+};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 use serde_json::Value;
@@ -337,11 +339,11 @@ pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
     Config::from_parts(
         nonempty(cli.base_url.clone())
             .or_else(|| env_first(&["PAY_API_URL"]))
-            .or_else(|| file.base_url),
+            .or(file.base_url),
         nonempty(cli.api_key.clone()).or_else(|| env_first(&["PAY_API_KEY"])),
         nonempty(cli.org_id.clone())
             .or_else(|| env_first(&["PAY_ORG_ID"]))
-            .or_else(|| file.org_id),
+            .or(file.org_id),
     )
 }
 
@@ -651,10 +653,12 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                     &provider,
                     amount,
                     &currency,
-                    max_payers,
-                    unlimited,
-                    label.as_deref(),
-                    product_id.as_deref(),
+                    PaymentLinkExtras {
+                        max_payers,
+                        unlimited,
+                        label: label.as_deref(),
+                        product_id: product_id.as_deref(),
+                    },
                 )
                 .await
         }

@@ -77,6 +77,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: clippy domain
         run: cargo clippy -p domain --all-targets -- -D warnings
+      - name: clippy pay-client pay-cli pay-mcp
+        run: cargo clippy -p pay-client -p pay-cli -p pay-mcp --all-targets -- -D warnings
       - name: test domain
         run: cargo test -p domain
       - name: test rails (parse + fixtures, no Docker)

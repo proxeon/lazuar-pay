@@ -2,7 +2,7 @@
 
 mod support;
 
-use pay_client::{CheckoutExtras, Client, Config, Error};
+use pay_client::{CheckoutExtras, Client, Config, Error, PaymentLinkExtras};
 use rust_decimal::Decimal;
 use std::time::Duration;
 use support::serve;
@@ -254,7 +254,16 @@ async fn payment_link_create_test_rail() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let link = c
-        .payment_link_create("test", amount, "MYR", Some(3), false, Some("seat"), None)
+        .payment_link_create(
+            "test",
+            amount,
+            "MYR",
+            PaymentLinkExtras {
+                max_payers: Some(3),
+                label: Some("seat"),
+                ..Default::default()
+            },
+        )
         .await
         .unwrap();
     assert_eq!(link["provider"], "test");
@@ -333,7 +342,16 @@ async fn product_create_list_then_payment_link() {
         .iter()
         .any(|i| i["id"] == pid));
     let link = c
-        .payment_link_create("test", amount, "MYR", Some(1), false, None, Some(pid))
+        .payment_link_create(
+            "test",
+            amount,
+            "MYR",
+            PaymentLinkExtras {
+                max_payers: Some(1),
+                product_id: Some(pid),
+                ..Default::default()
+            },
+        )
         .await
         .unwrap();
     assert!(link["pay_url"].as_str().unwrap().contains("/c/"));

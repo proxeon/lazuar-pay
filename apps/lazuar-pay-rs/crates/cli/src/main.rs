@@ -16,10 +16,11 @@ async fn main() {
         );
     }
     match run(cli).await {
-        Ok(body) => match stdout_json(&body, compact, quiet, table) {
-            Some(s) => println!("{s}"),
-            None => {}
-        },
+        Ok(body) => {
+            if let Some(s) = stdout_json(&body, compact, quiet, table) {
+                println!("{s}");
+            }
+        }
         Err(e) => {
             // Agents parse problem+json (036/006 #8). Human Display is in `detail`.
             match serde_json::to_string(&e.to_json()) {

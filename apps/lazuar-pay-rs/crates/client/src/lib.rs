@@ -24,6 +24,15 @@ pub struct CheckoutExtras<'a> {
     pub product_id: Option<&'a str>,
 }
 
+/// Occupancy flags for `POST /v1/payment-links`.
+#[derive(Clone, Debug, Default)]
+pub struct PaymentLinkExtras<'a> {
+    pub max_payers: Option<i32>,
+    pub unlimited: bool,
+    pub label: Option<&'a str>,
+    pub product_id: Option<&'a str>,
+}
+
 /// Merchant `/v1` caller. Holds one reqwest client (no redirects — same posture as
 /// outbound webhooks; a 3xx must not silently POST a mint at another origin).
 pub struct Client {
@@ -151,10 +160,7 @@ impl Client {
         provider: &str,
         amount: Decimal,
         currency: &str,
-        max_payers: Option<i32>,
-        unlimited: bool,
-        label: Option<&str>,
-        product_id: Option<&str>,
+        extras: PaymentLinkExtras<'_>,
     ) -> Result<Value, Error> {
         validate_currency_for_provider(provider, currency)?;
         let org = self.cfg.org_id()?;
@@ -163,15 +169,15 @@ impl Client {
             "provider": provider,
             "amount": decimal_number(amount)?,
             "currency": currency,
-            "unlimited": unlimited,
+            "unlimited": extras.unlimited,
         });
-        if let Some(n) = max_payers {
+        if let Some(n) = extras.max_payers {
             body["max_payers"] = json!(n);
         }
-        if let Some(l) = label.map(str::trim).filter(|s| !s.is_empty()) {
+        if let Some(l) = extras.label.map(str::trim).filter(|s| !s.is_empty()) {
             body["label"] = json!(l);
         }
-        if let Some(p) = product_id.map(str::trim).filter(|s| !s.is_empty()) {
+        if let Some(p) = extras.product_id.map(str::trim).filter(|s| !s.is_empty()) {
             body["product_id"] = json!(p);
         }
         self.post("/v1/payment-links", body, None).await

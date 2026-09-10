@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use pay_client::{CheckoutExtras, Client, Error};
+use pay_client::{CheckoutExtras, Client, Error, PaymentLinkExtras};
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
 use std::str::FromStr;
@@ -106,10 +106,7 @@ fn tool(
 /// JSON-RPC 2.0. Notifications (`id` missing) return `None`.
 pub async fn handle_rpc(req: &Value, client: Option<&Client>) -> Option<Value> {
     let method = req.get("method").and_then(Value::as_str).unwrap_or("");
-    let id = req.get("id").cloned();
-    if id.is_none() {
-        return None;
-    }
+    let id = req.get("id").cloned()?;
     let result = match method {
         "initialize" => Ok(json!({
             "protocolVersion": PROTOCOL,
@@ -232,10 +229,12 @@ async fn create_link(client: &Client, args: &Value) -> Result<Value, Error> {
             &provider,
             amount,
             &currency,
-            arg_i32(args, "max_payers"),
-            unlimited,
-            label.as_deref(),
-            product_id.as_deref(),
+            PaymentLinkExtras {
+                max_payers: arg_i32(args, "max_payers"),
+                unlimited,
+                label: label.as_deref(),
+                product_id: product_id.as_deref(),
+            },
         )
         .await
 }
