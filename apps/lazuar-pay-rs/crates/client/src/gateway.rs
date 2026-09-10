@@ -215,6 +215,28 @@ mod tests {
     }
 
     #[test]
+    fn example_gateway_files_are_valid_shapes() {
+        let dir = format!("{}/../../examples/gateway", env!("CARGO_MANIFEST_DIR"));
+        for name in [
+            "stripe.example.json",
+            "billplz.example.json",
+            "xendit.example.json",
+            "razorpay.example.json",
+            "solana.example.json",
+        ] {
+            let raw = std::fs::read_to_string(format!("{dir}/{name}")).unwrap();
+            let body: Value = serde_json::from_str(&raw).unwrap();
+            validate_gateway_put(&body).unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert!(!raw.contains("sk_live"), "{name}");
+        }
+        let chip = std::fs::read_to_string(format!("{dir}/chip.example.json")).unwrap();
+        let body: Value = serde_json::from_str(&chip).unwrap();
+        assert_eq!(body["provider"], "chip");
+        let err = validate_gateway_put(&body).unwrap_err();
+        assert!(err.to_string().contains("CHIP PEM"), "{err}");
+    }
+
+    #[test]
     fn solana_requires_environment() {
         let err = validate_gateway_put(&json!({
             "provider": "solana",

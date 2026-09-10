@@ -1,0 +1,7 @@
+{
+  "provider": "chip",
+  "secret": "REPLACE_CHIP_API_KEY",
+  "webhook_secret": "-----BEGIN PUBLIC KEY-----\nREPLACE_WITH_CHIP_BRAND_PEM\n-----END PUBLIC KEY-----",
+  "public_merchant_id": "REPLACE_BRAND_ID",
+  "environment": "test"
+}

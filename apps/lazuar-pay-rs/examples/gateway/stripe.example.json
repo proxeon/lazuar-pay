@@ -1,0 +1,6 @@
+{
+  "provider": "stripe",
+  "secret": "sk_test_REPLACE_ME",
+  "webhook_secret": "whsec_REPLACE_ME",
+  "environment": "test"
+}

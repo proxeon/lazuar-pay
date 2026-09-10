@@ -1,0 +1,7 @@
+{
+  "provider": "billplz",
+  "secret": "REPLACE_ME",
+  "webhook_secret": "REPLACE_ME",
+  "public_merchant_id": "REPLACE_COLLECTION_ID",
+  "environment": "test"
+}

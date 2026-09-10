@@ -1,0 +1,6 @@
+{
+  "provider": "razorpay",
+  "secret": "rzp_test_REPLACE_ME:REPLACE_KEY_SECRET",
+  "webhook_secret": "REPLACE_WEBHOOK_SECRET",
+  "environment": "test"
+}
