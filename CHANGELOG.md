@@ -55,11 +55,13 @@ aliases `PAY_API_KEY` / `PAY_ORG_ID` / `PAY_API_URL` also work.
 
 #### MCP (`lazuar-pay-mcp`, crate `pay-mcp`)
 
-stdio JSON-RPC (Content-Length). Eight tools; secrets stay in env. No
+stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
 `pay_put_gateway`. Idempotency required on mint and refund.
 
 - `pay_whoami`, `pay_ready`
 - `pay_create_checkout`, `pay_get_checkout`
+- `pay_wait_checkout` — poll GET until `paid|failed|expired|open` (not buyer start)
+- `pay_list_events` — Plane C cursor (`after` = event_id, newer, oldest first)
 - `pay_list_payments`, `pay_list_receipts`
 - `pay_create_refund`, `pay_create_payment_link`
 

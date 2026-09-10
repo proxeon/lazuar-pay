@@ -18,7 +18,7 @@ crates/
   app/        # binary: serve | --api-only | --worker-only | --watcher-only
   client/     # HTTP TypeSpec /v1 client. No sqlx. (035/02)
   cli/        # lazuar-pay binary: whoami / ready / checkout / payments / receipts
-  mcp/        # lazuar-pay-mcp stdio (8 tools, no gateway PUT)
+  mcp/        # lazuar-pay-mcp stdio (10 tools, no gateway PUT; wait + events)
 migrations/   # sqlx migrate, one folder (pay_rs). P1 init is in.
 ```
 

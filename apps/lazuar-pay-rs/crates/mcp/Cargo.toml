@@ -19,3 +19,15 @@ pay-client.workspace = true
 rust_decimal.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["io-std"] }
+
+[dev-dependencies]
+api.workspace = true
+axum.workspace = true
+pay-client.workspace = true
+reqwest.workspace = true
+rust_decimal.workspace = true
+sqlx.workspace = true
+storage.workspace = true
+testcontainers = { version = "0.25", features = ["blocking"] }
+testcontainers-modules = { version = "0.13", features = ["postgres"] }
+tokio.workspace = true

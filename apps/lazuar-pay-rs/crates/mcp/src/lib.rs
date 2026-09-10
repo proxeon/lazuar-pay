@@ -1,5 +1,6 @@
 //! stdio MCP adapter over `pay-client` (035/01, 036/006 #24). HTTP only.
-//! Eight tools. No `pay_put_gateway`. Idempotency required on mint and refund.
+//! Ten tools. No `pay_put_gateway`. Idempotency required on mint and refund.
+//! Wait + events close the agent loop (mint → wait/events → refund).
 
 #![forbid(unsafe_code)]
 
@@ -7,6 +8,7 @@ use pay_client::{CheckoutExtras, Client, Error, PaymentLinkExtras};
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
 use std::str::FromStr;
+use std::time::Duration;
 
 const PROTOCOL: &str = "2024-11-05";
 
@@ -32,10 +34,32 @@ pub fn tools() -> Value {
         ),
         tool(
             "pay_get_checkout",
-            "GET /v1/checkouts/{id}. Poll until status is paid. paid means a Proof took; no admin override.",
+            "GET /v1/checkouts/{id}. One read. Use pay_wait_checkout to block until paid. paid means a Proof took; no admin override. Never POST /v1/pay/{token}/start.",
             true,
             false,
             json!({ "id": {"type": "string"} }),
+        ),
+        tool(
+            "pay_wait_checkout",
+            "Poll GET /v1/checkouts/{id} until wire status matches until (paid/failed/expired/open). Not a buyer start. Default until=paid, timeout_secs=900, interval_ms=500. Timeout is problem+json 408 with last body.",
+            true,
+            false,
+            json!({
+                "id": {"type": "string"},
+                "until": {"type": "string", "description": "paid (default) | failed | expired | open"},
+                "timeout_secs": {"type": "integer"},
+                "interval_ms": {"type": "integer"}
+            }),
+        ),
+        tool(
+            "pay_list_events",
+            "GET /v1/orgs/{org}/events. Plane C cursor: after=event_id returns newer rows, oldest first. No secrets in items.",
+            true,
+            false,
+            json!({
+                "limit": {"type": "integer"},
+                "after": {"type": "string", "description": "event_id exclusive; newer than this id"}
+            }),
         ),
         tool("pay_list_payments", "GET /v1/orgs/{org}/payments", true, false, json!({
             "limit": {"type": "integer"},
@@ -84,6 +108,7 @@ fn tool(
     let required: Vec<&str> = match name {
         "pay_create_checkout" => vec!["provider", "amount", "idempotency_key"],
         "pay_get_checkout" => vec!["id"],
+        "pay_wait_checkout" => vec!["id"],
         "pay_create_refund" => vec!["checkout", "idempotency_key"],
         "pay_create_payment_link" => vec!["provider", "amount"],
         _ => vec![],
@@ -151,6 +176,12 @@ async fn call_tool(params: &Value, client: Option<&Client>) -> Result<Value, Val
         "pay_ready" => client.ready().await,
         "pay_create_checkout" => create_checkout(client, &args).await,
         "pay_get_checkout" => get_checkout(client, &args).await,
+        "pay_wait_checkout" => wait_checkout(client, &args).await,
+        "pay_list_events" => {
+            client
+                .events_list(arg_u32(&args, "limit"), arg_str(&args, "after").as_deref())
+                .await
+        }
         "pay_list_payments" => {
             client
                 .payments_list(arg_u32(&args, "limit"), arg_str(&args, "after").as_deref())
@@ -174,6 +205,15 @@ async fn call_tool(params: &Value, client: Option<&Client>) -> Result<Value, Val
 async fn get_checkout(client: &Client, args: &Value) -> Result<Value, Error> {
     let id = arg_str(args, "id").ok_or_else(|| Error::Config("id is required".into()))?;
     client.checkout_get(&id).await
+}
+
+/// Same poll as CLI `checkout wait`. HTTP GET only — never buyer start.
+async fn wait_checkout(client: &Client, args: &Value) -> Result<Value, Error> {
+    let id = arg_str(args, "id").ok_or_else(|| Error::Config("id is required".into()))?;
+    let until = arg_str(args, "until").unwrap_or_else(|| "paid".into());
+    let timeout = Duration::from_secs(arg_u64(args, "timeout_secs").unwrap_or(900));
+    let interval = Duration::from_millis(arg_u64(args, "interval_ms").unwrap_or(500));
+    client.checkout_wait(&id, &until, timeout, interval).await
 }
 
 async fn create_checkout(client: &Client, args: &Value) -> Result<Value, Error> {
@@ -251,7 +291,15 @@ fn arg_str(args: &Value, key: &str) -> Option<String> {
 }
 
 fn arg_u32(args: &Value, key: &str) -> Option<u32> {
-    args.get(key).and_then(Value::as_u64).map(|n| n as u32)
+    arg_u64(args, key).and_then(|n| u32::try_from(n).ok())
+}
+
+fn arg_u64(args: &Value, key: &str) -> Option<u64> {
+    args.get(key).and_then(|v| {
+        v.as_u64()
+            .or_else(|| v.as_i64().and_then(|n| u64::try_from(n).ok()))
+            .or_else(|| v.as_str().and_then(|s| s.trim().parse().ok()))
+    })
 }
 
 fn arg_i32(args: &Value, key: &str) -> Option<i32> {
@@ -295,11 +343,11 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn tools_list_is_eight_and_has_no_gateway() {
+    async fn tools_list_is_ten_with_wait_and_events_no_gateway() {
         let req = json!({"jsonrpc":"2.0","id":1,"method":"tools/list"});
         let res = handle_rpc(&req, None).await.unwrap();
         let tools = res["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 8, "{tools:?}");
+        assert_eq!(tools.len(), 10, "{tools:?}");
         let names: Vec<_> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
         assert_eq!(
             names,
@@ -308,6 +356,8 @@ mod tests {
                 "pay_ready",
                 "pay_create_checkout",
                 "pay_get_checkout",
+                "pay_wait_checkout",
+                "pay_list_events",
                 "pay_list_payments",
                 "pay_list_receipts",
                 "pay_create_refund",
@@ -315,6 +365,18 @@ mod tests {
             ]
         );
         assert!(!names.iter().any(|n| n.contains("gateway")));
+        let wait = tools
+            .iter()
+            .find(|t| t["name"] == "pay_wait_checkout")
+            .unwrap();
+        assert_eq!(wait["annotations"]["readOnlyHint"], true);
+        let reqd = wait["inputSchema"]["required"].as_array().unwrap();
+        assert!(reqd.iter().any(|v| v == "id"));
+        let events = tools
+            .iter()
+            .find(|t| t["name"] == "pay_list_events")
+            .unwrap();
+        assert_eq!(events["annotations"]["readOnlyHint"], true);
         let create = tools
             .iter()
             .find(|t| t["name"] == "pay_create_checkout")
@@ -356,13 +418,46 @@ mod tests {
         assert!(text.contains("not an MCP tool"), "{text}");
     }
 
-    #[tokio::test]
-    async fn create_checkout_requires_idempotency() {
-        let client = Client::new(
+    fn dummy_client() -> Client {
+        Client::new(
             pay_client::Config::new("http://127.0.0.1:9", "lzr_sk_test", Some("t1".into()))
                 .unwrap(),
         )
-        .unwrap();
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn wait_checkout_requires_id_and_rejects_until() {
+        let client = dummy_client();
+        let missing = json!({
+            "jsonrpc":"2.0",
+            "id": 4,
+            "method":"tools/call",
+            "params":{"name":"pay_wait_checkout","arguments":{}}
+        });
+        let res = handle_rpc(&missing, Some(&client)).await.unwrap();
+        assert_eq!(res["result"]["isError"], true);
+        let text = res["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("id is required"), "{text}");
+
+        let bad = json!({
+            "jsonrpc":"2.0",
+            "id": 5,
+            "method":"tools/call",
+            "params":{
+                "name":"pay_wait_checkout",
+                "arguments":{"id":"chk_1","until":"settled"}
+            }
+        });
+        let res = handle_rpc(&bad, Some(&client)).await.unwrap();
+        assert_eq!(res["result"]["isError"], true);
+        let text = res["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("until must be"), "{text}");
+    }
+
+    #[tokio::test]
+    async fn create_checkout_requires_idempotency() {
+        let client = dummy_client();
         let req = json!({
             "jsonrpc":"2.0",
             "id": 3,
