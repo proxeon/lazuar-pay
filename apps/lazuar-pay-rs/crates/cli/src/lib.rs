@@ -117,6 +117,13 @@ pub enum RefundCmd {
         #[arg(long)]
         idempotency_key: String,
     },
+    /// `GET /v1/orgs/{orgId}/refunds`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -137,6 +144,13 @@ pub enum PaymentLinkCmd {
         unlimited: bool,
         #[arg(long)]
         label: Option<String>,
+    },
+    /// `GET /v1/orgs/{orgId}/payment-links`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
     },
 }
 
@@ -279,6 +293,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                 .refund_create(&checkout, amount, &idempotency_key)
                 .await
         }
+        Command::Refund(RefundCmd::List { limit, after }) => {
+            client.refund_list(limit, after.as_deref()).await
+        }
         Command::PaymentLink(PaymentLinkCmd::Create {
             provider,
             amount,
@@ -298,6 +315,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                     label.as_deref(),
                 )
                 .await
+        }
+        Command::PaymentLink(PaymentLinkCmd::List { limit, after }) => {
+            client.payment_link_list(limit, after.as_deref()).await
         }
         Command::Payments(PaymentsCmd::List { limit, after }) => {
             client.payments_list(limit, after.as_deref()).await
@@ -557,6 +577,23 @@ mod tests {
         assert_eq!(cfg.api_key, "lzr_sk_alias");
         assert_eq!(cfg.org_id.as_deref(), Some("org-alias"));
         assert_eq!(cfg.base_url, "http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn list_subcommands_parse() {
+        let link =
+            Cli::try_parse_from(["lazuar-pay", "payment-link", "list", "--limit", "5"]).unwrap();
+        match link.command {
+            Command::PaymentLink(PaymentLinkCmd::List { limit, .. }) => {
+                assert_eq!(limit, Some(5));
+            }
+            other => panic!("{other:?}"),
+        }
+        let refunds = Cli::try_parse_from(["lazuar-pay", "refund", "list"]).unwrap();
+        match refunds.command {
+            Command::Refund(RefundCmd::List { .. }) => {}
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]

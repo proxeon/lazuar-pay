@@ -162,6 +162,28 @@ impl Client {
         self.post("/v1/payment-links", body, None).await
     }
 
+    /// `GET /v1/orgs/{org}/payment-links` (036/006 #16).
+    pub async fn payment_link_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/payment-links"), limit, after)
+            .await
+    }
+
+    /// `GET /v1/orgs/{org}/refunds` (036/006 #16).
+    pub async fn refund_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/refunds"), limit, after)
+            .await
+    }
+
     pub async fn payments_list(
         &self,
         limit: Option<u32>,

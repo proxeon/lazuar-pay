@@ -230,6 +230,12 @@ async fn payment_link_create_test_rail() {
     assert_eq!(link["provider"], "test");
     assert!(link["pay_url"].as_str().unwrap().contains("/c/"));
     assert_eq!(link["unlimited"], false);
+    let page = c.payment_link_list(Some(10), None).await.unwrap();
+    assert!(page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == link["id"]));
 }
 
 #[tokio::test]

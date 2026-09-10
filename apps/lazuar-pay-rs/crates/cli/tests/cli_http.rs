@@ -449,6 +449,46 @@ async fn payment_link_and_refund_create() {
     .unwrap();
     assert_eq!(refund["status"], "succeeded");
     assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
+
+    let links = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "payment-link",
+        "list",
+        "--limit",
+        "10",
+    ]))
+    .await
+    .unwrap();
+    assert!(links["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["pay_url"] == link["pay_url"]));
+
+    let refunds = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "refund",
+        "list",
+    ]))
+    .await
+    .unwrap();
+    assert!(refunds["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == refund["id"]));
 }
 
 #[tokio::test]
