@@ -15,7 +15,7 @@ use std::str::FromStr;
 pub use clap::Parser;
 
 /// Merchant client of focused Pay `:8081`. The money host is `lazuar-pay-rs serve`.
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 #[command(
     name = "lazuar-pay",
     about = "Lazuar Pay /v1 client (HTTP). Not the payment host.",
@@ -49,6 +49,23 @@ pub struct Cli {
     pub profile: Option<String>,
     #[command(subcommand)]
     pub command: Command,
+}
+
+impl std::fmt::Debug for Cli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Never print the writer key (036/006 #33).
+        f.debug_struct("Cli")
+            .field("base_url", &self.base_url)
+            .field("api_key", &self.api_key.as_ref().map(|_| "***"))
+            .field("org_id", &self.org_id)
+            .field("compact", &self.compact)
+            .field("quiet", &self.quiet)
+            .field("table", &self.table)
+            .field("config", &self.config)
+            .field("profile", &self.profile)
+            .field("command", &self.command)
+            .finish()
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -491,6 +508,45 @@ fn table_keys(items: &[Value]) -> Vec<String> {
     keys
 }
 
+const GATEWAY_VIEW_KEYS: &[&str] = &[
+    "org_id",
+    "provider",
+    "configured",
+    "last4",
+    "environment",
+    "webhook_configured",
+    "public_merchant_id",
+    "currency",
+    "capability",
+];
+
+/// Drop unknown keys so a host regression cannot print `secret` (036/006 #33).
+pub fn allowlist_gateway(v: Value) -> Value {
+    if let Some(procs) = v.get("processors").and_then(Value::as_array) {
+        let processors: Vec<Value> = procs.iter().cloned().map(allowlist_gateway_one).collect();
+        let mut out = serde_json::Map::new();
+        if let Some(org) = v.get("org_id") {
+            out.insert("org_id".into(), org.clone());
+        }
+        out.insert("processors".into(), Value::Array(processors));
+        return Value::Object(out);
+    }
+    allowlist_gateway_one(v)
+}
+
+fn allowlist_gateway_one(v: Value) -> Value {
+    let Some(obj) = v.as_object() else {
+        return v;
+    };
+    let mut out = serde_json::Map::new();
+    for k in GATEWAY_VIEW_KEYS {
+        if let Some(val) = obj.get(*k) {
+            out.insert((*k).to_string(), val.clone());
+        }
+    }
+    Value::Object(out)
+}
+
 fn cell(v: Option<&Value>) -> String {
     match v {
         None | Some(Value::Null) => String::new(),
@@ -614,10 +670,12 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         Command::Receipts(ReceiptsCmd::Get { id }) => client.receipts_get(&id).await,
         Command::Gateway(GatewayCmd::Put { file }) => {
             let body = read_gateway_file(&file)?;
-            client.gateway_put(body).await
+            client.gateway_put(body).await.map(allowlist_gateway)
         }
-        Command::Gateway(GatewayCmd::Get { provider }) => client.gateway_get(&provider).await,
-        Command::Gateway(GatewayCmd::List) => client.gateway_list().await,
+        Command::Gateway(GatewayCmd::Get { provider }) => {
+            client.gateway_get(&provider).await.map(allowlist_gateway)
+        }
+        Command::Gateway(GatewayCmd::List) => client.gateway_list().await.map(allowlist_gateway),
         Command::Webhook(WebhookCmd::Put { url }) => client.webhook_put(&url).await,
         Command::Webhook(WebhookCmd::Get) => client.webhook_get().await,
         Command::Webhook(WebhookCmd::Rotate) => client.webhook_rotate().await,
@@ -1000,6 +1058,25 @@ mod tests {
         assert!(compact.contains("\"ready\":true") || compact.contains("\"ready\": true"));
         let pretty = stdout_json(&body, false, false, false).unwrap();
         assert!(pretty.contains('\n'), "{pretty}");
+    }
+
+    #[test]
+    fn allowlist_gateway_drops_secret() {
+        let dirty = serde_json::json!({
+            "provider": "stripe",
+            "configured": true,
+            "secret": "sk_live_nope",
+            "last4": "nope"
+        });
+        let clean = allowlist_gateway(dirty);
+        assert_eq!(clean["provider"], "stripe");
+        assert!(clean.get("secret").is_none(), "{clean}");
+        let dbg = format!(
+            "{:?}",
+            Cli::try_parse_from(["lazuar-pay", "--api-key", "lzr_sk_secret", "whoami"]).unwrap()
+        );
+        assert!(!dbg.contains("lzr_sk_secret"), "{dbg}");
+        assert!(dbg.contains("***"), "{dbg}");
     }
 
     #[test]
