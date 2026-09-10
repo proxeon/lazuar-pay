@@ -50,6 +50,8 @@ jobs:
           git diff --exit-code -- packages/pay-types-ts
       - name: Pay OpenAPI ↔ Map* honesty
         run: node scripts/check-pay-openapi-honesty.mjs
+      - name: Pay OpenAPI ↔ Rust axum honesty
+        run: node scripts/check-pay-rs-openapi-honesty.mjs
 
   pay-rs:
     runs-on: ubuntu-latest

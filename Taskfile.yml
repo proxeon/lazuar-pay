@@ -133,6 +133,7 @@ tasks:
         if cargo tree -p pay-cli --edges normal -i sqlx 2>&1 | grep -q '^sqlx v'; then echo "sqlx in pay-cli"; exit 1; fi
         if cargo tree -p pay-mcp --edges normal -i sqlx 2>&1 | grep -q '^sqlx v'; then echo "sqlx in pay-mcp"; exit 1; fi
         if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then echo "domain forbids f64"; exit 1; fi
+        node ../../scripts/check-pay-rs-openapi-honesty.mjs
 
   # ==========================================
   # Cloudflare named tunnel (preferred hop A for Billplz callbacks)
