@@ -161,6 +161,13 @@ pub enum RefundCmd {
         #[arg(long)]
         after: Option<String>,
     },
+    /// `POST /v1/orgs/{orgId}/refunds/{id}/resolve` — ops hatch, not MCP.
+    Resolve {
+        id: String,
+        /// succeeded | failed
+        #[arg(long)]
+        status: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -555,6 +562,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         }
         Command::Refund(RefundCmd::List { limit, after }) => {
             client.refund_list(limit, after.as_deref()).await
+        }
+        Command::Refund(RefundCmd::Resolve { id, status }) => {
+            client.refund_resolve(&id, &status).await
         }
         Command::PaymentLink(PaymentLinkCmd::Create {
             provider,
@@ -1116,6 +1126,26 @@ mod tests {
         match ev.command {
             Command::Events(EventsCmd::List { after, .. }) => {
                 assert_eq!(after.as_deref(), Some("evt_1"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn refund_resolve_parses_status() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "refund",
+            "resolve",
+            "abc",
+            "--status",
+            "succeeded",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Refund(RefundCmd::Resolve { id, status }) => {
+                assert_eq!(id, "abc");
+                assert_eq!(status, "succeeded");
             }
             other => panic!("{other:?}"),
         }

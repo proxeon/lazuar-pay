@@ -238,6 +238,14 @@ async fn refund_create_after_test_start() {
         .expect("payments page");
     let page2 = c.payments_list(Some(1), Some(pay_after)).await.unwrap();
     assert!(page2["items"].is_array());
+    let miss = c
+        .refund_resolve("cccccccccccccccccccccccccccccccc", "succeeded")
+        .await
+        .unwrap_err();
+    match miss {
+        Error::Api { status, .. } => assert_eq!(status, 404),
+        other => panic!("{other}"),
+    }
 }
 
 #[tokio::test]

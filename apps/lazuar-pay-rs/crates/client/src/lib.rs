@@ -227,6 +227,25 @@ impl Client {
             .await
     }
 
+    /// `POST /v1/orgs/{org}/refunds/{id}/resolve`. Ops hatch, not an MCP tool (036/006 #31).
+    pub async fn refund_resolve(&self, id: &str, status: &str) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let status = status.trim().to_ascii_lowercase();
+        if status != "succeeded" && status != "failed" {
+            return Err(Error::Config("status must be succeeded or failed".into()));
+        }
+        let id = id.trim();
+        if id.is_empty() {
+            return Err(Error::Config("refund id is required".into()));
+        }
+        self.post(
+            &format!("/v1/orgs/{org}/refunds/{id}/resolve"),
+            json!({ "status": status }),
+            None,
+        )
+        .await
+    }
+
     /// `GET /v1/orgs/{org}/refunds` (036/006 #16).
     pub async fn refund_list(
         &self,
