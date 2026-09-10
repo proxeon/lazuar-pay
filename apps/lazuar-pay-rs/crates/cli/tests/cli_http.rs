@@ -728,6 +728,42 @@ async fn webhook_put_get_rotate_test() {
     .await
     .unwrap();
     assert_eq!(ping["ok"], true);
+
+    let one_path = write_json("one-wh", r#"{"webhook_secret":"whsec_cli_one"}"#);
+    let one_put = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "one-webhook",
+        "put",
+        "--file",
+        one_path.to_str().unwrap(),
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(one_put["webhook_configured"], true);
+    assert!(one_put.get("webhook_secret").is_none());
+    assert!(!one_put.to_string().contains("whsec_cli_one"));
+    let one_got = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "one-webhook",
+        "get",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(one_got["webhook_configured"], true);
+    assert!(one_got.get("webhook_secret").is_none());
+    let _ = std::fs::remove_file(&one_path);
     let events = run(parse(&[
         "lazuar-pay",
         "--base-url",

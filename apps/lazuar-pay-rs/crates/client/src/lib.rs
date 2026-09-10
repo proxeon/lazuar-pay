@@ -330,6 +330,25 @@ impl Client {
             .await
     }
 
+    /// `PUT /v1/orgs/{org}/one-webhook`. Secret from `--file` only (036/006 #32).
+    pub async fn one_webhook_put(&self, webhook_secret: &str) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let secret = webhook_secret.trim();
+        if secret.is_empty() {
+            return Err(Error::Config("webhook_secret is required".into()));
+        }
+        self.put(
+            &format!("/v1/orgs/{org}/one-webhook"),
+            json!({ "webhook_secret": secret }),
+        )
+        .await
+    }
+
+    pub async fn one_webhook_get(&self) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get(&format!("/v1/orgs/{org}/one-webhook")).await
+    }
+
     pub async fn webhook_test(&self) -> Result<Value, Error> {
         let org = self.cfg.org_id()?;
         self.post(&format!("/v1/orgs/{org}/webhooks/test"), json!({}), None)

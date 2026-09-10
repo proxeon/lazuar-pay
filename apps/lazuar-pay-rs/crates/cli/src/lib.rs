@@ -81,6 +81,9 @@ pub enum Command {
     /// Plane C delivery cursor (`GET /v1/orgs/{org}/events`).
     #[command(subcommand)]
     Events(EventsCmd),
+    /// One inbound webhook secret. Write via `--file` only.
+    #[command(name = "one-webhook", subcommand)]
+    OneWebhook(OneWebhookCmd),
     /// Recurring is not offered; list is honest-empty (036/006 #30).
     #[command(subcommand)]
     Subscription(SubscriptionCmd),
@@ -287,6 +290,17 @@ pub enum EventsCmd {
         #[arg(long)]
         after: Option<String>,
     },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum OneWebhookCmd {
+    /// `PUT /v1/orgs/{orgId}/one-webhook`
+    Put {
+        #[arg(long, value_name = "PATH")]
+        file: PathBuf,
+    },
+    /// `GET /v1/orgs/{orgId}/one-webhook` (configured bool only).
+    Get,
 }
 
 #[derive(Debug, Subcommand)]
@@ -625,6 +639,11 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         Command::Events(EventsCmd::List { limit, after }) => {
             client.events_list(limit, after.as_deref()).await
         }
+        Command::OneWebhook(OneWebhookCmd::Put { file }) => {
+            let secret = read_one_webhook_file(&file)?;
+            client.one_webhook_put(&secret).await
+        }
+        Command::OneWebhook(OneWebhookCmd::Get) => client.one_webhook_get().await,
         Command::Subscription(SubscriptionCmd::List { limit, after }) => {
             client.subscription_list(limit, after.as_deref()).await
         }
@@ -703,6 +722,32 @@ fn require_loopback(url: &str) -> Result<(), Error> {
     Err(Error::Config(
         "listen --forward-to must be loopback http (Testing only)".into(),
     ))
+}
+
+/// One webhook JSON `{ "webhook_secret": "…" }`. Errors name the path, never the secret.
+pub fn read_one_webhook_file(path: &Path) -> Result<String, Error> {
+    refuse_world_readable(path)?;
+    let raw = std::fs::read_to_string(path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let body: Value = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    if body
+        .get("api_key")
+        .and_then(Value::as_str)
+        .is_some_and(|s| !s.is_empty())
+    {
+        return Err(Error::Config(format!(
+            "{} must not contain api_key",
+            path.display()
+        )));
+    }
+    let secret = body
+        .get("webhook_secret")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| Error::Config(format!("{} missing webhook_secret", path.display())))?;
+    Ok(secret.to_string())
 }
 
 /// Read PutGateway JSON. Errors name the path, never the file bytes (sk_ / PEM).
@@ -1160,6 +1205,23 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn one_webhook_put_requires_file_not_secret() {
+        let err =
+            Cli::try_parse_from(["lazuar-pay", "one-webhook", "put", "--secret", "x"]).unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected") || err.to_string().contains("file"),
+            "{}",
+            err.to_string()
+        );
+        let path = std::env::temp_dir().join(format!("lazuar-pay-one-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{"webhook_secret":"whsec_should_not_leak"}"#).unwrap();
+        chmod_owner_rw(&path);
+        let secret = read_one_webhook_file(&path).unwrap();
+        assert_eq!(secret, "whsec_should_not_leak");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
