@@ -492,6 +492,48 @@ async fn payment_link_and_refund_create() {
 }
 
 #[tokio::test]
+async fn product_create_and_list() {
+    let (base, _h) = serve().await;
+    let created = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "product",
+        "create",
+        "--name",
+        "Seat",
+        "--amount",
+        "10.00",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(created["name"], "Seat");
+    let id = created["id"].as_str().unwrap();
+    let page = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "product",
+        "list",
+    ]))
+    .await
+    .unwrap();
+    assert!(page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == id));
+}
+
+#[tokio::test]
 async fn webhook_put_get_rotate_test() {
     let (base, _h) = serve().await;
     let put = run(parse(&[

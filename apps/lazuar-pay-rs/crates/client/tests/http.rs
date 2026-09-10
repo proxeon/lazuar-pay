@@ -224,7 +224,7 @@ async fn payment_link_create_test_rail() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let link = c
-        .payment_link_create("test", amount, "MYR", Some(3), false, Some("seat"))
+        .payment_link_create("test", amount, "MYR", Some(3), false, Some("seat"), None)
         .await
         .unwrap();
     assert_eq!(link["provider"], "test");
@@ -263,6 +263,31 @@ async fn webhook_put_get_rotate_test_never_echo_on_get() {
         ping["event_id"].as_str().unwrap().starts_with("test-"),
         "{ping}"
     );
+}
+
+#[tokio::test]
+async fn product_create_list_then_payment_link() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let product = c
+        .product_create("Seat", amount, "MYR", Some("row A"))
+        .await
+        .unwrap();
+    assert_eq!(product["name"], "Seat");
+    assert_eq!(product["currency"], "MYR");
+    let pid = product["id"].as_str().unwrap();
+    let page = c.product_list(Some(10), None).await.unwrap();
+    assert!(page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == pid));
+    let link = c
+        .payment_link_create("test", amount, "MYR", Some(1), false, None, Some(pid))
+        .await
+        .unwrap();
+    assert!(link["pay_url"].as_str().unwrap().contains("/c/"));
 }
 
 #[tokio::test]

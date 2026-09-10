@@ -64,6 +64,9 @@ pub enum Command {
     /// Plane C org webhook (dashboard Webhooks page).
     #[command(subcommand)]
     Webhook(WebhookCmd),
+    /// MYR one-off catalog (SPA creates a product then a payment-link).
+    #[command(subcommand)]
+    Product(ProductCmd),
 }
 
 #[derive(Debug, Subcommand)]
@@ -144,6 +147,9 @@ pub enum PaymentLinkCmd {
         unlimited: bool,
         #[arg(long)]
         label: Option<String>,
+        /// Catalog product (SPA: product create then link).
+        #[arg(long)]
+        product_id: Option<String>,
     },
     /// `GET /v1/orgs/{orgId}/payment-links`
     List {
@@ -207,6 +213,28 @@ pub enum WebhookCmd {
     Rotate,
     /// `POST /v1/orgs/{orgId}/webhooks/test` — enqueue `webhook.test`.
     Test,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ProductCmd {
+    /// `POST /v1/orgs/{orgId}/products`. Currency is MYR; no recurring interval.
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        amount: String,
+        #[arg(long, default_value = "MYR")]
+        currency: String,
+        #[arg(long)]
+        description: Option<String>,
+    },
+    /// `GET /v1/orgs/{orgId}/products`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
 }
 
 pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
@@ -303,6 +331,7 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
             max_payers,
             unlimited,
             label,
+            product_id,
         }) => {
             let amount = parse_amount(&amount)?;
             client
@@ -313,6 +342,7 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                     max_payers,
                     unlimited,
                     label.as_deref(),
+                    product_id.as_deref(),
                 )
                 .await
         }
@@ -336,6 +366,20 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         Command::Webhook(WebhookCmd::Get) => client.webhook_get().await,
         Command::Webhook(WebhookCmd::Rotate) => client.webhook_rotate().await,
         Command::Webhook(WebhookCmd::Test) => client.webhook_test().await,
+        Command::Product(ProductCmd::Create {
+            name,
+            amount,
+            currency,
+            description,
+        }) => {
+            let amount = parse_amount(&amount)?;
+            client
+                .product_create(&name, amount, &currency, description.as_deref())
+                .await
+        }
+        Command::Product(ProductCmd::List { limit, after }) => {
+            client.product_list(limit, after.as_deref()).await
+        }
     }
 }
 
@@ -577,6 +621,28 @@ mod tests {
         assert_eq!(cfg.api_key, "lzr_sk_alias");
         assert_eq!(cfg.org_id.as_deref(), Some("org-alias"));
         assert_eq!(cfg.base_url, "http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn product_create_parses_name_and_amount() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "product",
+            "create",
+            "--name",
+            "Seat",
+            "--amount",
+            "10.00",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Product(ProductCmd::Create { name, amount, .. }) => {
+                assert_eq!(name, "Seat");
+                assert_eq!(amount, "10.00");
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(Cli::try_parse_from(["lazuar-pay", "product", "list"]).is_ok());
     }
 
     #[test]

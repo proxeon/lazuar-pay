@@ -143,6 +143,7 @@ impl Client {
         max_payers: Option<i32>,
         unlimited: bool,
         label: Option<&str>,
+        product_id: Option<&str>,
     ) -> Result<Value, Error> {
         validate_currency_for_provider(provider, currency)?;
         let org = self.cfg.org_id()?;
@@ -159,7 +160,49 @@ impl Client {
         if let Some(l) = label.map(str::trim).filter(|s| !s.is_empty()) {
             body["label"] = json!(l);
         }
+        if let Some(p) = product_id.map(str::trim).filter(|s| !s.is_empty()) {
+            body["product_id"] = json!(p);
+        }
         self.post("/v1/payment-links", body, None).await
+    }
+
+    /// `POST /v1/orgs/{org}/products`. Bar B is MYR one-off (036/006 #17).
+    pub async fn product_create(
+        &self,
+        name: &str,
+        amount: Decimal,
+        currency: &str,
+        description: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(Error::Config("name is required".into()));
+        }
+        let ccy = currency.trim().to_ascii_uppercase();
+        if ccy != "MYR" {
+            return Err(Error::Config("product currency is MYR".into()));
+        }
+        let mut body = json!({
+            "name": name,
+            "amount": decimal_number(amount)?,
+            "currency": ccy,
+        });
+        if let Some(d) = description.map(str::trim).filter(|s| !s.is_empty()) {
+            body["description"] = json!(d);
+        }
+        self.post(&format!("/v1/orgs/{org}/products"), body, None)
+            .await
+    }
+
+    pub async fn product_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/products"), limit, after)
+            .await
     }
 
     /// `GET /v1/orgs/{org}/payment-links` (036/006 #16).
