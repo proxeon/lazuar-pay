@@ -218,6 +218,36 @@ async fn refund_create_after_test_start() {
         .await
         .unwrap();
     assert_eq!(paid["status"], "paid");
+    let conflict = c
+        .checkout_wait(
+            id,
+            "failed",
+            Duration::from_secs(30),
+            Duration::from_millis(50),
+        )
+        .await
+        .unwrap_err();
+    match conflict {
+        Error::WaitConflict {
+            until,
+            status,
+            last,
+        } => {
+            assert_eq!(until, "failed");
+            assert_eq!(status, "paid");
+            assert_eq!(last["status"], "paid");
+            assert_eq!(
+                Error::WaitConflict {
+                    until: until.clone(),
+                    status: status.clone(),
+                    last: last.clone(),
+                }
+                .to_json()["status"],
+                409
+            );
+        }
+        other => panic!("{other}"),
+    }
     let refund = c.refund_create(id, None, "refund-idem-1").await.unwrap();
     assert_eq!(refund["status"], "succeeded");
     assert_eq!(refund["reason"], "merchant");

@@ -88,6 +88,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orgs/{orgId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Member list of Plane C deliveries. Cursor `after` is event_id exclusive;
+         *     results are newer, oldest first. Rust host today; .NET follows at cutover.
+         */
+        get: operations["Webhooks_listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orgs/{orgId}/gateway": {
         parameters: {
             query?: never;
@@ -575,6 +595,20 @@ export interface components {
             org_id: string;
             webhook_configured: boolean;
         };
+        /** @description Plane C delivery. `after` is event_id exclusive; items are newer, oldest first. */
+        OrgEvent: {
+            event_id: string;
+            type: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Event payload. Never includes vault secrets. */
+            data?: unknown;
+        };
+        OrgEventListPage: {
+            items: components["schemas"]["OrgEvent"][];
+            next_cursor?: string;
+        };
         /** @description Member ping plus whether this shop can take money: not charges_paused, and a vault row or Test allowed. */
         OrgReadyResponse: {
             org_id: string;
@@ -935,6 +969,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckoutListPage"];
+                };
+            };
+        };
+    };
+    Webhooks_listEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after?: string;
+            };
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgEventListPage"];
                 };
             };
         };

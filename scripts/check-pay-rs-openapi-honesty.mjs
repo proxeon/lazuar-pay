@@ -22,13 +22,8 @@ const OPENAPI_PATH = path.join(ROOT, "packages/pay-spec/dist/openapi.yaml");
 const ROUTER = path.join(ROOT, "apps/lazuar-pay-rs/crates/api/src/lib.rs");
 const HTTP_VERBS = new Set(["get", "post", "put", "delete", "patch"]);
 
-/** Process probes + agent event cursor. Buyer/PSP doors live in pay-spec. */
-const IMPL_ONLY = new Set([
-  "GET /health",
-  "GET /ready",
-  "GET /metrics",
-  "GET /v1/orgs/{}/events",
-]);
+/** Process probes. Buyer/PSP doors and GET events live in pay-spec. */
+const IMPL_ONLY = new Set(["GET /health", "GET /ready", "GET /metrics"]);
 
 /** TypeSpec uses `/v1/webhooks/{provider}/{orgId}`; Rust names each rail. */
 const SPEC_WEBHOOK_WILDCARD = "POST /v1/webhooks/{}/{}";

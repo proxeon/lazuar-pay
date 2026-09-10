@@ -15,6 +15,13 @@ pub enum Error {
     /// Poll loop hit `--timeout-secs` before `status` matched `--until`.
     #[error("checkout wait timed out (until {until})")]
     WaitTimeout { until: String, last: Value },
+    /// Wire status is already terminal and will not become `until` (paid/failed/expired).
+    #[error("checkout is {status}, not {until}")]
+    WaitConflict {
+        until: String,
+        status: String,
+        last: Value,
+    },
 }
 
 impl Error {
@@ -46,6 +53,16 @@ impl Error {
                 "detail": format!("checkout wait timed out (until {until})"),
                 "last": last,
             }),
+            Self::WaitConflict {
+                until,
+                status,
+                last,
+            } => json!({
+                "status": 409,
+                "title": "Conflict",
+                "detail": format!("checkout is {status}, not {until}"),
+                "last": last,
+            }),
         }
     }
 
@@ -75,6 +92,7 @@ impl Error {
         match self {
             Self::Config(_) => 2,
             Self::WaitTimeout { .. } => 8,
+            Self::WaitConflict { .. } => 1,
             Self::Transport(_) => 6,
             Self::Api {
                 status: 401 | 403, ..
@@ -150,6 +168,15 @@ mod tests {
             }
             .exit_code(),
             8
+        );
+        assert_eq!(
+            Error::WaitConflict {
+                until: "paid".into(),
+                status: "failed".into(),
+                last: json!({"status": "failed"}),
+            }
+            .exit_code(),
+            1
         );
     }
 }

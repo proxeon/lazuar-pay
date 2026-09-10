@@ -353,6 +353,21 @@ model WebhookOk {
   ok: boolean;
 }
 
+/** Plane C delivery. `after` is event_id exclusive; items are newer, oldest first. */
+model OrgEvent {
+  event_id: string;
+  type: string;
+  status: string;
+  created_at: utcDateTime;
+  /** Event payload. Never includes vault secrets. */
+  data?: unknown;
+}
+
+model OrgEventListPage {
+  items: OrgEvent[];
+  next_cursor?: string;
+}
+
 model WebhookDuplicate {
   duplicate: boolean;
 }
@@ -607,4 +622,12 @@ interface Webhooks {
   @post
   @route("/orgs/{orgId}/webhooks/test")
   testOrg(@path orgId: string): WebhookOk;
+
+  /**
+   * Member list of Plane C deliveries. Cursor `after` is event_id exclusive;
+   * results are newer, oldest first. Rust host today; .NET follows at cutover.
+   */
+  @get
+  @route("/orgs/{orgId}/events")
+  listEvents(@path orgId: string, @query limit?: int32, @query after?: string): OrgEventListPage;
 }

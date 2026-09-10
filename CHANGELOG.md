@@ -23,7 +23,7 @@ they never call `storage::apply`, mint `lzr_sk_`, or expose buyer
 - Official document numbers from `document_sequences` (Malaysia year, UTC+8):
   Take settle allocates `RCPT-{year}-{n}`; refund settle allocates `REF-{year}-{n}`.
 - `GET /v1/orgs/{org}/events?after=` — Plane C delivery cursor (newer than
-  `event_id`, oldest first). Not in pay-spec; honesty script allowlists it.
+  `event_id`, oldest first). Now in pay-spec; .NET Map* at cutover.
 - Dockerfile and compose overlay on `pay-db` (`:8081`). Does not replace .NET `pay`.
 
 #### CLI (`lazuar-pay`, crate `pay-cli`)
@@ -60,7 +60,8 @@ stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
 
 - `pay_whoami`, `pay_ready`
 - `pay_create_checkout`, `pay_get_checkout`
-- `pay_wait_checkout` — poll GET until `paid|failed|expired|open` (not buyer start)
+- `pay_wait_checkout` — poll GET until `paid|failed|expired|open` (not buyer start);
+  terminal mismatch is 409
 - `pay_list_events` — Plane C cursor (`after` = event_id, newer, oldest first)
 - `pay_list_payments`, `pay_list_receipts`
 - `pay_create_refund`, `pay_create_payment_link`
@@ -74,6 +75,8 @@ stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
 - GitHub `pay-rs` job runs `cargo test -p pay-client -p pay-cli` and
   `cargo test -p pay-mcp`; clippy `-D warnings` on those crates; `pay` job runs
   OpenAPI ↔ Rust axum honesty (`scripts/check-pay-rs-openapi-honesty.mjs`).
+- `checkout wait` / `pay_wait_checkout` return 409 when status is already
+  terminal and does not match `--until` (no long timeout).
 
 ### Security
 
@@ -86,8 +89,9 @@ stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
   `chmod 600`). Errors name the path, never file bytes.
 - Gateway stdout is allowlisted (no `secret` / PEM). `Cli` Debug prints `***`
   for `api_key`.
-- `listen --forward-to` rejects non-loopback URLs, including userinfo forms
-  such as `http://127.0.0.1:80@evil.example/hook`.
+- `listen --forward-to` is loopback http only: `127.0.0.1`, `localhost`, and
+  `[::1]`. Userinfo forms such as `http://127.0.0.1:80@evil.example/hook` are
+  rejected.
 
 ### Fixed
 
@@ -98,4 +102,4 @@ stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
   `default_value_t` was baked on the first parse in the process).
 - `solana` + default MYR fails closed as config (`USDC` required), not a host 400.
 
-[Unreleased]: https://github.com/proxeon/lazuar-pay/compare/main...feat/pay-rs-cli
+[Unreleased]: https://github.com/proxeon/lazuar-pay/compare/main...feat/lazuar-pay-rs

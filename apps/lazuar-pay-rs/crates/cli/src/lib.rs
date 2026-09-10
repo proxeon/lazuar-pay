@@ -153,7 +153,7 @@ pub enum CheckoutCmd {
         #[arg(long)]
         after: Option<String>,
     },
-    /// Poll GET until wire status matches `--until` (036/006 #4). Not a buyer start.
+    /// Poll GET until `--until`. Not a buyer start. Terminal mismatch is 409, not a wait.
     Wait {
         id: String,
         #[arg(long, default_value = "paid")]
@@ -791,19 +791,36 @@ fn require_loopback(url: &str) -> Result<(), Error> {
         return Err(err());
     }
     let hostport = rest.split(['/', '?', '#']).next().unwrap_or("");
-    let (host, port) = match hostport.split_once(':') {
-        Some((h, p)) => (h, Some(p)),
-        None => (hostport, None),
-    };
+    let (host, port) = loopback_hostport(hostport).ok_or_else(err)?;
     if let Some(p) = port {
         if p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()) {
             return Err(err());
         }
     }
-    if host == "127.0.0.1" || host.eq_ignore_ascii_case("localhost") {
+    let h = host.to_ascii_lowercase();
+    if h == "127.0.0.1" || h == "localhost" || h == "::1" || h == "0:0:0:0:0:0:0:1" {
         return Ok(());
     }
     Err(err())
+}
+
+/// `127.0.0.1[:port]`, `localhost[:port]`, or `[::1][:port]`.
+fn loopback_hostport(hostport: &str) -> Option<(String, Option<&str>)> {
+    if let Some(rest) = hostport.strip_prefix('[') {
+        let (host, after) = rest.split_once(']')?;
+        let port = if after.is_empty() {
+            None
+        } else if let Some(p) = after.strip_prefix(':') {
+            Some(p)
+        } else {
+            return None;
+        };
+        return Some((host.to_string(), port));
+    }
+    match hostport.split_once(':') {
+        Some((h, p)) => Some((h.to_string(), Some(p))),
+        None => Some((hostport.to_string(), None)),
+    }
 }
 
 /// One webhook JSON `{ "webhook_secret": "…" }`. Errors name the path, never the secret.
@@ -904,10 +921,14 @@ mod tests {
     fn listen_requires_loopback_forward_to() {
         assert!(require_loopback("http://127.0.0.1:9/hook").is_ok());
         assert!(require_loopback("http://localhost:3021/hook").is_ok());
+        assert!(require_loopback("http://[::1]/hook").is_ok());
+        assert!(require_loopback("http://[::1]:3021/hook").is_ok());
         let err = require_loopback("https://example.com/hook").unwrap_err();
         assert!(err.to_string().contains("loopback"), "{err}");
         assert!(require_loopback("http://127.0.0.1.evil.example/hook").is_err());
         assert!(require_loopback("http://127.0.0.1:80@evil.example/hook").is_err());
+        assert!(require_loopback("http://[::2]/hook").is_err());
+        assert!(require_loopback("http://[::1]:80@evil.example/hook").is_err());
         let cli = Cli::try_parse_from([
             "lazuar-pay",
             "listen",

@@ -126,8 +126,21 @@ impl Client {
         let deadline = Instant::now() + timeout;
         let mut last = self.checkout_get(id).await?;
         loop {
-            if last.get("status").and_then(Value::as_str) == Some(until.as_str()) {
+            let status = last
+                .get("status")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if status == until {
                 return Ok(last);
+            }
+            // paid/failed/expired do not transition to another until. Do not sit until 408.
+            if wait_is_terminal(&status) {
+                return Err(Error::WaitConflict {
+                    until,
+                    status,
+                    last,
+                });
             }
             if Instant::now() >= deadline {
                 return Err(Error::WaitTimeout { until, last });
@@ -469,6 +482,11 @@ pub fn validate_currency_for_provider(provider: &str, currency: &str) -> Result<
     Ok(())
 }
 
+/// Wire statuses that will not change. `open` keeps polling.
+fn wait_is_terminal(status: &str) -> bool {
+    matches!(status, "paid" | "failed" | "expired")
+}
+
 fn require_idempotency(raw: &str) -> Result<&str, Error> {
     let key = raw.trim();
     if key.is_empty() {
@@ -510,6 +528,15 @@ mod tests {
         let d = Decimal::from_str_exact("10.50").unwrap();
         let v = decimal_number(d).unwrap();
         assert_eq!(v.to_string(), "10.5");
+    }
+
+    #[test]
+    fn wait_terminal_is_paid_failed_expired() {
+        assert!(wait_is_terminal("paid"));
+        assert!(wait_is_terminal("failed"));
+        assert!(wait_is_terminal("expired"));
+        assert!(!wait_is_terminal("open"));
+        assert!(!wait_is_terminal(""));
     }
 
     #[test]

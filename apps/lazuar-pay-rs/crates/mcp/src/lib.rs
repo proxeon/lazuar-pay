@@ -41,7 +41,7 @@ pub fn tools() -> Value {
         ),
         tool(
             "pay_wait_checkout",
-            "Poll GET /v1/checkouts/{id} until wire status matches until (paid/failed/expired/open). Not a buyer start. Default until=paid, timeout_secs=900, interval_ms=500. Timeout is problem+json 408 with last body.",
+            "Poll GET /v1/checkouts/{id} until wire status matches until (paid/failed/expired/open). Not a buyer start. Default until=paid, timeout_secs=900, interval_ms=500. Timeout is 408 with last. Already paid/failed/expired ≠ until is 409, not a wait.",
             true,
             false,
             json!({
