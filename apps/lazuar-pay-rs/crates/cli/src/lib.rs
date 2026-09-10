@@ -74,10 +74,10 @@ pub enum CheckoutCmd {
     /// `POST /v1/checkouts`. `--provider` is required (no silent test default).
     Create {
         /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
-        #[arg(long)]
+        #[arg(short, long)]
         provider: String,
         /// Decimal string, at most 2 display places. Never parsed as f64.
-        #[arg(long)]
+        #[arg(short, long)]
         amount: String,
         /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
         #[arg(long, default_value = "MYR")]
@@ -141,9 +141,9 @@ pub enum PaymentLinkCmd {
     /// `POST /v1/payment-links`
     Create {
         /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
-        #[arg(long)]
+        #[arg(short, long)]
         provider: String,
-        #[arg(long)]
+        #[arg(short, long)]
         amount: String,
         /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
         #[arg(long, default_value = "MYR")]
@@ -492,6 +492,50 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn create_parses_short_provider_and_amount() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "10.00",
+            "--idempotency-key",
+            "k1",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Checkout(CheckoutCmd::Create {
+                provider, amount, ..
+            }) => {
+                assert_eq!(provider, "test");
+                assert_eq!(amount, "10.00");
+            }
+            other => panic!("{other:?}"),
+        }
+        let link = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "12.50",
+        ])
+        .unwrap();
+        match link.command {
+            Command::PaymentLink(PaymentLinkCmd::Create {
+                provider, amount, ..
+            }) => {
+                assert_eq!(provider, "test");
+                assert_eq!(amount, "12.50");
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]
