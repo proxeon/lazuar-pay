@@ -5,7 +5,9 @@
 use clap::Subcommand;
 use pay_client::{env_first, validate_gateway_put, CheckoutExtras, Client, Config, Error};
 use rust_decimal::Decimal;
+use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -36,6 +38,12 @@ pub struct Cli {
     /// Success is exit 0 with empty stdout. Errors still stderr JSON.
     #[arg(long, global = true)]
     pub quiet: bool,
+    /// JSON config path. Default `~/.config/lazuar-pay/config.json`. Never stores api_key.
+    #[arg(long, env = "LAZUAR_PAY_CONFIG")]
+    pub config: Option<PathBuf>,
+    /// Named profile inside the config file (`profiles.<name>`).
+    #[arg(long, env = "LAZUAR_PAY_PROFILE")]
+    pub profile: Option<String>,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -245,12 +253,94 @@ pub enum ProductCmd {
 }
 
 pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
-    // clap reads LAZUAR_PAY_*; pay-node aliases fill the rest (036/006 #3).
+    // Flags/env beat the file. The file must not hold api_key (036/006 #26).
+    let file = load_file_config(cli.config.as_deref(), cli.profile.as_deref())?;
     Config::from_parts(
-        nonempty(cli.base_url.clone()).or_else(|| env_first(&["PAY_API_URL"])),
+        nonempty(cli.base_url.clone())
+            .or_else(|| env_first(&["PAY_API_URL"]))
+            .or_else(|| file.base_url),
         nonempty(cli.api_key.clone()).or_else(|| env_first(&["PAY_API_KEY"])),
-        nonempty(cli.org_id.clone()).or_else(|| env_first(&["PAY_ORG_ID"])),
+        nonempty(cli.org_id.clone())
+            .or_else(|| env_first(&["PAY_ORG_ID"]))
+            .or_else(|| file.org_id),
     )
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FileConfig {
+    #[serde(default)]
+    base_url: Option<String>,
+    #[serde(default)]
+    org_id: Option<String>,
+    #[serde(default)]
+    profile: Option<String>,
+    #[serde(default)]
+    profiles: HashMap<String, FileConfig>,
+    /// Present only so we can refuse it. Never copied into Config.
+    #[serde(default)]
+    api_key: Option<String>,
+}
+
+fn load_file_config(
+    explicit: Option<&Path>,
+    profile_flag: Option<&str>,
+) -> Result<FileConfig, Error> {
+    let path = match explicit {
+        Some(p) => Some(p.to_path_buf()),
+        None => default_config_path(),
+    };
+    let Some(path) = path else {
+        return Ok(FileConfig::default());
+    };
+    if !path.exists() {
+        return Ok(FileConfig::default());
+    }
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let mut parsed: FileConfig = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    if parsed
+        .api_key
+        .as_ref()
+        .is_some_and(|s| !s.trim().is_empty())
+    {
+        return Err(Error::Config(format!(
+            "{} must not contain api_key; use LAZUAR_PAY_API_KEY",
+            path.display()
+        )));
+    }
+    let name = profile_flag
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .or_else(|| parsed.profile.clone());
+    if let Some(name) = name {
+        if let Some(p) = parsed.profiles.remove(&name) {
+            if p.api_key.as_ref().is_some_and(|s| !s.trim().is_empty()) {
+                return Err(Error::Config(format!(
+                    "{} profile {name} must not contain api_key",
+                    path.display()
+                )));
+            }
+            return Ok(FileConfig {
+                base_url: p.base_url.or(parsed.base_url),
+                org_id: p.org_id.or(parsed.org_id),
+                ..FileConfig::default()
+            });
+        }
+        if profile_flag.is_some() {
+            return Err(Error::Config(format!(
+                "profile {name} not found in {}",
+                path.display()
+            )));
+        }
+    }
+    Ok(parsed)
+}
+
+fn default_config_path() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    Some(PathBuf::from(home).join(".config/lazuar-pay/config.json"))
 }
 
 /// `sk_live` JSON at mode 0644 must not be accepted (036/006 #21). Unix only.
@@ -707,6 +797,31 @@ mod tests {
     }
 
     #[test]
+    fn config_file_fills_org_and_rejects_api_key() {
+        let path = std::env::temp_dir().join(format!(
+            "lazuar-pay-cfg-{}-{}.json",
+            std::process::id(),
+            "ok"
+        ));
+        std::fs::write(
+            &path,
+            r#"{"base_url":"http://127.0.0.1:9","org_id":"from-file","profiles":{"dev":{"org_id":"from-dev"}}}"#,
+        )
+        .unwrap();
+        let got = load_file_config(Some(&path), None).unwrap();
+        assert_eq!(got.org_id.as_deref(), Some("from-file"));
+        let dev = load_file_config(Some(&path), Some("dev")).unwrap();
+        assert_eq!(dev.org_id.as_deref(), Some("from-dev"));
+        std::fs::write(&path, r#"{"api_key":"lzr_sk_nope","org_id":"x"}"#).unwrap();
+        let err = load_file_config(Some(&path), None).unwrap_err();
+        assert!(
+            err.to_string().contains("must not contain api_key"),
+            "{err}"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn pay_aliases_fill_when_canonical_missing() {
         let _g = ENV_LOCK.lock().expect("env lock");
         let prev_key = std::env::var("PAY_API_KEY").ok();
@@ -721,6 +836,8 @@ mod tests {
             org_id: None,
             compact: false,
             quiet: false,
+            config: None,
+            profile: None,
             command: Command::Whoami,
         };
         let cfg = config_from_cli(&cli);
