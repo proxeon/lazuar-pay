@@ -176,6 +176,13 @@ async fn unknown_provider_is_api_error() {
 fn write_json(name: &str, body: &str) -> std::path::PathBuf {
     let path = std::env::temp_dir().join(format!("lazuar-pay-{name}-{}.json", std::process::id()));
     std::fs::write(&path, body).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut p = std::fs::metadata(&path).unwrap().permissions();
+        p.set_mode(0o600);
+        std::fs::set_permissions(&path, p).unwrap();
+    }
     path
 }
 

@@ -253,6 +253,26 @@ pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
     )
 }
 
+/// `sk_live` JSON at mode 0644 must not be accepted (036/006 #21). Unix only.
+fn refuse_world_readable(path: &Path) -> Result<(), Error> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(path)
+            .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?
+            .permissions()
+            .mode();
+        if mode & 0o077 != 0 {
+            return Err(Error::Config(format!(
+                "{} is group/world-readable; chmod 600 and retry",
+                path.display()
+            )));
+        }
+    }
+    let _ = path;
+    Ok(())
+}
+
 fn nonempty(s: Option<String>) -> Option<String> {
     s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
@@ -395,6 +415,7 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
 
 /// Read PutGateway JSON. Errors name the path, never the file bytes (sk_ / PEM).
 pub fn read_gateway_file(path: &Path) -> Result<Value, Error> {
+    refuse_world_readable(path)?;
     let raw = std::fs::read_to_string(path)
         .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
     let body: Value = serde_json::from_str(&raw)
@@ -811,10 +832,46 @@ mod tests {
             r#"{"provider":"test","secret":"sk_should_not_leak","webhook_secret":"x"}"#,
         )
         .unwrap();
+        chmod_owner_rw(&path);
         let err = read_gateway_file(&path).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("test processor"), "{msg}");
         assert!(!msg.contains("sk_should_not_leak"), "{msg}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[cfg(unix)]
+    fn chmod_owner_rw(path: &std::path::Path) {
+        use std::os::unix::fs::PermissionsExt;
+        let mut p = std::fs::metadata(path).unwrap().permissions();
+        p.set_mode(0o600);
+        std::fs::set_permissions(path, p).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    fn chmod_owner_rw(_: &std::path::Path) {}
+
+    #[cfg(unix)]
+    #[test]
+    fn read_gateway_file_rejects_world_readable() {
+        use std::os::unix::fs::PermissionsExt;
+        let path =
+            std::env::temp_dir().join(format!("lazuar-pay-gw-mode-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"{"provider":"stripe","secret":"sk_live_should_not_leak","webhook_secret":"whsec_x","environment":"live"}"#,
+        )
+        .unwrap();
+        let mut p = std::fs::metadata(&path).unwrap().permissions();
+        p.set_mode(0o644);
+        std::fs::set_permissions(&path, p).unwrap();
+        let err = read_gateway_file(&path).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("chmod 600") || msg.contains("world-readable"),
+            "{msg}"
+        );
+        assert!(!msg.contains("sk_live_should_not_leak"), "{msg}");
         let _ = std::fs::remove_file(&path);
     }
 }
