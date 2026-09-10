@@ -222,6 +222,22 @@ async fn refund_create_after_test_start() {
     assert_eq!(refund["status"], "succeeded");
     assert_eq!(refund["reason"], "merchant");
     assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
+
+    let rcpts = c.receipts_list(Some(1), None).await.unwrap();
+    let items = rcpts["items"].as_array().unwrap();
+    assert!(!items.is_empty(), "{rcpts}");
+    let rid = items[0]["id"].as_str().unwrap();
+    let one = c.receipts_get(rid).await.unwrap();
+    assert_eq!(one["id"], rid);
+    if let Some(after) = rcpts["next_cursor"].as_str() {
+        let page2 = c.receipts_list(Some(1), Some(after)).await.unwrap();
+        assert!(page2["items"].is_array());
+    }
+    let pays = c.payments_list(Some(1), None).await.unwrap();
+    if let Some(after) = pays["next_cursor"].as_str() {
+        let page2 = c.payments_list(Some(1), Some(after)).await.unwrap();
+        assert!(page2["items"].is_array());
+    }
 }
 
 #[tokio::test]

@@ -136,6 +136,8 @@ async fn whoami_ready_checkout() {
         "t1",
         "receipts",
         "list",
+        "--limit",
+        "1",
     ]))
     .await
     .unwrap();
@@ -450,6 +452,89 @@ async fn payment_link_and_refund_create() {
     .await
     .unwrap();
     assert_eq!(paid["status"], "paid");
+
+    let rcpts = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "receipts",
+        "list",
+        "--limit",
+        "1",
+    ]))
+    .await
+    .unwrap();
+    let rid = rcpts["items"][0]["id"].as_str().unwrap();
+    let one = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "receipts",
+        "get",
+        rid,
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(one["id"], rid);
+    if let Some(after) = rcpts["next_cursor"].as_str() {
+        let page2 = run(parse(&[
+            "lazuar-pay",
+            "--base-url",
+            &base,
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "receipts",
+            "list",
+            "--after",
+            after,
+        ]))
+        .await
+        .unwrap();
+        assert!(page2["items"].is_array());
+    }
+    let pays = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "payments",
+        "list",
+        "--limit",
+        "1",
+    ]))
+    .await
+    .unwrap();
+    if let Some(after) = pays["next_cursor"].as_str() {
+        let page2 = run(parse(&[
+            "lazuar-pay",
+            "--base-url",
+            &base,
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "payments",
+            "list",
+            "--after",
+            after,
+        ]))
+        .await
+        .unwrap();
+        assert!(page2["items"].is_array());
+    }
 
     let refund = run(parse(&[
         "lazuar-pay",
