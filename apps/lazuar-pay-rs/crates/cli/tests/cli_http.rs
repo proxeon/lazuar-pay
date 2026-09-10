@@ -491,24 +491,23 @@ async fn payment_link_and_refund_create() {
     .await
     .unwrap();
     assert_eq!(one["id"], rid);
-    if let Some(after) = rcpts["next_cursor"].as_str() {
-        let page2 = run(parse(&[
-            "lazuar-pay",
-            "--base-url",
-            &base,
-            "--api-key",
-            "lzr_sk_test",
-            "--org-id",
-            "t1",
-            "receipts",
-            "list",
-            "--after",
-            after,
-        ]))
-        .await
-        .unwrap();
-        assert!(page2["items"].is_array());
-    }
+    // Host only sets next_cursor when the page is full; still send --after (036/006 #19).
+    let page2 = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "receipts",
+        "list",
+        "--after",
+        rid,
+    ]))
+    .await
+    .unwrap();
+    assert!(page2["items"].is_array());
     let pays = run(parse(&[
         "lazuar-pay",
         "--base-url",
@@ -524,24 +523,26 @@ async fn payment_link_and_refund_create() {
     ]))
     .await
     .unwrap();
-    if let Some(after) = pays["next_cursor"].as_str() {
-        let page2 = run(parse(&[
-            "lazuar-pay",
-            "--base-url",
-            &base,
-            "--api-key",
-            "lzr_sk_test",
-            "--org-id",
-            "t1",
-            "payments",
-            "list",
-            "--after",
-            after,
-        ]))
-        .await
-        .unwrap();
-        assert!(page2["items"].is_array());
-    }
+    let pay_after = pays["items"][0]["id"]
+        .as_str()
+        .or_else(|| pays["next_cursor"].as_str())
+        .expect("payments page");
+    let page2 = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "payments",
+        "list",
+        "--after",
+        pay_after,
+    ]))
+    .await
+    .unwrap();
+    assert!(page2["items"].is_array());
 
     let refund = run(parse(&[
         "lazuar-pay",

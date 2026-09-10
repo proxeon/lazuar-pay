@@ -30,10 +30,10 @@ pub struct Cli {
     /// One tenant id. Env `LAZUAR_PAY_ORG_ID` or `PAY_ORG_ID`.
     #[arg(long, env = "LAZUAR_PAY_ORG_ID")]
     pub org_id: Option<String>,
-    /// One-line JSON on stdout (036/006 #10). Default is pretty-print.
+    /// One-line JSON on stdout. Default is pretty-print.
     #[arg(long, global = true)]
     pub compact: bool,
-    /// Success is exit 0 with empty stdout (036/006 #10). Errors still stderr JSON.
+    /// Success is exit 0 with empty stdout. Errors still stderr JSON.
     #[arg(long, global = true)]
     pub quiet: bool,
     #[command(subcommand)]
@@ -79,7 +79,7 @@ pub enum CheckoutCmd {
         /// Decimal string, at most 2 display places. Never parsed as f64.
         #[arg(long)]
         amount: String,
-        /// Fiat default MYR. `solana` requires USDC (not MYR/USD) — 036/006 #14.
+        /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
         #[arg(long, default_value = "MYR")]
         currency: String,
         /// Required so a retry does not mint a second charge (036/006 #7).
@@ -145,7 +145,7 @@ pub enum PaymentLinkCmd {
         provider: String,
         #[arg(long)]
         amount: String,
-        /// Fiat default MYR. `solana` requires USDC (not MYR/USD) — 036/006 #14.
+        /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
         #[arg(long, default_value = "MYR")]
         currency: String,
         #[arg(long)]
@@ -295,7 +295,11 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    args.into_iter().any(|a| a.as_ref() == "--api-key")
+    // clap accepts `--api-key val` and `--api-key=val`.
+    args.into_iter().any(|a| {
+        let a = a.as_ref();
+        a == "--api-key" || a.starts_with("--api-key=")
+    })
 }
 
 pub async fn run(cli: Cli) -> Result<Value, Error> {
@@ -568,6 +572,11 @@ mod tests {
             "lazuar-pay",
             "--api-key",
             "lzr_sk_x",
+            "whoami"
+        ]));
+        assert!(api_key_flag_on_argv([
+            "lazuar-pay",
+            "--api-key=lzr_sk_x",
             "whoami"
         ]));
         assert!(!api_key_flag_on_argv(["lazuar-pay", "whoami"]));

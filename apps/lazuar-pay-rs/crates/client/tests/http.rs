@@ -229,15 +229,15 @@ async fn refund_create_after_test_start() {
     let rid = items[0]["id"].as_str().unwrap();
     let one = c.receipts_get(rid).await.unwrap();
     assert_eq!(one["id"], rid);
-    if let Some(after) = rcpts["next_cursor"].as_str() {
-        let page2 = c.receipts_list(Some(1), Some(after)).await.unwrap();
-        assert!(page2["items"].is_array());
-    }
+    let page2 = c.receipts_list(Some(1), Some(rid)).await.unwrap();
+    assert!(page2["items"].is_array());
     let pays = c.payments_list(Some(1), None).await.unwrap();
-    if let Some(after) = pays["next_cursor"].as_str() {
-        let page2 = c.payments_list(Some(1), Some(after)).await.unwrap();
-        assert!(page2["items"].is_array());
-    }
+    let pay_after = pays["items"][0]["id"]
+        .as_str()
+        .or_else(|| pays["next_cursor"].as_str())
+        .expect("payments page");
+    let page2 = c.payments_list(Some(1), Some(pay_after)).await.unwrap();
+    assert!(page2["items"].is_array());
 }
 
 #[tokio::test]
