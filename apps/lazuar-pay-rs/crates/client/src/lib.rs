@@ -213,6 +213,34 @@ impl Client {
         self.get(&format!("/v1/orgs/{org}/gateways")).await
     }
 
+    /// `PUT /v1/orgs/{org}/webhooks` — Plane C URL. Host mints `whsec_` once (036/006 #15).
+    pub async fn webhook_put(&self, url: &str) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let url = url.trim();
+        if url.is_empty() {
+            return Err(Error::Config("url is required".into()));
+        }
+        self.put(&format!("/v1/orgs/{org}/webhooks"), json!({ "url": url }))
+            .await
+    }
+
+    pub async fn webhook_get(&self) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get(&format!("/v1/orgs/{org}/webhooks")).await
+    }
+
+    pub async fn webhook_rotate(&self) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.post(&format!("/v1/orgs/{org}/webhooks/rotate"), json!({}), None)
+            .await
+    }
+
+    pub async fn webhook_test(&self) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.post(&format!("/v1/orgs/{org}/webhooks/test"), json!({}), None)
+            .await
+    }
+
     async fn get(&self, path: &str) -> Result<Value, Error> {
         let req = self
             .http

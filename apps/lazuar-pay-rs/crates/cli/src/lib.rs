@@ -61,6 +61,9 @@ pub enum Command {
     /// BYOK vault. Write only via `--file` (035/03). No `--secret` flags.
     #[command(subcommand)]
     Gateway(GatewayCmd),
+    /// Plane C org webhook (dashboard Webhooks page).
+    #[command(subcommand)]
+    Webhook(WebhookCmd),
 }
 
 #[derive(Debug, Subcommand)]
@@ -175,6 +178,21 @@ pub enum GatewayCmd {
     },
     /// `GET /v1/orgs/{orgId}/gateways`
     List,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum WebhookCmd {
+    /// `PUT /v1/orgs/{orgId}/webhooks`. URL only — host mints `whsec_`.
+    Put {
+        #[arg(long)]
+        url: String,
+    },
+    /// `GET /v1/orgs/{orgId}/webhooks` (no secret, prefix only).
+    Get,
+    /// `POST /v1/orgs/{orgId}/webhooks/rotate` — new `whsec_` once.
+    Rotate,
+    /// `POST /v1/orgs/{orgId}/webhooks/test` — enqueue `webhook.test`.
+    Test,
 }
 
 pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
@@ -294,6 +312,10 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         }
         Command::Gateway(GatewayCmd::Get { provider }) => client.gateway_get(&provider).await,
         Command::Gateway(GatewayCmd::List) => client.gateway_list().await,
+        Command::Webhook(WebhookCmd::Put { url }) => client.webhook_put(&url).await,
+        Command::Webhook(WebhookCmd::Get) => client.webhook_get().await,
+        Command::Webhook(WebhookCmd::Rotate) => client.webhook_rotate().await,
+        Command::Webhook(WebhookCmd::Test) => client.webhook_test().await,
     }
 }
 
@@ -546,6 +568,33 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn webhook_put_requires_url_not_secret() {
+        let err = Cli::try_parse_from(["lazuar-pay", "webhook", "put"]).unwrap_err();
+        assert!(err.to_string().contains("url"), "{}", err.to_string());
+        let err = Cli::try_parse_from(["lazuar-pay", "webhook", "put", "--secret", "whsec_x"])
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected") || err.to_string().contains("url"),
+            "{}",
+            err.to_string()
+        );
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "webhook",
+            "put",
+            "--url",
+            "http://127.0.0.1:9/hook",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Webhook(WebhookCmd::Put { url }) => {
+                assert_eq!(url, "http://127.0.0.1:9/hook");
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]

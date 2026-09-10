@@ -233,6 +233,33 @@ async fn payment_link_create_test_rail() {
 }
 
 #[tokio::test]
+async fn webhook_put_get_rotate_test_never_echo_on_get() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let put = c.webhook_put("http://127.0.0.1:9/hook").await.unwrap();
+    assert_eq!(put["webhook_configured"], true);
+    let secret = put["webhook_secret"].as_str().unwrap().to_string();
+    assert!(secret.starts_with("whsec_"), "{secret}");
+
+    let got = c.webhook_get().await.unwrap();
+    assert_eq!(got["webhook_configured"], true);
+    assert!(got.get("webhook_secret").is_none(), "{got}");
+    assert!(!got.to_string().contains(&secret), "{got}");
+
+    let rot = c.webhook_rotate().await.unwrap();
+    let secret2 = rot["webhook_secret"].as_str().unwrap().to_string();
+    assert_ne!(secret2, secret);
+    assert!(secret2.starts_with("whsec_"));
+
+    let ping = c.webhook_test().await.unwrap();
+    assert_eq!(ping["ok"], true);
+    assert!(
+        ping["event_id"].as_str().unwrap().starts_with("test-"),
+        "{ping}"
+    );
+}
+
+#[tokio::test]
 async fn payments_list_empty_page() {
     let (base, _h) = serve().await;
     let c = machine(&base);

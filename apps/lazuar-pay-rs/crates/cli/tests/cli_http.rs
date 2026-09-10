@@ -451,6 +451,75 @@ async fn payment_link_and_refund_create() {
     assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
 }
 
+#[tokio::test]
+async fn webhook_put_get_rotate_test() {
+    let (base, _h) = serve().await;
+    let put = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "put",
+        "--url",
+        "http://127.0.0.1:9/hook",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(put["webhook_configured"], true);
+    let secret = put["webhook_secret"].as_str().unwrap().to_string();
+    assert!(secret.starts_with("whsec_"));
+
+    let got = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "get",
+    ]))
+    .await
+    .unwrap();
+    assert!(got.get("webhook_secret").is_none());
+    assert!(!got.to_string().contains(&secret), "{got}");
+
+    let rot = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "rotate",
+    ]))
+    .await
+    .unwrap();
+    assert_ne!(rot["webhook_secret"].as_str().unwrap(), secret.as_str());
+
+    let ping = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "webhook",
+        "test",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(ping["ok"], true);
+}
+
 fn chip_pem() -> String {
     std::fs::read_to_string(format!(
         "{}/../rails/tests/fixtures/chip/test_public.pem",
