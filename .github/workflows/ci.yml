@@ -87,6 +87,8 @@ jobs:
         run: cargo test -p workers
       - name: test pay-client and pay-cli (Docker Postgres 16)
         run: cargo test -p pay-client -p pay-cli
+      - name: test pay-mcp (stdio, no Docker)
+        run: cargo test -p pay-mcp
       - name: rails has no sqlx
         run: |
           set -euo pipefail

@@ -111,10 +111,10 @@ tasks:
       - docker compose -f apps/lazuar-pay/docker-compose.pay.yml -f apps/lazuar-pay-rs/docker-compose.overlay.yml --profile pay-rs up -d --build
 
   pay-rs:cli:
-    desc: TypeSpec /v1 HTTP client + lazuar-pay CLI (035/02)
+    desc: TypeSpec /v1 HTTP client + lazuar-pay CLI + MCP stdio (035/02)
     dir: apps/lazuar-pay-rs
     cmds:
-      - cargo test -p pay-client -p pay-cli
+      - cargo test -p pay-client -p pay-cli -p pay-mcp
 
   pay-rs:check:
     desc: Workspace check + domain purity (no tokio/sqlx/axum)
@@ -131,6 +131,7 @@ tasks:
         if cargo tree -p pay-client --edges normal -i sqlx 2>&1 | grep -q '^sqlx v'; then echo "sqlx in pay-client"; exit 1; fi
         if cargo tree -p pay-client --edges normal -i axum 2>&1 | grep -q '^axum v'; then echo "axum in pay-client"; exit 1; fi
         if cargo tree -p pay-cli --edges normal -i sqlx 2>&1 | grep -q '^sqlx v'; then echo "sqlx in pay-cli"; exit 1; fi
+        if cargo tree -p pay-mcp --edges normal -i sqlx 2>&1 | grep -q '^sqlx v'; then echo "sqlx in pay-mcp"; exit 1; fi
         if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then echo "domain forbids f64"; exit 1; fi
 
   # ==========================================

@@ -1836,6 +1836,7 @@ version = "0.1.0"
 dependencies = [
  "api",
  "axum",
+ "rails",
  "reqwest",
  "rust_decimal",
  "serde",
@@ -1845,6 +1846,16 @@ dependencies = [
  "testcontainers",
  "testcontainers-modules",
  "thiserror 2.0.20",
+ "tokio",
+]
+
+[[package]]
+name = "pay-mcp"
+version = "0.1.0"
+dependencies = [
+ "pay-client",
+ "rust_decimal",
+ "serde_json",
  "tokio",
 ]
 

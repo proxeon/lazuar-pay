@@ -18,6 +18,7 @@ crates/
   app/        # binary: serve | --api-only | --worker-only | --watcher-only
   client/     # HTTP TypeSpec /v1 client. No sqlx. (035/02)
   cli/        # lazuar-pay binary: whoami / ready / checkout / payments / receipts
+  mcp/        # lazuar-pay-mcp stdio (8 tools, no gateway PUT)
 migrations/   # sqlx migrate, one folder (pay_rs). P1 init is in.
 ```
 
@@ -56,7 +57,7 @@ cargo run -p lazuar-pay-rs -- --worker-only  # loops, no bind
 cargo run -p lazuar-pay-rs -- --watcher-only # Solana watch + bind only
 cargo run -p lazuar-pay-rs -- backfill        # dry-run terminal copy public → pay_rs
 cargo run -p lazuar-pay-rs -- backfill --apply
-cargo test -p pay-client -p pay-cli           # HTTP client + CLI (Docker)
+cargo test -p pay-client -p pay-cli -p pay-mcp  # HTTP client + CLI (Docker) + MCP stdio
 cargo run -p pay-cli -- --help
 # Canonical env (clap). pay-node aliases also work.
 #   LAZUAR_PAY_BASE_URL | PAY_API_URL     default http://localhost:8081
