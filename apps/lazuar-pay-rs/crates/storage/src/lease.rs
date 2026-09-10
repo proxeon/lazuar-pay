@@ -361,6 +361,90 @@ pub async fn enqueue_outbound(
     Ok(())
 }
 
+/// Plane C cursor: events *newer* than `after` event_id, oldest first (036/006 #29).
+#[derive(Clone, Debug)]
+pub struct OrgEvent {
+    pub event_id: String,
+    pub event_type: String,
+    pub payload: Value,
+    pub status: String,
+    pub created_at: OffsetDateTime,
+}
+
+pub async fn list_org_events(
+    pool: &PgPool,
+    tenant_id: &str,
+    limit: i64,
+    after: Option<&str>,
+) -> Result<(Vec<OrgEvent>, Option<String>), ApplyError> {
+    let cursor = if let Some(id) = after.map(str::trim).filter(|s| !s.is_empty()) {
+        sqlx::query(
+            "SELECT event_id, created_at FROM pay_rs.org_webhook_deliveries WHERE tenant_id = $1 AND event_id = $2",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await?
+    } else {
+        None
+    };
+    let rows = if let Some(c) = cursor {
+        let created: OffsetDateTime = c.try_get("created_at")?;
+        let eid: String = c.try_get("event_id")?;
+        sqlx::query(
+            r#"
+            SELECT event_id, event_type, payload_json::text, status, created_at
+              FROM pay_rs.org_webhook_deliveries
+             WHERE tenant_id = $1
+               AND (created_at > $2 OR (created_at = $2 AND event_id > $3))
+             ORDER BY created_at ASC, event_id ASC
+             LIMIT $4
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(created)
+        .bind(eid)
+        .bind(limit + 1)
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query(
+            r#"
+            SELECT event_id, event_type, payload_json::text, status, created_at
+              FROM pay_rs.org_webhook_deliveries
+             WHERE tenant_id = $1
+             ORDER BY created_at ASC, event_id ASC
+             LIMIT $2
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(limit + 1)
+        .fetch_all(pool)
+        .await?
+    };
+    let mut list = rows;
+    let mut next = None;
+    if list.len() as i64 > limit {
+        list.truncate(limit as usize);
+        if let Some(last) = list.last() {
+            next = Some(last.try_get::<String, _>("event_id")?);
+        }
+    }
+    let mut out = Vec::with_capacity(list.len());
+    for row in list {
+        let raw: String = row.try_get("payload_json")?;
+        let payload = serde_json::from_str(&raw).unwrap_or(Value::Object(Default::default()));
+        out.push(OrgEvent {
+            event_id: row.try_get("event_id")?,
+            event_type: row.try_get("event_type")?,
+            payload,
+            status: row.try_get("status")?,
+            created_at: row.try_get("created_at")?,
+        });
+    }
+    Ok((out, next))
+}
+
 pub async fn enqueue_outbound_pool(
     pool: &PgPool,
     tenant_id: &str,

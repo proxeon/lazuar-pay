@@ -27,9 +27,9 @@ pub use documents::{allocate as allocate_document, malaysia_year, DocSeries};
 pub use error::ApplyError;
 pub use lease::{
     claim_deliveries, claim_expired, claim_psync, claim_refunds, defer_psync, enqueue_outbound,
-    enqueue_outbound_pool, envelope, load_endpoint, mark_delivery, mark_refund, money_number,
-    sweep_retention, DeliveryRow, EndpointRow, ExpireCandidate, PsyncCandidate, RefundClaim,
-    RetentionCfg,
+    enqueue_outbound_pool, envelope, list_org_events, load_endpoint, mark_delivery, mark_refund,
+    money_number, sweep_retention, DeliveryRow, EndpointRow, ExpireCandidate, OrgEvent,
+    PsyncCandidate, RefundClaim, RetentionCfg,
 };
 pub use read::{AttemptView, PaymentView};
 pub use vault::{

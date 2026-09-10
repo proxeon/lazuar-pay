@@ -317,6 +317,17 @@ impl Client {
             .await
     }
 
+    /// `GET /v1/orgs/{org}/events` — Plane C cursor, newer than `after` (036/006 #29).
+    pub async fn events_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/events"), limit, after)
+            .await
+    }
+
     async fn get(&self, path: &str) -> Result<Value, Error> {
         let req = self
             .http

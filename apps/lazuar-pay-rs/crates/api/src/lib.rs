@@ -6,6 +6,7 @@ pub mod boot;
 pub mod checkouts;
 pub mod cors;
 pub mod errors;
+pub mod events;
 pub mod gateway;
 pub mod health;
 pub mod identity;
@@ -147,6 +148,7 @@ pub fn router(state: AppState) -> Router {
             put(one_webhooks::put).get(one_webhooks::get),
         )
         .route("/v1/orgs/{org_id}/ready", get(org_ready::get))
+        .route("/v1/orgs/{org_id}/events", get(events::list))
         .layer(cors::layer(&state.cors_origins))
         .layer(middleware::from_fn(request_id::echo))
         .with_state(state)

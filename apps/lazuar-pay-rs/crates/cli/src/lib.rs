@@ -78,6 +78,9 @@ pub enum Command {
     /// MYR one-off catalog (SPA creates a product then a payment-link).
     #[command(subcommand)]
     Product(ProductCmd),
+    /// Plane C delivery cursor (`GET /v1/orgs/{org}/events`).
+    #[command(subcommand)]
+    Events(EventsCmd),
 }
 
 #[derive(Debug, Subcommand)]
@@ -247,6 +250,17 @@ pub enum ProductCmd {
         description: Option<String>,
     },
     /// `GET /v1/orgs/{orgId}/products`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EventsCmd {
+    /// `GET /v1/orgs/{orgId}/events`. `after` is event_id; results are newer, oldest first.
     List {
         #[arg(long)]
         limit: Option<u32>,
@@ -573,6 +587,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         }
         Command::Product(ProductCmd::List { limit, after }) => {
             client.product_list(limit, after.as_deref()).await
+        }
+        Command::Events(EventsCmd::List { limit, after }) => {
+            client.events_list(limit, after.as_deref()).await
         }
     }
 }
@@ -969,6 +986,13 @@ mod tests {
         let checkouts = Cli::try_parse_from(["lazuar-pay", "checkout", "list"]).unwrap();
         match checkouts.command {
             Command::Checkout(CheckoutCmd::List { .. }) => {}
+            other => panic!("{other:?}"),
+        }
+        let ev = Cli::try_parse_from(["lazuar-pay", "events", "list", "--after", "evt_1"]).unwrap();
+        match ev.command {
+            Command::Events(EventsCmd::List { after, .. }) => {
+                assert_eq!(after.as_deref(), Some("evt_1"));
+            }
             other => panic!("{other:?}"),
         }
     }

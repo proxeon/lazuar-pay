@@ -714,6 +714,29 @@ async fn webhook_put_get_rotate_test() {
     .await
     .unwrap();
     assert_eq!(ping["ok"], true);
+    let events = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "events",
+        "list",
+        "--limit",
+        "20",
+    ]))
+    .await
+    .unwrap();
+    assert!(
+        events["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["event_id"] == ping["event_id"]),
+        "{events}"
+    );
 }
 
 fn chip_pem() -> String {

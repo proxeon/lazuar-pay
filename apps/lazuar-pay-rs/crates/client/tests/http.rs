@@ -285,6 +285,25 @@ async fn webhook_put_get_rotate_test_never_echo_on_get() {
         ping["event_id"].as_str().unwrap().starts_with("test-"),
         "{ping}"
     );
+    let events = c.events_list(Some(10), None).await.unwrap();
+    assert!(
+        events["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["event_id"] == ping["event_id"]),
+        "{events}"
+    );
+    let after = ping["event_id"].as_str().unwrap();
+    let page2 = c.events_list(Some(10), Some(after)).await.unwrap();
+    assert!(
+        page2["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|e| e["event_id"] != after),
+        "{page2}"
+    );
 }
 
 #[tokio::test]
