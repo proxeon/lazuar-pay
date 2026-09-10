@@ -54,6 +54,19 @@ async fn wait_until_paid_then_list_events() {
     let open = tool_json(&open);
     assert_eq!(open["status"], "open");
 
+    let timed = call(
+        &c,
+        "pay_wait_checkout",
+        json!({"id": id, "until": "paid", "timeout_secs": 0, "interval_ms": 50}),
+    )
+    .await;
+    assert_eq!(timed["result"]["isError"], true, "{timed}");
+    let body: Value =
+        serde_json::from_str(timed["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(body["status"], 408);
+    assert_eq!(body["title"], "Timeout");
+    assert_eq!(body["last"]["status"], "open");
+
     let res = reqwest::Client::new()
         .post(format!("{base}/v1/pay/{token}/start"))
         .header("Content-Type", "application/json")

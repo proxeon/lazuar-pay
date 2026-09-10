@@ -299,6 +299,17 @@ fn arg_u64(args: &Value, key: &str) -> Option<u64> {
         v.as_u64()
             .or_else(|| v.as_i64().and_then(|n| u64::try_from(n).ok()))
             .or_else(|| v.as_str().and_then(|s| s.trim().parse().ok()))
+            // Agents often send `5.0`. Only whole non-negative numbers count.
+            .or_else(|| {
+                let n = v.as_number()?;
+                let s = n.to_string();
+                let (int, frac) = s.split_once('.').unwrap_or((s.as_str(), "0"));
+                if frac.bytes().all(|b| b == b'0') {
+                    int.parse().ok()
+                } else {
+                    None
+                }
+            })
     })
 }
 
@@ -453,6 +464,15 @@ mod tests {
         assert_eq!(res["result"]["isError"], true);
         let text = res["result"]["content"][0]["text"].as_str().unwrap();
         assert!(text.contains("until must be"), "{text}");
+    }
+
+    #[test]
+    fn arg_u64_accepts_whole_json_numbers() {
+        let args = json!({"timeout_secs": 5, "interval_ms": "50", "float": 5.0, "frac": 1.5});
+        assert_eq!(arg_u64(&args, "timeout_secs"), Some(5));
+        assert_eq!(arg_u64(&args, "interval_ms"), Some(50));
+        assert_eq!(arg_u64(&args, "float"), Some(5));
+        assert_eq!(arg_u64(&args, "frac"), None);
     }
 
     #[tokio::test]
