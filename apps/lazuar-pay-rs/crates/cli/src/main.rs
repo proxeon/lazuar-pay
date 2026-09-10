@@ -8,6 +8,7 @@ async fn main() {
     let cli = Cli::parse();
     let compact = cli.compact;
     let quiet = cli.quiet;
+    let table = cli.table;
     // Env-only key is safer; `--quiet` also silences this hint.
     if !quiet && api_key_flag_on_argv(std::env::args()) {
         eprintln!(
@@ -15,7 +16,7 @@ async fn main() {
         );
     }
     match run(cli).await {
-        Ok(body) => match stdout_json(&body, compact, quiet) {
+        Ok(body) => match stdout_json(&body, compact, quiet, table) {
             Some(s) => println!("{s}"),
             None => {}
         },

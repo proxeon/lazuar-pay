@@ -38,6 +38,9 @@ pub struct Cli {
     /// Success is exit 0 with empty stdout. Errors still stderr JSON.
     #[arg(long, global = true)]
     pub quiet: bool,
+    /// Tab-separated table for `items` lists (036/006 #27). `--quiet` still wins.
+    #[arg(long, global = true)]
+    pub table: bool,
     /// JSON config path. Default `~/.config/lazuar-pay/config.json`. Never stores api_key.
     #[arg(long, env = "LAZUAR_PAY_CONFIG")]
     pub config: Option<PathBuf>,
@@ -367,15 +370,73 @@ fn nonempty(s: Option<String>) -> Option<String> {
     s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
 
-/// `--quiet` wins. `--compact` is one line. Neither → pretty JSON (036/006 #10).
-pub fn stdout_json(body: &Value, compact: bool, quiet: bool) -> Option<String> {
+/// `--quiet` wins. `--table` then `--compact`. Else pretty JSON.
+pub fn stdout_json(body: &Value, compact: bool, quiet: bool, table: bool) -> Option<String> {
     if quiet {
         return None;
+    }
+    if table {
+        return Some(format_table(body));
     }
     if compact {
         serde_json::to_string(body).ok()
     } else {
         serde_json::to_string_pretty(body).ok()
+    }
+}
+
+/// TSV: header from the first object's keys. Scalars only (036/006 #27).
+pub fn format_table(body: &Value) -> String {
+    if let Some(items) = body.get("items").and_then(Value::as_array) {
+        if items.is_empty() {
+            return "items\t(empty)\n".into();
+        }
+        let keys = table_keys(items);
+        let mut out = keys.join("\t");
+        out.push('\n');
+        for row in items {
+            let cells: Vec<String> = keys.iter().map(|k| cell(row.get(k))).collect();
+            out.push_str(&cells.join("\t"));
+            out.push('\n');
+        }
+        return out;
+    }
+    if let Some(obj) = body.as_object() {
+        let mut out = String::new();
+        for (k, v) in obj {
+            out.push_str(k);
+            out.push('\t');
+            out.push_str(&cell(Some(v)));
+            out.push('\n');
+        }
+        return out;
+    }
+    body.to_string()
+}
+
+fn table_keys(items: &[Value]) -> Vec<String> {
+    let prefer = ["id", "status", "provider", "amount", "currency", "number"];
+    let mut keys = Vec::new();
+    for p in prefer {
+        if items.iter().any(|i| i.get(p).is_some()) {
+            keys.push(p.to_string());
+        }
+    }
+    if let Some(obj) = items[0].as_object() {
+        for k in obj.keys() {
+            if !keys.iter().any(|e| e == k) {
+                keys.push(k.clone());
+            }
+        }
+    }
+    keys
+}
+
+fn cell(v: Option<&Value>) -> String {
+    match v {
+        None | Some(Value::Null) => String::new(),
+        Some(Value::String(s)) => s.replace(['\t', '\n'], " "),
+        Some(other) => other.to_string(),
     }
 }
 
@@ -737,13 +798,30 @@ mod tests {
     #[test]
     fn stdout_json_quiet_wins_then_compact() {
         let body = serde_json::json!({"ready": true});
-        assert!(stdout_json(&body, false, true).is_none());
-        assert!(stdout_json(&body, true, true).is_none());
-        let compact = stdout_json(&body, true, false).unwrap();
+        assert!(stdout_json(&body, false, true, false).is_none());
+        assert!(stdout_json(&body, true, true, false).is_none());
+        let compact = stdout_json(&body, true, false, false).unwrap();
         assert!(!compact.contains('\n'), "{compact}");
         assert!(compact.contains("\"ready\":true") || compact.contains("\"ready\": true"));
-        let pretty = stdout_json(&body, false, false).unwrap();
+        let pretty = stdout_json(&body, false, false, false).unwrap();
         assert!(pretty.contains('\n'), "{pretty}");
+    }
+
+    #[test]
+    fn format_table_lists_items() {
+        let body = serde_json::json!({
+            "items": [
+                {"id": "a", "status": "open", "amount": 10},
+                {"id": "b", "status": "paid", "amount": 5}
+            ]
+        });
+        let t = format_table(&body);
+        assert!(t.starts_with("id\tstatus\tamount\n"), "{t}");
+        assert!(t.contains("a\topen\t10\n"), "{t}");
+        assert!(t.contains("b\tpaid\t5\n"), "{t}");
+        assert!(stdout_json(&body, false, false, true)
+            .unwrap()
+            .contains('\t'));
     }
 
     #[test]
@@ -836,6 +914,7 @@ mod tests {
             org_id: None,
             compact: false,
             quiet: false,
+            table: false,
             config: None,
             profile: None,
             command: Command::Whoami,
