@@ -89,6 +89,17 @@ impl Client {
         self.get(&format!("/v1/checkouts/{id}")).await
     }
 
+    /// `GET /v1/orgs/{org}/checkouts` — crash recovery (036/006 #18).
+    pub async fn checkout_list(
+        &self,
+        limit: Option<u32>,
+        after: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get_list(&format!("/v1/orgs/{org}/checkouts"), limit, after)
+            .await
+    }
+
     /// Poll `GET /v1/checkouts/{id}` until wire `status` matches `until` (`paid`/`failed`/`expired`/`open`).
     pub async fn checkout_wait(
         &self,

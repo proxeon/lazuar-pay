@@ -54,6 +54,12 @@ async fn checkout_create_get_wire_status_open() {
     assert_eq!(got["id"], id);
     assert_eq!(got["status"], "open");
     assert_eq!(got["pay_url"], created["pay_url"]);
+    let page = c.checkout_list(Some(10), None).await.unwrap();
+    assert!(page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == id));
 }
 
 #[tokio::test]

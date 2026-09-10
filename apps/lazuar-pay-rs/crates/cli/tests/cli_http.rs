@@ -88,6 +88,27 @@ async fn whoami_ready_checkout() {
     assert_eq!(got["id"], id);
     assert_eq!(got["pay_url"], created["pay_url"]);
 
+    let listed = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "list",
+        "--limit",
+        "10",
+    ]))
+    .await
+    .unwrap();
+    assert!(listed["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|i| i["id"] == id));
+
     let pays = run(parse(&[
         "lazuar-pay",
         "--base-url",

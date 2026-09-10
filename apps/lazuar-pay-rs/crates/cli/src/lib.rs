@@ -97,6 +97,13 @@ pub enum CheckoutCmd {
     },
     /// `GET /v1/checkouts/{id}`
     Get { id: String },
+    /// `GET /v1/orgs/{orgId}/checkouts`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
     /// Poll GET until wire status matches `--until` (036/006 #4). Not a buyer start.
     Wait {
         id: String,
@@ -293,6 +300,9 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
                 .await
         }
         Command::Checkout(CheckoutCmd::Get { id }) => client.checkout_get(&id).await,
+        Command::Checkout(CheckoutCmd::List { limit, after }) => {
+            client.checkout_list(limit, after.as_deref()).await
+        }
         Command::Checkout(CheckoutCmd::Wait {
             id,
             until,
@@ -658,6 +668,11 @@ mod tests {
         let refunds = Cli::try_parse_from(["lazuar-pay", "refund", "list"]).unwrap();
         match refunds.command {
             Command::Refund(RefundCmd::List { .. }) => {}
+            other => panic!("{other:?}"),
+        }
+        let checkouts = Cli::try_parse_from(["lazuar-pay", "checkout", "list"]).unwrap();
+        match checkouts.command {
+            Command::Checkout(CheckoutCmd::List { .. }) => {}
             other => panic!("{other:?}"),
         }
     }
