@@ -67,12 +67,21 @@ impl Error {
         }
     }
 
+    /// Process exit for `lazuar-pay` (036/006 #11).
+    ///
+    /// 0 ok · 1 other 4xx · 2 config · 3 auth (401/403) · 4 not found ·
+    /// 5 server 5xx · 6 transport · 8 checkout-wait timeout.
     pub fn exit_code(&self) -> i32 {
         match self {
             Self::Config(_) => 2,
-            Self::WaitTimeout { .. } => 1,
-            Self::Api { status, .. } if (400..500).contains(status) => 1,
-            Self::Api { .. } | Self::Transport(_) => 1,
+            Self::WaitTimeout { .. } => 8,
+            Self::Transport(_) => 6,
+            Self::Api {
+                status: 401 | 403, ..
+            } => 3,
+            Self::Api { status: 404, .. } => 4,
+            Self::Api { status, .. } if (500..600).contains(status) => 5,
+            Self::Api { .. } => 1,
         }
     }
 }
@@ -105,5 +114,42 @@ mod tests {
         let j = Error::Config("no key".into()).to_json();
         assert_eq!(j["title"], "Config");
         assert_eq!(j["detail"], "no key");
+    }
+
+    #[test]
+    fn exit_codes_distinguish_auth_not_found_server_transport() {
+        assert_eq!(Error::Config("x".into()).exit_code(), 2);
+        assert_eq!(
+            Error::from_problem(401, &json!({"title": "Unauthorized"})).exit_code(),
+            3
+        );
+        assert_eq!(
+            Error::from_problem(403, &json!({"title": "Forbidden"})).exit_code(),
+            3
+        );
+        assert_eq!(
+            Error::from_problem(404, &json!({"title": "Not Found"})).exit_code(),
+            4
+        );
+        assert_eq!(
+            Error::from_problem(400, &json!({"title": "Bad Request"})).exit_code(),
+            1
+        );
+        assert_eq!(
+            Error::from_problem(409, &json!({"title": "Conflict"})).exit_code(),
+            1
+        );
+        assert_eq!(
+            Error::from_problem(500, &json!({"title": "Internal"})).exit_code(),
+            5
+        );
+        assert_eq!(
+            Error::WaitTimeout {
+                until: "paid".into(),
+                last: json!({"status": "open"}),
+            }
+            .exit_code(),
+            8
+        );
     }
 }

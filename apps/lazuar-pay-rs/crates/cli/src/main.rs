@@ -19,6 +19,7 @@ async fn main() {
                 Ok(s) => eprintln!("{s}"),
                 Err(_) => eprintln!("{e}"),
             }
+            // 0 ok · 1 4xx · 2 config · 3 auth · 4 404 · 5 5xx · 6 transport · 8 wait timeout.
             std::process::exit(e.exit_code());
         }
     }
