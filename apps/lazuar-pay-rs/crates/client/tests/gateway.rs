@@ -110,3 +110,91 @@ async fn put_test_fails_before_http() {
             .unwrap_err();
     assert!(err.to_string().contains("test processor"), "{err}");
 }
+
+fn chip_pem() -> String {
+    std::fs::read_to_string(format!(
+        "{}/../rails/tests/fixtures/chip/test_public.pem",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("chip test_public.pem")
+}
+
+async fn put_view(c: &Client, body: Value, secret: &str) -> Value {
+    let put = c.gateway_put(body).await.unwrap();
+    assert_eq!(put["configured"], true);
+    let dumped = put.to_string();
+    assert!(!dumped.contains(secret), "{dumped}");
+    assert!(put.get("secret").is_none());
+    assert!(put.get("webhook_secret").is_none());
+    put
+}
+
+#[tokio::test]
+async fn put_file_rails_chip_billplz_xendit_razorpay() {
+    let _g = GATE.lock().await;
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let pem = chip_pem();
+
+    let chip = put_view(
+        &c,
+        json!({
+            "provider": "chip",
+            "secret": "chip_sk",
+            "webhook_secret": pem,
+            "public_merchant_id": "brand_1",
+            "environment": "test"
+        }),
+        "chip_sk",
+    )
+    .await;
+    assert_eq!(chip["provider"], "chip");
+    assert!(!chip.to_string().contains("BEGIN PUBLIC KEY"));
+
+    let bp = put_view(
+        &c,
+        json!({
+            "provider": "billplz",
+            "secret": "bp_sk",
+            "webhook_secret": "xsig",
+            "public_merchant_id": "col_1",
+            "environment": "test"
+        }),
+        "bp_sk",
+    )
+    .await;
+    assert_eq!(bp["provider"], "billplz");
+    assert!(!bp.to_string().contains("xsig"));
+
+    let xn = put_view(
+        &c,
+        json!({
+            "provider": "xendit",
+            "secret": "xnd_sk",
+            "webhook_secret": "tok_1",
+            "environment": "test"
+        }),
+        "xnd_sk",
+    )
+    .await;
+    assert_eq!(xn["provider"], "xendit");
+    assert!(!xn.to_string().contains("tok_1"));
+
+    let rz = put_view(
+        &c,
+        json!({
+            "provider": "razorpay",
+            "secret": "rzp_test:secret",
+            "webhook_secret": "wh_rzp",
+            "environment": "test"
+        }),
+        "rzp_test:secret",
+    )
+    .await;
+    assert_eq!(rz["provider"], "razorpay");
+    assert!(!rz.to_string().contains("wh_rzp"));
+
+    let got = c.gateway_get("chip").await.unwrap();
+    assert_eq!(got["configured"], true);
+    assert!(got.get("secret").is_none());
+}

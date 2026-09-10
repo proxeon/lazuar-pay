@@ -58,7 +58,8 @@ cargo run -p lazuar-pay-rs -- backfill        # dry-run terminal copy public →
 cargo run -p lazuar-pay-rs -- backfill --apply
 cargo test -p pay-client -p pay-cli           # HTTP client + CLI (Docker)
 cargo run -p pay-cli -- --help
-# LAZUAR_PAY_API_KEY=lzr_sk_… LAZUAR_PAY_ORG_ID=… cargo run -p pay-cli -- checkout create --provider test --amount 10.00
+# LAZUAR_PAY_API_KEY=lzr_sk_… LAZUAR_PAY_ORG_ID=… cargo run -p pay-cli -- checkout create --provider test --amount 10.00 --idempotency-key k1
+# pay-node aliases PAY_API_KEY / PAY_ORG_ID / PAY_API_URL also work.
 # cargo run -p pay-cli -- gateway put --file ./secrets/stripe.json
 # cargo run -p pay-cli -- gateway list
 ```

@@ -15,7 +15,11 @@ async fn main() {
             }
         },
         Err(e) => {
-            eprintln!("{e}");
+            // Agents parse problem+json (036/006 #8). Human Display is in `detail`.
+            match serde_json::to_string(&e.to_json()) {
+                Ok(s) => eprintln!("{s}"),
+                Err(_) => eprintln!("{e}"),
+            }
             std::process::exit(e.exit_code());
         }
     }

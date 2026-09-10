@@ -28,12 +28,12 @@ impl Config {
         })
     }
 
-    /// `LAZUAR_PAY_BASE_URL` / `LAZUAR_PAY_API_KEY` / `LAZUAR_PAY_ORG_ID`.
+    /// Canonical `LAZUAR_PAY_*` then pay-node `PAY_*` aliases (036/006 #3).
     pub fn from_env() -> Result<Self, Error> {
         Self::from_parts(
-            std::env::var("LAZUAR_PAY_BASE_URL").ok(),
-            std::env::var("LAZUAR_PAY_API_KEY").ok(),
-            std::env::var("LAZUAR_PAY_ORG_ID").ok(),
+            env_first(&["LAZUAR_PAY_BASE_URL", "PAY_API_URL"]),
+            env_first(&["LAZUAR_PAY_API_KEY", "PAY_API_KEY"]),
+            env_first(&["LAZUAR_PAY_ORG_ID", "PAY_ORG_ID"]),
         )
     }
 
@@ -68,6 +68,19 @@ impl Config {
     pub fn authorization(&self) -> String {
         format!("Bearer {}", self.api_key)
     }
+}
+
+/// First non-empty env var. Canonical names win over pay-node aliases.
+pub fn env_first(names: &[&str]) -> Option<String> {
+    for n in names {
+        if let Ok(v) = std::env::var(n) {
+            let t = v.trim();
+            if !t.is_empty() {
+                return Some(t.to_string());
+            }
+        }
+    }
+    None
 }
 
 fn normalize_base(raw: &str) -> Result<String, Error> {
@@ -149,5 +162,10 @@ mod tests {
     fn missing_key_from_parts() {
         let err = Config::from_parts(None, None, None).unwrap_err();
         assert!(err.to_string().contains("LAZUAR_PAY_API_KEY"), "{err}");
+    }
+
+    #[test]
+    fn env_first_skips_empty() {
+        assert!(env_first(&["LAZUAR_PAY_CLI_TEST_MISSING"]).is_none());
     }
 }

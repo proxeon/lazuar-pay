@@ -24,6 +24,7 @@ tokio.workspace = true
 [dev-dependencies]
 api.workspace = true
 axum.workspace = true
+reqwest.workspace = true
 sqlx.workspace = true
 storage.workspace = true
 testcontainers = { version = "0.25", features = ["blocking"] }

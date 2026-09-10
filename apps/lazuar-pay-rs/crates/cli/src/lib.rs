@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 use clap::Subcommand;
-use pay_client::{validate_gateway_put, Client, Config, Error};
+use pay_client::{env_first, validate_gateway_put, Client, Config, Error};
 use rust_decimal::Decimal;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -20,13 +20,14 @@ pub use clap::Parser;
     version
 )]
 pub struct Cli {
-    /// Pay origin, no trailing slash. Env `LAZUAR_PAY_BASE_URL`.
+    /// Pay origin, no trailing slash. Env `LAZUAR_PAY_BASE_URL` or `PAY_API_URL`.
     #[arg(long, env = "LAZUAR_PAY_BASE_URL")]
     pub base_url: Option<String>,
-    /// One `lzr_sk_…` (or Testing `test-writer`). Env `LAZUAR_PAY_API_KEY`.
-    #[arg(long, env = "LAZUAR_PAY_API_KEY")]
+    /// One `lzr_sk_…` (or Testing `test-writer`). Env `LAZUAR_PAY_API_KEY` or `PAY_API_KEY`.
+    /// `hide_env_values`: `--help` must not print the key (036/006 #1).
+    #[arg(long, env = "LAZUAR_PAY_API_KEY", hide_env_values = true)]
     pub api_key: Option<String>,
-    /// One tenant id. Env `LAZUAR_PAY_ORG_ID`.
+    /// One tenant id. Env `LAZUAR_PAY_ORG_ID` or `PAY_ORG_ID`.
     #[arg(long, env = "LAZUAR_PAY_ORG_ID")]
     pub org_id: Option<String>,
     #[command(subcommand)]
@@ -41,6 +42,11 @@ pub enum Command {
     Ready,
     #[command(subcommand)]
     Checkout(CheckoutCmd),
+    #[command(subcommand)]
+    Refund(RefundCmd),
+    /// Occupancy mint (SPA Pay links).
+    #[command(name = "payment-link", subcommand)]
+    PaymentLink(PaymentLinkCmd),
     /// `GET /v1/orgs/{orgId}/payments`
     Payments {
         #[arg(long)]
@@ -66,11 +72,54 @@ pub enum CheckoutCmd {
         amount: String,
         #[arg(long, default_value = "MYR")]
         currency: String,
+        /// Required so a retry does not mint a second charge (036/006 #7).
         #[arg(long)]
-        idempotency_key: Option<String>,
+        idempotency_key: String,
     },
     /// `GET /v1/checkouts/{id}`
     Get { id: String },
+    /// Poll GET until wire status matches `--until` (036/006 #4). Not a buyer start.
+    Wait {
+        id: String,
+        #[arg(long, default_value = "paid")]
+        until: String,
+        #[arg(long, default_value_t = 900)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 500)]
+        interval_ms: u64,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum RefundCmd {
+    /// `POST /v1/orgs/{orgId}/refunds`
+    Create {
+        #[arg(long)]
+        checkout: String,
+        #[arg(long)]
+        amount: Option<String>,
+        #[arg(long)]
+        idempotency_key: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PaymentLinkCmd {
+    /// `POST /v1/payment-links`
+    Create {
+        #[arg(long)]
+        provider: String,
+        #[arg(long)]
+        amount: String,
+        #[arg(long, default_value = "MYR")]
+        currency: String,
+        #[arg(long)]
+        max_payers: Option<i32>,
+        #[arg(long, default_value_t = false)]
+        unlimited: bool,
+        #[arg(long)]
+        label: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -103,11 +152,16 @@ pub enum GatewayCmd {
 }
 
 pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
+    // clap reads LAZUAR_PAY_*; pay-node aliases fill the rest (036/006 #3).
     Config::from_parts(
-        cli.base_url.clone(),
-        cli.api_key.clone(),
-        cli.org_id.clone(),
+        nonempty(cli.base_url.clone()).or_else(|| env_first(&["PAY_API_URL"])),
+        nonempty(cli.api_key.clone()).or_else(|| env_first(&["PAY_API_KEY"])),
+        nonempty(cli.org_id.clone()).or_else(|| env_first(&["PAY_ORG_ID"])),
     )
+}
+
+fn nonempty(s: Option<String>) -> Option<String> {
+    s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
 
 pub async fn run(cli: Cli) -> Result<Value, Error> {
@@ -124,10 +178,58 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
         }) => {
             let amount = parse_amount(&amount)?;
             client
-                .checkout_create(&provider, amount, &currency, idempotency_key.as_deref())
+                .checkout_create(&provider, amount, &currency, &idempotency_key)
                 .await
         }
         Command::Checkout(CheckoutCmd::Get { id }) => client.checkout_get(&id).await,
+        Command::Checkout(CheckoutCmd::Wait {
+            id,
+            until,
+            timeout_secs,
+            interval_ms,
+        }) => {
+            client
+                .checkout_wait(
+                    &id,
+                    &until,
+                    std::time::Duration::from_secs(timeout_secs),
+                    std::time::Duration::from_millis(interval_ms),
+                )
+                .await
+        }
+        Command::Refund(RefundCmd::Create {
+            checkout,
+            amount,
+            idempotency_key,
+        }) => {
+            let amount = match amount {
+                Some(a) => Some(parse_amount(&a)?),
+                None => None,
+            };
+            client
+                .refund_create(&checkout, amount, &idempotency_key)
+                .await
+        }
+        Command::PaymentLink(PaymentLinkCmd::Create {
+            provider,
+            amount,
+            currency,
+            max_payers,
+            unlimited,
+            label,
+        }) => {
+            let amount = parse_amount(&amount)?;
+            client
+                .payment_link_create(
+                    &provider,
+                    amount,
+                    &currency,
+                    max_payers,
+                    unlimited,
+                    label.as_deref(),
+                )
+                .await
+        }
         Command::Payments { limit, after } => client.payments_list(limit, after.as_deref()).await,
         Command::Receipts(ReceiptsCmd::List { limit, after }) => {
             client.receipts_list(limit, after.as_deref()).await
@@ -175,12 +277,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn create_requires_provider_and_amount() {
+    fn create_requires_provider_amount_and_idempotency() {
         let err = Cli::try_parse_from(["lazuar-pay", "checkout", "create"]).unwrap_err();
         let msg = err.to_string();
         assert!(
             msg.contains("provider") || msg.contains("required"),
             "{msg}"
+        );
+        let err = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+        ])
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("idempotency-key"),
+            "{}",
+            err.to_string()
         );
     }
 
@@ -200,6 +317,8 @@ mod tests {
             "test",
             "--amount",
             "10.00",
+            "--idempotency-key",
+            "k1",
         ])
         .unwrap();
         match cli.command {
@@ -272,6 +391,18 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn help_hides_api_key_value() {
+        let err = Cli::try_parse_from(["lazuar-pay", "--help"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("LAZUAR_PAY_API_KEY") || msg.contains("api-key"),
+            "{msg}"
+        );
+        assert!(!msg.contains("lzr_sk_live"), "{msg}");
+        assert!(!msg.contains("sk_live"), "{msg}");
     }
 
     #[test]

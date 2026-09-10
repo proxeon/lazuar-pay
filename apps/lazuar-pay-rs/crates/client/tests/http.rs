@@ -4,6 +4,7 @@ mod support;
 
 use pay_client::{Client, Config, Error};
 use rust_decimal::Decimal;
+use std::time::Duration;
 use support::serve;
 
 fn machine(base: &str) -> Client {
@@ -28,7 +29,7 @@ async fn checkout_create_get_wire_status_open() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let created = c
-        .checkout_create("test", amount, "MYR", Some("cli-idem-1"))
+        .checkout_create("test", amount, "MYR", "cli-idem-1")
         .await
         .unwrap();
     assert_eq!(created["org_id"], "t1");
@@ -55,11 +56,11 @@ async fn checkout_idempotent_replay() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let a = c
-        .checkout_create("test", amount, "MYR", Some("same-key"))
+        .checkout_create("test", amount, "MYR", "same-key")
         .await
         .unwrap();
     let b = c
-        .checkout_create("test", amount, "MYR", Some("same-key"))
+        .checkout_create("test", amount, "MYR", "same-key")
         .await
         .unwrap();
     assert_eq!(a["id"], b["id"]);
@@ -71,6 +72,115 @@ async fn missing_org_is_config_error() {
     let c = Client::new(Config::new(&base, "lzr_sk_test", None).unwrap()).unwrap();
     let err = c.ready().await.unwrap_err();
     assert!(matches!(err, Error::Config(_)), "{err}");
+}
+
+#[tokio::test]
+async fn checkout_wait_until_open_is_immediate() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let created = c
+        .checkout_create("test", amount, "MYR", "wait-open")
+        .await
+        .unwrap();
+    let id = created["id"].as_str().unwrap();
+    let got = c
+        .checkout_wait(
+            id,
+            "open",
+            Duration::from_secs(2),
+            Duration::from_millis(50),
+        )
+        .await
+        .unwrap();
+    assert_eq!(got["status"], "open");
+}
+
+#[tokio::test]
+async fn checkout_wait_paid_times_out_while_open() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let created = c
+        .checkout_create("test", amount, "MYR", "wait-paid")
+        .await
+        .unwrap();
+    let id = created["id"].as_str().unwrap();
+    let err = c
+        .checkout_wait(
+            id,
+            "paid",
+            Duration::from_millis(200),
+            Duration::from_millis(50),
+        )
+        .await
+        .unwrap_err();
+    match err {
+        Error::WaitTimeout { until, last } => {
+            assert_eq!(until, "paid");
+            assert_eq!(last["status"], "open");
+            let j = Error::WaitTimeout {
+                until: until.clone(),
+                last: last.clone(),
+            }
+            .to_json();
+            assert_eq!(j["status"], 408);
+        }
+        other => panic!("{other}"),
+    }
+}
+
+#[tokio::test]
+async fn empty_idempotency_is_config() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let err = c
+        .checkout_create("test", amount, "MYR", "  ")
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("idempotency-key"), "{err}");
+}
+
+#[tokio::test]
+async fn refund_create_after_test_start() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let created = c
+        .checkout_create("test", amount, "MYR", "refund-1")
+        .await
+        .unwrap();
+    let token = created["public_token"].as_str().unwrap();
+    let id = created["id"].as_str().unwrap();
+    let res = reqwest::Client::new()
+        .post(format!("{base}/v1/pay/{token}/start"))
+        .header("Content-Type", "application/json")
+        .body("{}")
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success(), "{}", res.status());
+    let paid = c.checkout_get(id).await.unwrap();
+    assert_eq!(paid["status"], "paid");
+    let refund = c.refund_create(id, None, "refund-idem-1").await.unwrap();
+    assert_eq!(refund["status"], "succeeded");
+    assert_eq!(refund["reason"], "merchant");
+    assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
+}
+
+#[tokio::test]
+async fn payment_link_create_test_rail() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let link = c
+        .payment_link_create("test", amount, "MYR", Some(3), false, Some("seat"))
+        .await
+        .unwrap();
+    assert_eq!(link["provider"], "test");
+    assert!(link["pay_url"].as_str().unwrap().contains("/c/"));
+    assert_eq!(link["unlimited"], false);
 }
 
 #[tokio::test]

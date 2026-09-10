@@ -8,12 +8,13 @@ mod config;
 mod error;
 mod gateway;
 
-pub use config::Config;
+pub use config::{env_first, Config};
 pub use error::Error;
 pub use gateway::validate_gateway_put;
 
 use rust_decimal::Decimal;
 use serde_json::{json, Map, Number, Value};
+use std::time::{Duration, Instant};
 
 /// Merchant `/v1` caller. Holds one reqwest client (no redirects — same posture as
 /// outbound webhooks; a 3xx must not silently POST a mint at another origin).
@@ -45,25 +46,99 @@ impl Client {
     }
 
     /// `POST /v1/checkouts`. Amount is a JSON number (09 lock 7), never a string, never f64.
+    /// Idempotency-Key is required so agent retries do not mint a second charge (036/006 #7).
     pub async fn checkout_create(
         &self,
         provider: &str,
         amount: Decimal,
         currency: &str,
-        idempotency_key: Option<&str>,
+        idempotency_key: &str,
     ) -> Result<Value, Error> {
         let org = self.cfg.org_id()?;
+        let key = require_idempotency(idempotency_key)?;
         let body = json!({
             "org_id": org,
             "provider": provider,
             "amount": decimal_number(amount)?,
             "currency": currency,
         });
-        self.post("/v1/checkouts", body, idempotency_key).await
+        self.post("/v1/checkouts", body, Some(key)).await
     }
 
     pub async fn checkout_get(&self, id: &str) -> Result<Value, Error> {
         self.get(&format!("/v1/checkouts/{id}")).await
+    }
+
+    /// Poll `GET /v1/checkouts/{id}` until wire `status` matches `until` (`paid`/`failed`/`expired`/`open`).
+    pub async fn checkout_wait(
+        &self,
+        id: &str,
+        until: &str,
+        timeout: Duration,
+        interval: Duration,
+    ) -> Result<Value, Error> {
+        let until = until.trim().to_ascii_lowercase();
+        if !matches!(until.as_str(), "paid" | "failed" | "expired" | "open") {
+            return Err(Error::Config(
+                "until must be paid, failed, expired, or open".into(),
+            ));
+        }
+        let deadline = Instant::now() + timeout;
+        let mut last = self.checkout_get(id).await?;
+        loop {
+            if last.get("status").and_then(Value::as_str) == Some(until.as_str()) {
+                return Ok(last);
+            }
+            if Instant::now() >= deadline {
+                return Err(Error::WaitTimeout { until, last });
+            }
+            tokio::time::sleep(interval).await;
+            last = self.checkout_get(id).await?;
+        }
+    }
+
+    /// `POST /v1/orgs/{org}/refunds`. Idempotency-Key is required (036/006 #7).
+    pub async fn refund_create(
+        &self,
+        checkout_id: &str,
+        amount: Option<Decimal>,
+        idempotency_key: &str,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let key = require_idempotency(idempotency_key)?;
+        let mut body = json!({ "checkout_id": checkout_id });
+        if let Some(a) = amount {
+            body["amount"] = decimal_number(a)?;
+        }
+        self.post(&format!("/v1/orgs/{org}/refunds"), body, Some(key))
+            .await
+    }
+
+    /// `POST /v1/payment-links`. Occupancy mint (SPA "Pay links").
+    pub async fn payment_link_create(
+        &self,
+        provider: &str,
+        amount: Decimal,
+        currency: &str,
+        max_payers: Option<i32>,
+        unlimited: bool,
+        label: Option<&str>,
+    ) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let mut body = json!({
+            "org_id": org,
+            "provider": provider,
+            "amount": decimal_number(amount)?,
+            "currency": currency,
+            "unlimited": unlimited,
+        });
+        if let Some(n) = max_payers {
+            body["max_payers"] = json!(n);
+        }
+        if let Some(l) = label.map(str::trim).filter(|s| !s.is_empty()) {
+            body["label"] = json!(l);
+        }
+        self.post("/v1/payment-links", body, None).await
     }
 
     pub async fn payments_list(
@@ -189,6 +264,14 @@ impl Client {
         }
         Err(Error::from_problem(status, &body))
     }
+}
+
+fn require_idempotency(raw: &str) -> Result<&str, Error> {
+    let key = raw.trim();
+    if key.is_empty() {
+        return Err(Error::Config("idempotency-key is required".into()));
+    }
+    Ok(key)
 }
 
 /// Host amounts are JSON numbers. `rust_decimal` default serde is a string — do not use it

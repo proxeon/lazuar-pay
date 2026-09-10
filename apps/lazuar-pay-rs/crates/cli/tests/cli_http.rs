@@ -133,6 +133,8 @@ async fn unknown_provider_is_api_error() {
         "paypal",
         "--amount",
         "10",
+        "--idempotency-key",
+        "paypal-1",
     ]))
     .await
     .unwrap_err();
@@ -271,4 +273,151 @@ async fn gateway_put_file_solana_secret_never_sent() {
     assert!(msg.contains("does not take an API secret"), "{msg}");
     assert!(!msg.contains("sk_test_should_not_leave_disk"), "{msg}");
     let _ = std::fs::remove_file(&path);
+}
+
+#[tokio::test]
+async fn checkout_wait_open_and_timeout() {
+    let (base, _h) = serve().await;
+    let created = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "create",
+        "--provider",
+        "test",
+        "--amount",
+        "10.00",
+        "--idempotency-key",
+        "wait-cli-1",
+    ]))
+    .await
+    .unwrap();
+    let id = created["id"].as_str().unwrap();
+    let open = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "wait",
+        id,
+        "--until",
+        "open",
+        "--timeout-secs",
+        "2",
+        "--interval-ms",
+        "50",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(open["status"], "open");
+
+    let err = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "wait",
+        id,
+        "--until",
+        "paid",
+        "--timeout-secs",
+        "1",
+        "--interval-ms",
+        "50",
+    ]))
+    .await
+    .unwrap_err();
+    let j = err.to_json();
+    assert_eq!(j["status"], 408);
+    assert_eq!(j["last"]["status"], "open");
+}
+
+#[tokio::test]
+async fn payment_link_and_refund_create() {
+    let (base, _h) = serve().await;
+    let link = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "payment-link",
+        "create",
+        "--provider",
+        "test",
+        "--amount",
+        "10.00",
+        "--max-payers",
+        "2",
+        "--label",
+        "seat",
+    ]))
+    .await
+    .unwrap();
+    assert!(link["pay_url"].as_str().unwrap().contains("/c/"));
+
+    let created = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "create",
+        "--provider",
+        "test",
+        "--amount",
+        "10.00",
+        "--idempotency-key",
+        "refund-cli-1",
+    ]))
+    .await
+    .unwrap();
+    let token = created["public_token"].as_str().unwrap();
+    let id = created["id"].as_str().unwrap();
+    let res = reqwest::Client::new()
+        .post(format!("{base}/v1/pay/{token}/start"))
+        .header("Content-Type", "application/json")
+        .body("{}")
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success(), "{}", res.status());
+
+    let refund = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "refund",
+        "create",
+        "--checkout",
+        id,
+        "--idempotency-key",
+        "refund-cli-idem",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(refund["status"], "succeeded");
+    assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
 }
