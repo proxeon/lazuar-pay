@@ -16,6 +16,14 @@ use rust_decimal::Decimal;
 use serde_json::{json, Map, Number, Value};
 use std::time::{Duration, Instant};
 
+/// Optional TypeSpec fields on `POST /v1/checkouts` (036/006 #13).
+#[derive(Clone, Debug, Default)]
+pub struct CheckoutExtras<'a> {
+    pub success_url: Option<&'a str>,
+    pub cancel_url: Option<&'a str>,
+    pub product_id: Option<&'a str>,
+}
+
 /// Merchant `/v1` caller. Holds one reqwest client (no redirects — same posture as
 /// outbound webhooks; a 3xx must not silently POST a mint at another origin).
 pub struct Client {
@@ -53,15 +61,26 @@ impl Client {
         amount: Decimal,
         currency: &str,
         idempotency_key: &str,
+        extras: CheckoutExtras<'_>,
     ) -> Result<Value, Error> {
         let org = self.cfg.org_id()?;
         let key = require_idempotency(idempotency_key)?;
-        let body = json!({
+        let mut body = json!({
             "org_id": org,
             "provider": provider,
             "amount": decimal_number(amount)?,
             "currency": currency,
         });
+        if let Some(u) = extras.success_url.map(str::trim).filter(|s| !s.is_empty()) {
+            body["success_url"] = json!(u);
+        }
+        if let Some(u) = extras.cancel_url.map(str::trim).filter(|s| !s.is_empty()) {
+            body["cancel_url"] = json!(u);
+        }
+        if let Some(p) = extras.product_id.map(str::trim).filter(|s| !s.is_empty()) {
+            // TypeSpec optional. Host standalone mint currently does not persist it.
+            body["product_id"] = json!(p);
+        }
         self.post("/v1/checkouts", body, Some(key)).await
     }
 

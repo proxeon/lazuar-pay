@@ -2,7 +2,7 @@
 
 mod support;
 
-use pay_client::{Client, Config, Error};
+use pay_client::{CheckoutExtras, Client, Config, Error};
 use rust_decimal::Decimal;
 use std::time::Duration;
 use support::serve;
@@ -29,7 +29,13 @@ async fn checkout_create_get_wire_status_open() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let created = c
-        .checkout_create("test", amount, "MYR", "cli-idem-1")
+        .checkout_create(
+            "test",
+            amount,
+            "MYR",
+            "cli-idem-1",
+            CheckoutExtras::default(),
+        )
         .await
         .unwrap();
     assert_eq!(created["org_id"], "t1");
@@ -51,16 +57,39 @@ async fn checkout_create_get_wire_status_open() {
 }
 
 #[tokio::test]
+async fn checkout_create_sends_success_and_cancel_urls() {
+    let (base, _h) = serve().await;
+    let c = machine(&base);
+    let amount = Decimal::from_str_exact("10.00").unwrap();
+    let created = c
+        .checkout_create(
+            "test",
+            amount,
+            "MYR",
+            "urls-1",
+            CheckoutExtras {
+                success_url: Some("https://app.example/ok"),
+                cancel_url: Some("https://app.example/no"),
+                product_id: None,
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(created["success_url"], "https://app.example/ok");
+    assert_eq!(created["cancel_url"], "https://app.example/no");
+}
+
+#[tokio::test]
 async fn checkout_idempotent_replay() {
     let (base, _h) = serve().await;
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let a = c
-        .checkout_create("test", amount, "MYR", "same-key")
+        .checkout_create("test", amount, "MYR", "same-key", CheckoutExtras::default())
         .await
         .unwrap();
     let b = c
-        .checkout_create("test", amount, "MYR", "same-key")
+        .checkout_create("test", amount, "MYR", "same-key", CheckoutExtras::default())
         .await
         .unwrap();
     assert_eq!(a["id"], b["id"]);
@@ -80,7 +109,13 @@ async fn checkout_wait_until_open_is_immediate() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let created = c
-        .checkout_create("test", amount, "MYR", "wait-open")
+        .checkout_create(
+            "test",
+            amount,
+            "MYR",
+            "wait-open",
+            CheckoutExtras::default(),
+        )
         .await
         .unwrap();
     let id = created["id"].as_str().unwrap();
@@ -102,7 +137,13 @@ async fn checkout_wait_paid_times_out_while_open() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let created = c
-        .checkout_create("test", amount, "MYR", "wait-paid")
+        .checkout_create(
+            "test",
+            amount,
+            "MYR",
+            "wait-paid",
+            CheckoutExtras::default(),
+        )
         .await
         .unwrap();
     let id = created["id"].as_str().unwrap();
@@ -136,7 +177,7 @@ async fn empty_idempotency_is_config() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let err = c
-        .checkout_create("test", amount, "MYR", "  ")
+        .checkout_create("test", amount, "MYR", "  ", CheckoutExtras::default())
         .await
         .unwrap_err();
     assert!(err.to_string().contains("idempotency-key"), "{err}");
@@ -148,7 +189,7 @@ async fn refund_create_after_test_start() {
     let c = machine(&base);
     let amount = Decimal::from_str_exact("10.00").unwrap();
     let created = c
-        .checkout_create("test", amount, "MYR", "refund-1")
+        .checkout_create("test", amount, "MYR", "refund-1", CheckoutExtras::default())
         .await
         .unwrap();
     let token = created["public_token"].as_str().unwrap();

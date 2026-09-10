@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 use clap::Subcommand;
-use pay_client::{env_first, validate_gateway_put, Client, Config, Error};
+use pay_client::{env_first, validate_gateway_put, CheckoutExtras, Client, Config, Error};
 use rust_decimal::Decimal;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -77,6 +77,15 @@ pub enum CheckoutCmd {
         /// Required so a retry does not mint a second charge (036/006 #7).
         #[arg(long)]
         idempotency_key: String,
+        /// Buyer return URL after pay (TypeSpec; host persists).
+        #[arg(long)]
+        success_url: Option<String>,
+        /// Buyer return URL on cancel (TypeSpec; host persists).
+        #[arg(long)]
+        cancel_url: Option<String>,
+        /// TypeSpec optional. Catalog mint uses `payment-link create --product-id`.
+        #[arg(long)]
+        product_id: Option<String>,
     },
     /// `GET /v1/checkouts/{id}`
     Get { id: String },
@@ -200,10 +209,23 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
             amount,
             currency,
             idempotency_key,
+            success_url,
+            cancel_url,
+            product_id,
         }) => {
             let amount = parse_amount(&amount)?;
             client
-                .checkout_create(&provider, amount, &currency, &idempotency_key)
+                .checkout_create(
+                    &provider,
+                    amount,
+                    &currency,
+                    &idempotency_key,
+                    CheckoutExtras {
+                        success_url: success_url.as_deref(),
+                        cancel_url: cancel_url.as_deref(),
+                        product_id: product_id.as_deref(),
+                    },
+                )
                 .await
         }
         Command::Checkout(CheckoutCmd::Get { id }) => client.checkout_get(&id).await,
@@ -356,14 +378,28 @@ mod tests {
             "10.00",
             "--idempotency-key",
             "k1",
+            "--success-url",
+            "https://app.example/ok",
+            "--cancel-url",
+            "https://app.example/no",
+            "--product-id",
+            "prod_1",
         ])
         .unwrap();
         match cli.command {
             Command::Checkout(CheckoutCmd::Create {
-                provider, amount, ..
+                provider,
+                amount,
+                success_url,
+                cancel_url,
+                product_id,
+                ..
             }) => {
                 assert_eq!(provider, "test");
                 assert_eq!(amount, "10.00");
+                assert_eq!(success_url.as_deref(), Some("https://app.example/ok"));
+                assert_eq!(cancel_url.as_deref(), Some("https://app.example/no"));
+                assert_eq!(product_id.as_deref(), Some("prod_1"));
             }
             other => panic!("{other:?}"),
         }
