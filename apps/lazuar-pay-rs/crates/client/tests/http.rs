@@ -161,7 +161,15 @@ async fn refund_create_after_test_start() {
         .await
         .unwrap();
     assert!(res.status().is_success(), "{}", res.status());
-    let paid = c.checkout_get(id).await.unwrap();
+    let paid = c
+        .checkout_wait(
+            id,
+            "paid",
+            Duration::from_secs(5),
+            Duration::from_millis(50),
+        )
+        .await
+        .unwrap();
     assert_eq!(paid["status"], "paid");
     let refund = c.refund_create(id, None, "refund-idem-1").await.unwrap();
     assert_eq!(refund["status"], "succeeded");

@@ -24,7 +24,7 @@ pub struct Cli {
     #[arg(long, env = "LAZUAR_PAY_BASE_URL")]
     pub base_url: Option<String>,
     /// One `lzr_sk_…` (or Testing `test-writer`). Env `LAZUAR_PAY_API_KEY` or `PAY_API_KEY`.
-    /// `hide_env_values`: `--help` must not print the key (036/006 #1).
+    // 036/006 #1: hide_env_values so `--help` does not print the key.
     #[arg(long, env = "LAZUAR_PAY_API_KEY", hide_env_values = true)]
     pub api_key: Option<String>,
     /// One tenant id. Env `LAZUAR_PAY_ORG_ID` or `PAY_ORG_ID`.
@@ -115,7 +115,7 @@ pub enum PaymentLinkCmd {
         currency: String,
         #[arg(long)]
         max_payers: Option<i32>,
-        #[arg(long, default_value_t = false)]
+        #[arg(long)]
         unlimited: bool,
         #[arg(long)]
         label: Option<String>,
@@ -275,6 +275,16 @@ fn parse_amount(raw: &str) -> Result<Decimal, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn restore_env(key: &str, prev: Option<String>) {
+        match prev {
+            Some(v) => std::env::set_var(key, v),
+            None => std::env::remove_var(key),
+        }
+    }
 
     #[test]
     fn create_requires_provider_amount_and_idempotency() {
@@ -395,14 +405,108 @@ mod tests {
 
     #[test]
     fn help_hides_api_key_value() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        const SENTINEL: &str = "lzr_sk_live_sentinel_do_not_print";
+        let prev = std::env::var("LAZUAR_PAY_API_KEY").ok();
+        std::env::set_var("LAZUAR_PAY_API_KEY", SENTINEL);
         let err = Cli::try_parse_from(["lazuar-pay", "--help"]).unwrap_err();
         let msg = err.to_string();
+        restore_env("LAZUAR_PAY_API_KEY", prev);
+        assert!(msg.contains("--api-key"), "{msg}");
+        assert!(msg.contains("LAZUAR_PAY_API_KEY"), "{msg}");
+        // clap would otherwise render `[env: LAZUAR_PAY_API_KEY=lzr_sk_…]`.
+        assert!(!msg.contains(SENTINEL), "{msg}");
+        assert!(!msg.contains("LAZUAR_PAY_API_KEY="), "{msg}");
+    }
+
+    #[test]
+    fn pay_aliases_fill_when_canonical_missing() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        let prev_key = std::env::var("PAY_API_KEY").ok();
+        let prev_org = std::env::var("PAY_ORG_ID").ok();
+        let prev_url = std::env::var("PAY_API_URL").ok();
+        std::env::set_var("PAY_API_KEY", "lzr_sk_alias");
+        std::env::set_var("PAY_ORG_ID", "org-alias");
+        std::env::set_var("PAY_API_URL", "http://127.0.0.1:9");
+        let cli = Cli {
+            base_url: None,
+            api_key: None,
+            org_id: None,
+            command: Command::Whoami,
+        };
+        let cfg = config_from_cli(&cli);
+        restore_env("PAY_API_KEY", prev_key);
+        restore_env("PAY_ORG_ID", prev_org);
+        restore_env("PAY_API_URL", prev_url);
+        let cfg = cfg.expect("PAY_* aliases");
+        assert_eq!(cfg.api_key, "lzr_sk_alias");
+        assert_eq!(cfg.org_id.as_deref(), Some("org-alias"));
+        assert_eq!(cfg.base_url, "http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn refund_create_requires_idempotency() {
+        let err = Cli::try_parse_from(["lazuar-pay", "refund", "create", "--checkout", "abc"])
+            .unwrap_err();
         assert!(
-            msg.contains("LAZUAR_PAY_API_KEY") || msg.contains("api-key"),
-            "{msg}"
+            err.to_string().contains("idempotency-key"),
+            "{}",
+            err.to_string()
         );
-        assert!(!msg.contains("lzr_sk_live"), "{msg}");
-        assert!(!msg.contains("sk_live"), "{msg}");
+    }
+
+    #[test]
+    fn unlimited_is_presence_flag() {
+        let on = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+            "--unlimited",
+        ])
+        .unwrap();
+        match on.command {
+            Command::PaymentLink(PaymentLinkCmd::Create { unlimited, .. }) => {
+                assert!(unlimited);
+            }
+            other => panic!("{other:?}"),
+        }
+        let off = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+        ])
+        .unwrap();
+        match off.command {
+            Command::PaymentLink(PaymentLinkCmd::Create { unlimited, .. }) => {
+                assert!(!unlimited);
+            }
+            other => panic!("{other:?}"),
+        }
+        let err = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+            "--unlimited",
+            "true",
+        ])
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected argument"),
+            "{}",
+            err.to_string()
+        );
     }
 
     #[test]

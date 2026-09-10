@@ -168,4 +168,14 @@ mod tests {
     fn env_first_skips_empty() {
         assert!(env_first(&["LAZUAR_PAY_CLI_TEST_MISSING"]).is_none());
     }
+
+    #[test]
+    fn env_first_prefers_earlier_nonempty() {
+        std::env::set_var("LAZUAR_PAY_CLI_TEST_FIRST", "canon");
+        std::env::set_var("LAZUAR_PAY_CLI_TEST_SECOND", "alias");
+        let got = env_first(&["LAZUAR_PAY_CLI_TEST_FIRST", "LAZUAR_PAY_CLI_TEST_SECOND"]);
+        std::env::remove_var("LAZUAR_PAY_CLI_TEST_FIRST");
+        std::env::remove_var("LAZUAR_PAY_CLI_TEST_SECOND");
+        assert_eq!(got.as_deref(), Some("canon"));
+    }
 }

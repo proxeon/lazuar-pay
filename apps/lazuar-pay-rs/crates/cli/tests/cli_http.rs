@@ -3,7 +3,11 @@
 mod support;
 
 use pay_cli::{run, Cli, Parser};
+use serde_json::json;
 use support::serve;
+use tokio::sync::Mutex;
+
+static GATE: Mutex<()> = Mutex::const_new(());
 
 fn parse(args: &[&str]) -> Cli {
     Cli::try_parse_from(args).unwrap()
@@ -153,6 +157,7 @@ fn write_json(name: &str, body: &str) -> std::path::PathBuf {
 
 #[tokio::test]
 async fn gateway_put_file_stripe_and_solana() {
+    let _g = GATE.lock().await;
     let (base, _h) = serve().await;
     let stripe = write_json(
         "stripe",
@@ -249,6 +254,7 @@ async fn gateway_put_file_stripe_and_solana() {
 
 #[tokio::test]
 async fn gateway_put_file_solana_secret_never_sent() {
+    let _g = GATE.lock().await;
     let (base, _h) = serve().await;
     let path = write_json(
         "sol-bad",
@@ -401,6 +407,28 @@ async fn payment_link_and_refund_create() {
         .unwrap();
     assert!(res.status().is_success(), "{}", res.status());
 
+    let paid = run(parse(&[
+        "lazuar-pay",
+        "--base-url",
+        &base,
+        "--api-key",
+        "lzr_sk_test",
+        "--org-id",
+        "t1",
+        "checkout",
+        "wait",
+        id,
+        "--until",
+        "paid",
+        "--timeout-secs",
+        "5",
+        "--interval-ms",
+        "50",
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(paid["status"], "paid");
+
     let refund = run(parse(&[
         "lazuar-pay",
         "--base-url",
@@ -420,4 +448,116 @@ async fn payment_link_and_refund_create() {
     .unwrap();
     assert_eq!(refund["status"], "succeeded");
     assert!(refund["number"].as_str().unwrap().starts_with("REF-"));
+}
+
+fn chip_pem() -> String {
+    std::fs::read_to_string(format!(
+        "{}/../rails/tests/fixtures/chip/test_public.pem",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .expect("chip test_public.pem")
+}
+
+fn write_value(name: &str, body: serde_json::Value) -> std::path::PathBuf {
+    write_json(name, &body.to_string())
+}
+
+#[tokio::test]
+async fn gateway_put_file_chip_billplz_xendit_razorpay() {
+    let _g = GATE.lock().await;
+    let (base, _h) = serve().await;
+    let pem = chip_pem();
+
+    async fn put_file(base: &str, path: &std::path::Path, secret: &str) -> serde_json::Value {
+        let put = run(parse(&[
+            "lazuar-pay",
+            "--base-url",
+            base,
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "gateway",
+            "put",
+            "--file",
+            path.to_str().unwrap(),
+        ]))
+        .await
+        .unwrap();
+        let dumped = put.to_string();
+        assert!(!dumped.contains(secret), "{dumped}");
+        assert_eq!(put["configured"], true);
+        let _ = std::fs::remove_file(path);
+        put
+    }
+
+    let chip = put_file(
+        &base,
+        &write_value(
+            "chip",
+            json!({
+                "provider": "chip",
+                "secret": "chip_sk",
+                "webhook_secret": pem,
+                "public_merchant_id": "brand_1",
+                "environment": "test"
+            }),
+        ),
+        "chip_sk",
+    )
+    .await;
+    assert_eq!(chip["provider"], "chip");
+    assert!(!chip.to_string().contains("BEGIN PUBLIC KEY"));
+
+    let bp = put_file(
+        &base,
+        &write_value(
+            "billplz",
+            json!({
+                "provider": "billplz",
+                "secret": "bp_sk",
+                "webhook_secret": "xsig",
+                "public_merchant_id": "col_1",
+                "environment": "test"
+            }),
+        ),
+        "bp_sk",
+    )
+    .await;
+    assert_eq!(bp["provider"], "billplz");
+    assert!(!bp.to_string().contains("xsig"));
+
+    let xn = put_file(
+        &base,
+        &write_value(
+            "xendit",
+            json!({
+                "provider": "xendit",
+                "secret": "xnd_sk",
+                "webhook_secret": "tok_1",
+                "environment": "test"
+            }),
+        ),
+        "xnd_sk",
+    )
+    .await;
+    assert_eq!(xn["provider"], "xendit");
+    assert!(!xn.to_string().contains("tok_1"));
+
+    let rz = put_file(
+        &base,
+        &write_value(
+            "razorpay",
+            json!({
+                "provider": "razorpay",
+                "secret": "rzp_test:secret",
+                "webhook_secret": "wh_rzp",
+                "environment": "test"
+            }),
+        ),
+        "rzp_test:secret",
+    )
+    .await;
+    assert_eq!(rz["provider"], "razorpay");
+    assert!(!rz.to_string().contains("wh_rzp"));
 }
