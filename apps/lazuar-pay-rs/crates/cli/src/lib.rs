@@ -128,8 +128,8 @@ pub enum CheckoutCmd {
         /// Decimal string, at most 2 display places. Never parsed as f64.
         #[arg(short, long)]
         amount: String,
-        /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
-        #[arg(long, default_value = "MYR")]
+        /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
+        #[arg(long, default_value_t = default_currency())]
         currency: String,
         /// Required so a retry does not mint a second charge (036/006 #7).
         #[arg(long)]
@@ -201,8 +201,8 @@ pub enum PaymentLinkCmd {
         provider: String,
         #[arg(short, long)]
         amount: String,
-        /// Fiat default MYR. `solana` requires USDC (not MYR/USD).
-        #[arg(long, default_value = "MYR")]
+        /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
+        #[arg(long, default_value_t = default_currency())]
         currency: String,
         #[arg(long)]
         max_payers: Option<i32>,
@@ -442,6 +442,10 @@ fn refuse_world_readable(path: &Path) -> Result<(), Error> {
     }
     let _ = path;
     Ok(())
+}
+
+fn default_currency() -> String {
+    env_first(&["LAZUAR_PAY_CURRENCY", "PAY_CURRENCY"]).unwrap_or_else(|| "MYR".into())
 }
 
 fn nonempty(s: Option<String>) -> Option<String> {
@@ -1148,6 +1152,34 @@ mod tests {
         // clap would otherwise render `[env: LAZUAR_PAY_API_KEY=lzr_sk_…]`.
         assert!(!msg.contains(SENTINEL), "{msg}");
         assert!(!msg.contains("LAZUAR_PAY_API_KEY="), "{msg}");
+    }
+
+    #[test]
+    fn pay_currency_env_defaults_checkout_create() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        let prev = std::env::var("PAY_CURRENCY").ok();
+        let prev_c = std::env::var("LAZUAR_PAY_CURRENCY").ok();
+        std::env::remove_var("LAZUAR_PAY_CURRENCY");
+        std::env::set_var("PAY_CURRENCY", "USD");
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "10",
+            "--idempotency-key",
+            "k1",
+        ]);
+        restore_env("PAY_CURRENCY", prev);
+        restore_env("LAZUAR_PAY_CURRENCY", prev_c);
+        match cli.unwrap().command {
+            Command::Checkout(CheckoutCmd::Create { currency, .. }) => {
+                assert_eq!(currency, "USD");
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]
