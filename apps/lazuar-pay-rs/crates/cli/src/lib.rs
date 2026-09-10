@@ -40,7 +40,7 @@ pub struct Cli {
     /// Success is exit 0 with empty stdout. Errors still stderr JSON.
     #[arg(long, global = true)]
     pub quiet: bool,
-    /// Tab-separated table for `items` lists (036/006 #27). `--quiet` still wins.
+    /// Tab-separated table for `items` lists. `--quiet` still wins.
     #[arg(long, global = true)]
     pub table: bool,
     /// JSON config path. Default `~/.config/lazuar-pay/config.json`. Never stores api_key.
@@ -103,7 +103,7 @@ pub enum Command {
     /// One inbound webhook secret. Write via `--file` only.
     #[command(name = "one-webhook", subcommand)]
     OneWebhook(OneWebhookCmd),
-    /// Recurring is not offered; list is honest-empty (036/006 #30).
+    /// Recurring is not offered; list is honest-empty.
     #[command(subcommand)]
     Subscription(SubscriptionCmd),
     /// Poll events and POST each envelope to a loopback URL (Testing).
@@ -129,8 +129,8 @@ pub enum CheckoutCmd {
         #[arg(short, long)]
         amount: String,
         /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
-        #[arg(long, default_value_t = default_currency())]
-        currency: String,
+        #[arg(long)]
+        currency: Option<String>,
         /// Required so a retry does not mint a second charge (036/006 #7).
         #[arg(long)]
         idempotency_key: String,
@@ -202,8 +202,8 @@ pub enum PaymentLinkCmd {
         #[arg(short, long)]
         amount: String,
         /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
-        #[arg(long, default_value_t = default_currency())]
-        currency: String,
+        #[arg(long)]
+        currency: Option<String>,
         #[arg(long)]
         max_payers: Option<i32>,
         #[arg(long)]
@@ -448,6 +448,11 @@ fn default_currency() -> String {
     env_first(&["LAZUAR_PAY_CURRENCY", "PAY_CURRENCY"]).unwrap_or_else(|| "MYR".into())
 }
 
+/// Flag beats env. clap must not bake default_value_t (Command is cached).
+fn resolve_currency(flag: Option<String>) -> String {
+    nonempty(flag).unwrap_or_else(default_currency)
+}
+
 fn nonempty(s: Option<String>) -> Option<String> {
     s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
@@ -590,6 +595,7 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
             product_id,
         }) => {
             let amount = parse_amount(&amount)?;
+            let currency = resolve_currency(currency);
             client
                 .checkout_create(
                     &provider,
@@ -652,6 +658,7 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
             product_id,
         }) => {
             let amount = parse_amount(&amount)?;
+            let currency = resolve_currency(currency);
             client
                 .payment_link_create(
                     &provider,
@@ -776,18 +783,27 @@ async fn listen_loop(
 }
 
 fn require_loopback(url: &str) -> Result<(), Error> {
+    let err = || Error::Config("listen --forward-to must be loopback http (Testing only)".into());
     let u = url.trim();
-    let rest = u.strip_prefix("http://").ok_or_else(|| {
-        Error::Config("listen --forward-to must be loopback http (Testing only)".into())
-    })?;
-    let hostport = rest.split('/').next().unwrap_or("");
-    let host = hostport.split(':').next().unwrap_or("");
+    let rest = u.strip_prefix("http://").ok_or_else(err)?;
+    // Reject userinfo (`127.0.0.1:80@evil`) and non-http schemes already stripped.
+    if rest.contains('@') {
+        return Err(err());
+    }
+    let hostport = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let (host, port) = match hostport.split_once(':') {
+        Some((h, p)) => (h, Some(p)),
+        None => (hostport, None),
+    };
+    if let Some(p) = port {
+        if p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(err());
+        }
+    }
     if host == "127.0.0.1" || host.eq_ignore_ascii_case("localhost") {
         return Ok(());
     }
-    Err(Error::Config(
-        "listen --forward-to must be loopback http (Testing only)".into(),
-    ))
+    Err(err())
 }
 
 /// One webhook JSON `{ "webhook_secret": "…" }`. Errors name the path, never the secret.
@@ -891,6 +907,7 @@ mod tests {
         let err = require_loopback("https://example.com/hook").unwrap_err();
         assert!(err.to_string().contains("loopback"), "{err}");
         assert!(require_loopback("http://127.0.0.1.evil.example/hook").is_err());
+        assert!(require_loopback("http://127.0.0.1:80@evil.example/hook").is_err());
         let cli = Cli::try_parse_from([
             "lazuar-pay",
             "listen",
@@ -1172,14 +1189,18 @@ mod tests {
             "--idempotency-key",
             "k1",
         ]);
+        let resolved = resolve_currency(None);
+        let flagged = resolve_currency(Some("MYR".into()));
         restore_env("PAY_CURRENCY", prev);
         restore_env("LAZUAR_PAY_CURRENCY", prev_c);
         match cli.unwrap().command {
             Command::Checkout(CheckoutCmd::Create { currency, .. }) => {
-                assert_eq!(currency, "USD");
+                assert!(currency.is_none(), "{currency:?}");
             }
             other => panic!("{other:?}"),
         }
+        assert_eq!(resolved, "USD");
+        assert_eq!(flagged, "MYR");
     }
 
     #[test]
