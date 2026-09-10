@@ -30,6 +30,12 @@ pub struct Cli {
     /// One tenant id. Env `LAZUAR_PAY_ORG_ID` or `PAY_ORG_ID`.
     #[arg(long, env = "LAZUAR_PAY_ORG_ID")]
     pub org_id: Option<String>,
+    /// One-line JSON on stdout (036/006 #10). Default is pretty-print.
+    #[arg(long, global = true)]
+    pub compact: bool,
+    /// Success is exit 0 with empty stdout (036/006 #10). Errors still stderr JSON.
+    #[arg(long, global = true)]
+    pub quiet: bool,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -162,6 +168,18 @@ pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
 
 fn nonempty(s: Option<String>) -> Option<String> {
     s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+}
+
+/// `--quiet` wins. `--compact` is one line. Neither → pretty JSON (036/006 #10).
+pub fn stdout_json(body: &Value, compact: bool, quiet: bool) -> Option<String> {
+    if quiet {
+        return None;
+    }
+    if compact {
+        serde_json::to_string(body).ok()
+    } else {
+        serde_json::to_string_pretty(body).ok()
+    }
 }
 
 pub async fn run(cli: Cli) -> Result<Value, Error> {
@@ -370,6 +388,30 @@ mod tests {
     }
 
     #[test]
+    fn compact_and_quiet_are_global_flags() {
+        let cli = Cli::try_parse_from(["lazuar-pay", "--quiet", "whoami"]).unwrap();
+        assert!(cli.quiet);
+        assert!(!cli.compact);
+        let cli = Cli::try_parse_from(["lazuar-pay", "ready", "--compact"]).unwrap();
+        assert!(cli.compact);
+        assert!(!cli.quiet);
+        let cli = Cli::try_parse_from(["lazuar-pay", "--compact", "--quiet", "whoami"]).unwrap();
+        assert!(cli.compact && cli.quiet);
+    }
+
+    #[test]
+    fn stdout_json_quiet_wins_then_compact() {
+        let body = serde_json::json!({"ready": true});
+        assert!(stdout_json(&body, false, true).is_none());
+        assert!(stdout_json(&body, true, true).is_none());
+        let compact = stdout_json(&body, true, false).unwrap();
+        assert!(!compact.contains('\n'), "{compact}");
+        assert!(compact.contains("\"ready\":true") || compact.contains("\"ready\": true"));
+        let pretty = stdout_json(&body, false, false).unwrap();
+        assert!(pretty.contains('\n'), "{pretty}");
+    }
+
+    #[test]
     fn gateway_put_requires_file_not_secret_flag() {
         let err = Cli::try_parse_from(["lazuar-pay", "gateway", "put", "--secret", "sk_test_x"])
             .unwrap_err();
@@ -432,6 +474,8 @@ mod tests {
             base_url: None,
             api_key: None,
             org_id: None,
+            compact: false,
+            quiet: false,
             command: Command::Whoami,
         };
         let cfg = config_from_cli(&cli);

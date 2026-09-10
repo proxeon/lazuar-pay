@@ -1,18 +1,17 @@
-//! `lazuar-pay` entry. Pretty-print host JSON to stdout; problems to stderr.
+//! `lazuar-pay` entry. Host JSON to stdout (`--compact` / `--quiet`); problems to stderr.
 
 use clap::Parser;
-use pay_cli::{run, Cli};
+use pay_cli::{run, stdout_json, Cli};
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    let compact = cli.compact;
+    let quiet = cli.quiet;
     match run(cli).await {
-        Ok(body) => match serde_json::to_string_pretty(&body) {
-            Ok(s) => println!("{s}"),
-            Err(e) => {
-                eprintln!("{e}");
-                std::process::exit(1);
-            }
+        Ok(body) => match stdout_json(&body, compact, quiet) {
+            Some(s) => println!("{s}"),
+            None => {}
         },
         Err(e) => {
             // Agents parse problem+json (036/006 #8). Human Display is in `detail`.
