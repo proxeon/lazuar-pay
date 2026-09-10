@@ -62,6 +62,22 @@ pub fn token(prefix: &str) -> String {
     format!("{prefix}-{}", Uuid::new_v4().simple())
 }
 
+/// C# `{series}-{MalaysiaTime.Year}-{n:00000}` — not `RCPT-TEST-{uuid}`.
+pub fn assert_issued_number(series: &str, number: &str) {
+    let prefix = format!("{series}-");
+    assert!(
+        number.starts_with(&prefix),
+        "expected {prefix}year-nnnnn, got {number}"
+    );
+    let rest = number.strip_prefix(&prefix).expect(number);
+    let (year, n) = rest.split_once('-').unwrap_or_else(|| panic!("{number}"));
+    assert_eq!(year.len(), 4, "{number}");
+    assert!(year.chars().all(|c| c.is_ascii_digit()), "{number}");
+    assert_eq!(n.len(), 5, "{number}");
+    assert!(n.chars().all(|c| c.is_ascii_digit()), "{number}");
+    assert_ne!(n, "00000", "{number}");
+}
+
 pub async fn insert_payment(tx: &mut Transaction<'_, Postgres>, token: &str) -> sqlx::Result<Uuid> {
     let row: (Uuid,) = sqlx::query_as(
         r#"

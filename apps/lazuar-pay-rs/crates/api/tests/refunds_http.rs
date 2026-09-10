@@ -132,7 +132,7 @@ async fn remainder_refund_replay_and_mismatch() {
     .await;
     assert_eq!(st, StatusCode::CREATED, "{created}");
     assert_eq!(created["status"], "succeeded");
-    assert!(created["number"].as_str().unwrap().starts_with("REF-"));
+    support::assert_issued_number("REF", created["number"].as_str().unwrap());
     assert!(created["amount"].is_number());
     assert_eq!(created["amount"], 10);
     assert_eq!(created["reason"], "merchant");
@@ -159,6 +159,21 @@ async fn remainder_refund_replay_and_mismatch() {
     .await;
     assert_eq!(st, StatusCode::OK, "{replay}");
     assert_eq!(replay["id"], refund_id);
+    assert_eq!(replay["number"], created["number"]);
+
+    let (st, listed) = call(
+        app.clone(),
+        authed("GET", "/v1/orgs/t1/refunds", "test-writer", None),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{listed}");
+    let listed_row = listed["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["id"] == refund_id)
+        .unwrap();
+    assert_eq!(listed_row["number"], created["number"]);
 
     let (st, mismatch) = call(
         app.clone(),

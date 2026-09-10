@@ -9,7 +9,7 @@ use domain::ProofId;
 use domain::{PaymentId, PublicToken, TenantId, TerminalReason};
 use sqlx::PgPool;
 use storage::{apply, ApplyCmd, ApplyError, ApplyOutcome, MintSpec};
-use support::{pool, token};
+use support::{assert_issued_number, pool, token};
 use time::{Duration, OffsetDateTime};
 
 fn myr10() -> Money {
@@ -156,6 +156,15 @@ async fn e1_inject_paid_takes_charge_and_journal() {
     .await
     .unwrap();
     assert_eq!(deliveries, 1);
+    let number: String = sqlx::query_scalar(
+        "SELECT number FROM pay_rs.documents WHERE payment_id = $1 AND series = 'RCPT'",
+    )
+    .bind(payment_id.as_uuid())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_issued_number("RCPT", &number);
+    assert!(!number.contains("TEST"));
 }
 
 #[tokio::test]

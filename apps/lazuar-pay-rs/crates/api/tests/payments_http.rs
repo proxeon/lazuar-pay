@@ -129,7 +129,7 @@ async fn list_charges_paid_not_settled() {
     .await;
     assert_eq!(st, StatusCode::OK, "{body}");
     let rcpt = find_item(&body, &id);
-    assert!(rcpt["number"].as_str().unwrap().starts_with("RCPT-"));
+    support::assert_issued_number("RCPT", rcpt["number"].as_str().unwrap());
     assert_eq!(rcpt["status"], "issued");
     assert_eq!(rcpt["checkout_id"], id);
     assert!(rcpt["amount"].is_number());

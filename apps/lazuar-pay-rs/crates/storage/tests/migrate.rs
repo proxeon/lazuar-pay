@@ -60,6 +60,7 @@ async fn lock_index_names_exist() {
         "inbound_events_pk",
         "deliveries_event",
         "documents_number",
+        "documents_refund",
         "idempotency_pk",
         "one_delivery",
         "credentials_pk",

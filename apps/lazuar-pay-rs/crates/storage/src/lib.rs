@@ -7,6 +7,7 @@ pub mod apply;
 pub mod backfill;
 pub mod catalog;
 pub mod chain;
+pub mod documents;
 pub mod error;
 pub mod lease;
 pub mod money_query;
@@ -22,6 +23,7 @@ pub use chain::{
     bind_proof, claim_unbound_proofs, claim_watch_reservations, insert_proof,
     reservation_by_locator, ProofRow, WatchRow,
 };
+pub use documents::{allocate as allocate_document, malaysia_year, DocSeries};
 pub use error::ApplyError;
 pub use lease::{
     claim_deliveries, claim_expired, claim_psync, claim_refunds, defer_psync, enqueue_outbound,

@@ -43,6 +43,23 @@ pub async fn pool() -> PgPool {
     pool
 }
 
+/// C# `{series}-{MalaysiaTime.Year}-{n:00000}` — not `RCPT-TEST-{uuid}`.
+#[allow(dead_code)]
+pub fn assert_issued_number(series: &str, number: &str) {
+    let prefix = format!("{series}-");
+    assert!(
+        number.starts_with(&prefix),
+        "expected {prefix}year-nnnnn, got {number}"
+    );
+    let rest = number.strip_prefix(&prefix).expect(number);
+    let (year, n) = rest.split_once('-').unwrap_or_else(|| panic!("{number}"));
+    assert_eq!(year.len(), 4, "{number}");
+    assert!(year.chars().all(|c| c.is_ascii_digit()), "{number}");
+    assert_eq!(n.len(), 5, "{number}");
+    assert!(n.chars().all(|c| c.is_ascii_digit()), "{number}");
+    assert_ne!(n, "00000", "{number}");
+}
+
 #[allow(dead_code)]
 pub fn sign(secret: &str, body: &str) -> String {
     use hmac::{Hmac, Mac};

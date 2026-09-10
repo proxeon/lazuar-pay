@@ -8,14 +8,11 @@ use sqlx::{PgPool, Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::documents::{self, DocSeries};
 use crate::error::ApplyError;
 use crate::lease::{enqueue_outbound, money_number};
 use crate::money_query::{uuid_wire, RefundListItem};
 use crate::rows;
-
-pub fn ref_number(refund_id: Uuid) -> String {
-    format!("REF-TEST-{}", uuid_wire(refund_id))
-}
 
 pub async fn fail_refund(pool: &PgPool, id: Uuid) -> Result<(), ApplyError> {
     sqlx::query(
@@ -134,16 +131,22 @@ async fn settle_refund_tx(
         recompute_charge(tx, cid).await?;
     }
 
-    let number = ref_number(id);
+    // Issue the REF note here (merchant settle / resolve), not on pending insert —
+    // C# RefundEndpoints. A unique-number collision must unwind this TX so we
+    // never mark succeeded without a document. refund_id is the list/GET join
+    // now that the number is year-n instead of REF-TEST-{uuid}.
+    let number =
+        documents::allocate(tx, &tenant, DocSeries::Refund, OffsetDateTime::now_utc()).await?;
     sqlx::query(
         r#"
-        INSERT INTO pay_rs.documents (tenant_id, payment_id, series, number, title)
-        VALUES ($1, $2, 'REF', $3, 'Refund')
-        ON CONFLICT (tenant_id, number) DO NOTHING
+        INSERT INTO pay_rs.documents (
+            tenant_id, payment_id, refund_id, series, number, title
+        ) VALUES ($1, $2, $3, 'REF', $4, 'Refund')
         "#,
     )
     .bind(&tenant)
     .bind(payment_id.as_uuid())
+    .bind(id)
     .bind(&number)
     .execute(&mut **tx)
     .await?;
@@ -216,9 +219,7 @@ async fn load_item(
                r.exponent, r.status, r.rail, r.reason, r.created_at, r.next_attempt_at,
                r.idempotency_key, d.number
           FROM pay_rs.refunds r
-          LEFT JOIN pay_rs.documents d
-            ON d.tenant_id = r.tenant_id AND d.series = 'REF'
-           AND d.number = ('REF-TEST-' || replace(r.id::text, '-', ''))
+          LEFT JOIN pay_rs.documents d ON d.refund_id = r.id
          WHERE r.id = $1
         "#,
     )

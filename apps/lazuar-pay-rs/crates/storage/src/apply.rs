@@ -25,6 +25,7 @@ use sqlx::{PgPool, Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::documents::{self, DocSeries};
 use crate::error::{is_unique_violation, ApplyError};
 use crate::rows;
 
@@ -981,7 +982,15 @@ async fn insert_rcpt(
     tx: &mut Transaction<'_, Postgres>,
     payment: &Payment,
 ) -> Result<(), ApplyError> {
-    let number = format!("RCPT-TEST-{}", payment.id.to_wire());
+    // Same TX as the charge: a unique-number collision must unwind Take, not
+    // ack the PSP event while the receipt is missing (C# Fulfillment).
+    let number = documents::allocate(
+        tx,
+        payment.tenant_id.as_str(),
+        DocSeries::Receipt,
+        OffsetDateTime::now_utc(),
+    )
+    .await?;
     sqlx::query(
         r#"
         INSERT INTO pay_rs.documents (tenant_id, payment_id, series, number, title)

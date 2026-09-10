@@ -152,9 +152,7 @@ pub async fn refund_by_id(
                r.exponent, r.status, r.rail, r.reason, r.created_at, r.next_attempt_at,
                r.idempotency_key, d.number
           FROM pay_rs.refunds r
-          LEFT JOIN pay_rs.documents d
-            ON d.tenant_id = r.tenant_id AND d.series = 'REF'
-           AND d.number = ('REF-TEST-' || replace(r.id::text, '-', ''))
+          LEFT JOIN pay_rs.documents d ON d.refund_id = r.id
          WHERE r.id = $1 AND r.tenant_id = $2
         "#,
     )
@@ -179,9 +177,7 @@ pub async fn refund_by_idempotency(
                r.exponent, r.status, r.rail, r.reason, r.created_at, r.next_attempt_at,
                r.idempotency_key, d.number
           FROM pay_rs.refunds r
-          LEFT JOIN pay_rs.documents d
-            ON d.tenant_id = r.tenant_id AND d.series = 'REF'
-           AND d.number = ('REF-TEST-' || replace(r.id::text, '-', ''))
+          LEFT JOIN pay_rs.documents d ON d.refund_id = r.id
          WHERE r.tenant_id = $1 AND r.idempotency_key = $2
         "#,
     )
@@ -465,9 +461,7 @@ pub async fn list_refunds(
                    r.exponent, r.status, r.rail, r.reason, r.created_at, r.next_attempt_at,
                    r.idempotency_key,
                    (SELECT d.number FROM pay_rs.documents d
-                     WHERE d.tenant_id = r.tenant_id AND d.series = 'REF'
-                       AND d.number = ('REF-TEST-' || replace(r.id::text, '-', ''))
-                     LIMIT 1) AS number
+                     WHERE d.refund_id = r.id) AS number
               FROM pay_rs.refunds r
              WHERE r.tenant_id = $1
                AND (r.created_at < $2 OR (r.created_at = $2 AND r.id < $3))
@@ -488,9 +482,7 @@ pub async fn list_refunds(
                    r.exponent, r.status, r.rail, r.reason, r.created_at, r.next_attempt_at,
                    r.idempotency_key,
                    (SELECT d.number FROM pay_rs.documents d
-                     WHERE d.tenant_id = r.tenant_id AND d.series = 'REF'
-                       AND d.number = ('REF-TEST-' || replace(r.id::text, '-', ''))
-                     LIMIT 1) AS number
+                     WHERE d.refund_id = r.id) AS number
               FROM pay_rs.refunds r
              WHERE r.tenant_id = $1
              ORDER BY r.created_at DESC, r.id DESC
