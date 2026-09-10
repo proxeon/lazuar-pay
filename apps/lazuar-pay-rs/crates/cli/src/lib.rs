@@ -289,6 +289,15 @@ pub fn stdout_json(body: &Value, compact: bool, quiet: bool) -> Option<String> {
     }
 }
 
+/// `--api-key` on argv lands in `ps` / shell history (036/006 #22). Prefer env.
+pub fn api_key_flag_on_argv<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    args.into_iter().any(|a| a.as_ref() == "--api-key")
+}
+
 pub async fn run(cli: Cli) -> Result<Value, Error> {
     let cfg = config_from_cli(&cli)?;
     let client = Client::new(cfg)?;
@@ -551,6 +560,23 @@ mod tests {
     fn parse_amount_rejects_zero() {
         assert!(parse_amount("0").is_err());
         assert!(parse_amount("-1").is_err());
+    }
+
+    #[test]
+    fn api_key_flag_on_argv_detects_long_flag() {
+        assert!(api_key_flag_on_argv([
+            "lazuar-pay",
+            "--api-key",
+            "lzr_sk_x",
+            "whoami"
+        ]));
+        assert!(!api_key_flag_on_argv(["lazuar-pay", "whoami"]));
+        assert!(!api_key_flag_on_argv([
+            "lazuar-pay",
+            "--org-id",
+            "t1",
+            "whoami"
+        ]));
     }
 
     #[test]
