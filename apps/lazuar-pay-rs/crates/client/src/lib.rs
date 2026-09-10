@@ -6,9 +6,11 @@
 
 mod config;
 mod error;
+mod gateway;
 
 pub use config::Config;
 pub use error::Error;
+pub use gateway::validate_gateway_put;
 
 use rust_decimal::Decimal;
 use serde_json::{json, Map, Number, Value};
@@ -89,6 +91,32 @@ impl Client {
         self.get(&format!("/v1/orgs/{org}/receipts/{id}")).await
     }
 
+    /// `PUT /v1/orgs/{org}/gateway`. Body is TypeSpec PutGateway (from `--file`).
+    pub async fn gateway_put(&self, body: Value) -> Result<Value, Error> {
+        validate_gateway_put(&body)?;
+        let org = self.cfg.org_id()?;
+        self.put(&format!("/v1/orgs/{org}/gateway"), body).await
+    }
+
+    pub async fn gateway_get(&self, provider: &str) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        let p = provider.trim();
+        if p.is_empty() {
+            return Err(Error::Config("provider is required".into()));
+        }
+        let req = self
+            .http
+            .get(self.cfg.url(&format!("/v1/orgs/{org}/gateway")))
+            .query(&[("provider", p)])
+            .header("Authorization", self.cfg.authorization());
+        self.send(req).await
+    }
+
+    pub async fn gateway_list(&self) -> Result<Value, Error> {
+        let org = self.cfg.org_id()?;
+        self.get(&format!("/v1/orgs/{org}/gateways")).await
+    }
+
     async fn get(&self, path: &str) -> Result<Value, Error> {
         let req = self
             .http
@@ -133,6 +161,16 @@ impl Client {
         if let Some(key) = idempotency_key.map(str::trim).filter(|s| !s.is_empty()) {
             req = req.header("Idempotency-Key", key);
         }
+        self.send(req).await
+    }
+
+    async fn put(&self, path: &str, body: Value) -> Result<Value, Error> {
+        let req = self
+            .http
+            .put(self.cfg.url(path))
+            .header("Authorization", self.cfg.authorization())
+            .header("Content-Type", "application/json")
+            .json(&body);
         self.send(req).await
     }
 

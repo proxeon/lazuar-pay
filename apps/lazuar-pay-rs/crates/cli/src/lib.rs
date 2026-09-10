@@ -3,9 +3,10 @@
 #![forbid(unsafe_code)]
 
 use clap::Subcommand;
-use pay_client::{Client, Config, Error};
+use pay_client::{validate_gateway_put, Client, Config, Error};
 use rust_decimal::Decimal;
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 /// Re-export so integration tests can `try_parse_from` without a clap dev-dep.
@@ -49,6 +50,9 @@ pub enum Command {
     },
     #[command(subcommand)]
     Receipts(ReceiptsCmd),
+    /// BYOK vault. Write only via `--file` (035/03). No `--secret` flags.
+    #[command(subcommand)]
+    Gateway(GatewayCmd),
 }
 
 #[derive(Debug, Subcommand)]
@@ -82,6 +86,22 @@ pub enum ReceiptsCmd {
     Get { id: String },
 }
 
+#[derive(Debug, Subcommand)]
+pub enum GatewayCmd {
+    /// `PUT /v1/orgs/{orgId}/gateway`. Secrets stay in the file, not argv / MCP args.
+    Put {
+        #[arg(long, value_name = "PATH")]
+        file: PathBuf,
+    },
+    /// `GET /v1/orgs/{orgId}/gateway?provider=`
+    Get {
+        #[arg(long)]
+        provider: String,
+    },
+    /// `GET /v1/orgs/{orgId}/gateways`
+    List,
+}
+
 pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
     Config::from_parts(
         cli.base_url.clone(),
@@ -113,7 +133,23 @@ pub async fn run(cli: Cli) -> Result<Value, Error> {
             client.receipts_list(limit, after.as_deref()).await
         }
         Command::Receipts(ReceiptsCmd::Get { id }) => client.receipts_get(&id).await,
+        Command::Gateway(GatewayCmd::Put { file }) => {
+            let body = read_gateway_file(&file)?;
+            client.gateway_put(body).await
+        }
+        Command::Gateway(GatewayCmd::Get { provider }) => client.gateway_get(&provider).await,
+        Command::Gateway(GatewayCmd::List) => client.gateway_list().await,
     }
+}
+
+/// Read PutGateway JSON. Errors name the path, never the file bytes (sk_ / PEM).
+pub fn read_gateway_file(path: &Path) -> Result<Value, Error> {
+    let raw = std::fs::read_to_string(path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let body: Value = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    validate_gateway_put(&body)?;
+    Ok(body)
 }
 
 fn parse_amount(raw: &str) -> Result<Decimal, Error> {
@@ -202,5 +238,55 @@ mod tests {
     fn parse_amount_rejects_zero() {
         assert!(parse_amount("0").is_err());
         assert!(parse_amount("-1").is_err());
+    }
+
+    #[test]
+    fn gateway_put_requires_file_not_secret_flag() {
+        let err = Cli::try_parse_from(["lazuar-pay", "gateway", "put", "--secret", "sk_test_x"])
+            .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("unexpected") || msg.contains("file") || msg.contains("required"),
+            "{msg}"
+        );
+        assert!(Cli::try_parse_from(["lazuar-pay", "gateway", "put"]).is_err());
+    }
+
+    #[test]
+    fn gateway_put_parses_file_flag() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "gateway",
+            "put",
+            "--file",
+            "/tmp/stripe.json",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Gateway(GatewayCmd::Put { file }) => {
+                assert_eq!(file, PathBuf::from("/tmp/stripe.json"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn read_gateway_file_rejects_test_without_echoing_secret() {
+        let path =
+            std::env::temp_dir().join(format!("lazuar-pay-gw-test-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"{"provider":"test","secret":"sk_should_not_leak","webhook_secret":"x"}"#,
+        )
+        .unwrap();
+        let err = read_gateway_file(&path).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("test processor"), "{msg}");
+        assert!(!msg.contains("sk_should_not_leak"), "{msg}");
+        let _ = std::fs::remove_file(&path);
     }
 }

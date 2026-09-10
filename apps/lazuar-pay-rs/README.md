@@ -59,9 +59,11 @@ cargo run -p lazuar-pay-rs -- backfill --apply
 cargo test -p pay-client -p pay-cli           # HTTP client + CLI (Docker)
 cargo run -p pay-cli -- --help
 # LAZUAR_PAY_API_KEY=lzr_sk_… LAZUAR_PAY_ORG_ID=… cargo run -p pay-cli -- checkout create --provider test --amount 10.00
+# cargo run -p pay-cli -- gateway put --file ./secrets/stripe.json
+# cargo run -p pay-cli -- gateway list
 ```
 
-`lazuar-pay` is an HTTP client of `:8081`, not a second money writer. Testing Fake One accepts `Authorization: Bearer lzr_sk_test` or `test-writer`. Stripe `sk_` is rejected locally. Stdout is host JSON (`paid`, not `Settled`). See `plans/035-evals/02-cli.md`.
+`lazuar-pay` is an HTTP client of `:8081`, not a second money writer. Testing Fake One accepts `Authorization: Bearer lzr_sk_test` or `test-writer`. Stripe `sk_` is rejected locally. Stdout is host JSON (`paid`, not `Settled`). Vault write is `gateway put --file` only — no `--secret` flags (035/03). See `plans/035-evals/02-cli.md`.
 
 Testing `serve` (`ASPNETCORE_ENVIRONMENT=Testing`, default) uses Fake One (`Authorization: Bearer test-writer`) unless `One__BaseUrl` is set, Fake PSP mint, and Fake worker remotes. Staging/Production require `Pay__WrapKey` (32-byte base64), `ConnectionStrings__Pay`, public `One__BaseUrl`, https `Pay__CheckoutBaseUrl`, and `Pay__CorsOrigins` (must include the checkout origin). Live mint decrypts the vault and POSTs to the PSP; CI never calls `api.stripe.com`.
 

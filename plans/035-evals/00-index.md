@@ -15,6 +15,7 @@ in-process `apply()`, and not a replacement for the dashboard’s One-key + BYOK
 |---|---|
 | [01-rest-cli-mcp.md](01-rest-cli-mcp.md) | Evaluation: existing surface, adapter split, REST gaps, CLI, MCP tool list, bootstrap, order, risks |
 | [02-cli.md](02-cli.md) | CLI implementation plan (`pay-client` + `lazuar-pay` binary) |
+| [03-cli-gateway.md](03-cli-gateway.md) | `gateway put --file` / list / get — BYOK, no secret flags |
 
 **Spec this sits on:** [032/13 identity](../032-hyperswitch-btcpay/13-identity.md),
 [032/17 API surface](../032-hyperswitch-btcpay/17-api-surface.md),
