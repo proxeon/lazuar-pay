@@ -67,11 +67,13 @@ pub enum Command {
 pub enum CheckoutCmd {
     /// `POST /v1/checkouts`. `--provider` is required (no silent test default).
     Create {
+        /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
         #[arg(long)]
         provider: String,
         /// Decimal string, at most 2 display places. Never parsed as f64.
         #[arg(long)]
         amount: String,
+        /// Fiat default MYR. `solana` requires USDC (not MYR/USD) — 036/006 #14.
         #[arg(long, default_value = "MYR")]
         currency: String,
         /// Required so a retry does not mint a second charge (036/006 #7).
@@ -118,10 +120,12 @@ pub enum RefundCmd {
 pub enum PaymentLinkCmd {
     /// `POST /v1/payment-links`
     Create {
+        /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
         #[arg(long)]
         provider: String,
         #[arg(long)]
         amount: String,
+        /// Fiat default MYR. `solana` requires USDC (not MYR/USD) — 036/006 #14.
         #[arg(long, default_value = "MYR")]
         currency: String,
         #[arg(long)]
@@ -542,6 +546,15 @@ mod tests {
             "{}",
             err.to_string()
         );
+    }
+
+    #[test]
+    fn checkout_create_help_states_solana_usdc() {
+        let err = Cli::try_parse_from(["lazuar-pay", "checkout", "create", "--help"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("USDC"), "{msg}");
+        assert!(msg.contains("solana"), "{msg}");
+        assert!(msg.contains("MYR"), "{msg}");
     }
 
     #[test]

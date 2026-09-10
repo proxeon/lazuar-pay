@@ -63,6 +63,7 @@ impl Client {
         idempotency_key: &str,
         extras: CheckoutExtras<'_>,
     ) -> Result<Value, Error> {
+        validate_currency_for_provider(provider, currency)?;
         let org = self.cfg.org_id()?;
         let key = require_idempotency(idempotency_key)?;
         let mut body = json!({
@@ -143,6 +144,7 @@ impl Client {
         unlimited: bool,
         label: Option<&str>,
     ) -> Result<Value, Error> {
+        validate_currency_for_provider(provider, currency)?;
         let org = self.cfg.org_id()?;
         let mut body = json!({
             "org_id": org,
@@ -285,6 +287,18 @@ impl Client {
     }
 }
 
+/// Host 400s `solana` + MYR (`solana does not capture ringgit`). Fail closed here (036/006 #14).
+pub fn validate_currency_for_provider(provider: &str, currency: &str) -> Result<(), Error> {
+    let p = provider.trim().to_ascii_lowercase();
+    let c = currency.trim().to_ascii_uppercase();
+    if p == "solana" && c != "USDC" {
+        return Err(Error::Config(
+            "solana requires currency USDC (receive-only; not MYR or USD)".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn require_idempotency(raw: &str) -> Result<&str, Error> {
     let key = raw.trim();
     if key.is_empty() {
@@ -326,5 +340,13 @@ mod tests {
         let d = Decimal::from_str_exact("10.50").unwrap();
         let v = decimal_number(d).unwrap();
         assert_eq!(v.to_string(), "10.5");
+    }
+
+    #[test]
+    fn solana_rejects_myr_before_http() {
+        let err = validate_currency_for_provider("solana", "MYR").unwrap_err();
+        assert!(err.to_string().contains("USDC"), "{err}");
+        validate_currency_for_provider("solana", "USDC").unwrap();
+        validate_currency_for_provider("test", "MYR").unwrap();
     }
 }
