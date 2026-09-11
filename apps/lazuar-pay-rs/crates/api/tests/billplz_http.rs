@@ -563,3 +563,76 @@ async fn empty_body_is_400() {
     assert_eq!(st, StatusCode::BAD_REQUEST);
     assert_eq!(body["detail"], "invalid event");
 }
+
+/// Success URL is not paid. GET /v1/pay/{token} retrieves the bill (no webhook POST).
+#[tokio::test]
+async fn get_after_start_takes_when_retrieve_paid_without_webhook() {
+    let _g = BILLPLZ_HTTP.lock().await;
+    let pool = pool().await;
+    let state: AppState = testing_state(pool.clone(), SECRET);
+    let billplz = state.billplz.clone();
+    billplz.set_retrieve(
+        200,
+        r#"{"id":"bill_1","paid":true,"state":"paid","paid_amount":1000}"#,
+    );
+    let app = api::router(state);
+
+    let (st, _) = call(
+        app.clone(),
+        authed(
+            "PUT",
+            "/v1/orgs/t1/gateway",
+            "test-writer",
+            Some(put_billplz()),
+        ),
+    )
+    .await;
+    assert!(st.is_success());
+    let (st, minted) = call(
+        app.clone(),
+        authed(
+            "POST",
+            "/v1/checkouts",
+            "test-writer",
+            Some(json!({
+                "org_id": "t1",
+                "provider": "billplz",
+                "amount": 10.00,
+                "currency": "MYR"
+            })),
+        ),
+    )
+    .await;
+    assert_eq!(st, StatusCode::CREATED);
+    let token = minted["public_token"].as_str().unwrap();
+    let (st, started) = call(
+        app.clone(),
+        Request::builder()
+            .method("POST")
+            .uri(format!("/v1/pay/{token}/start"))
+            .header("Content-Type", "application/json")
+            .body(Body::from(r#"{"email":"ada@acme.test"}"#))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{started}");
+    assert!(
+        started["redirect_url"]
+            .as_str()
+            .unwrap_or("")
+            .contains("billplz"),
+        "{started}"
+    );
+
+    let (st, got) = call(
+        app,
+        Request::builder()
+            .uri(format!("/v1/pay/{token}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{got}");
+    assert_eq!(got["status"], "paid");
+    assert_ne!(got["status"], "settled");
+}

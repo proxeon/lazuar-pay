@@ -101,5 +101,7 @@ stdio JSON-RPC (Content-Length). Ten tools; secrets stay in env. No
 - Mint `--currency` from `PAY_CURRENCY` is resolved per invocation (clap
   `default_value_t` was baked on the first parse in the process).
 - `solana` + default MYR fails closed as config (`USDC` required), not a host 400.
+- Billplz: public GET retrieves the bill if the callback never arrives (success
+  URL is still not paid). `Pay__LiveHttp=1` also starts PSync even with `--api-only`.
 
 [Unreleased]: https://github.com/proxeon/lazuar-pay/compare/main...feat/lazuar-pay-rs

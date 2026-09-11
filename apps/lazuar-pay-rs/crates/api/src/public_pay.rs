@@ -2,9 +2,10 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use domain::proof::{Proof, SyncOutcome};
 use domain::rail::{HostedSession, RailId};
 use domain::wire::buyer_status;
-use domain::{AttemptId, PaymentStatus, Proof, ProofId};
+use domain::{AttemptId, PaymentStatus, ProofId};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use storage::{apply, ApplyCmd, ApplyOutcome};
@@ -14,6 +15,66 @@ use crate::errors::{from_apply, problem};
 use crate::json::money_number;
 use crate::mint_http;
 use crate::AppState;
+use workers::billplz_remote::BillplzRemote;
+use workers::psync::SyncRail;
+
+/// Buyer GET while verifying. Do not trust the success-URL query; retrieve the bill (PSync).
+/// Covers a missed Billplz callback without `--worker` / inbound POST.
+async fn maybe_sync_billplz(st: &AppState, view: storage::PaymentView) -> storage::PaymentView {
+    if view.status != PaymentStatus::Open {
+        return view;
+    }
+    if view.provider.as_deref() != Some(RailId::BILLPLZ.as_str()) {
+        return view;
+    }
+    let Some(session_id) = view.session_id.as_deref().filter(|s| !s.is_empty()) else {
+        return view;
+    };
+    let Some(attempt_id) = view.attempt_id else {
+        return view;
+    };
+    let remote = if st.live_http.is_some() {
+        BillplzRemote::live(st.pool.clone(), st.wrap_key)
+    } else {
+        BillplzRemote::fake(st.pool.clone(), st.wrap_key, st.billplz.clone())
+    };
+    let SyncOutcome::Paid { received, refs } = remote
+        .retrieve(view.tenant_id.as_str(), "billplz", session_id)
+        .await
+    else {
+        return view;
+    };
+    let txn = refs
+        .capture_id
+        .clone()
+        .or(refs.network_id.clone())
+        .unwrap_or_else(|| session_id.to_string());
+    let proof_id = format!("sync:billplz:{session_id}:{txn}");
+    let now = OffsetDateTime::now_utc();
+    let _ = apply(
+        &st.pool,
+        ApplyCmd::InjectPaid {
+            tenant_id: view.tenant_id.clone(),
+            rail: RailId::BILLPLZ,
+            proof_id,
+            payment_id: view.id,
+            attempt_id,
+            received,
+            proof: Proof::PspSync {
+                rail: RailId::BILLPLZ,
+                connector_txn_id: txn,
+            },
+            now,
+            refs,
+        },
+    )
+    .await;
+    storage::read::payment_by_id(&st.pool, view.id)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or(view)
+}
 
 fn not_configured() -> Response {
     problem(
@@ -65,6 +126,7 @@ pub async fn get(
                     return get_link(&st, &link, view.slot_key.as_deref()).await;
                 }
             }
+            let view = maybe_sync_billplz(&st, view).await;
             Json(public_json(&st, &view)).into_response()
         }
         Ok(None) => problem(StatusCode::NOT_FOUND, "Not Found", "checkout not found"),

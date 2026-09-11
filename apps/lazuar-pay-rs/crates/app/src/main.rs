@@ -254,6 +254,12 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
     let fakes = Fakes::default();
     let testing = env == Env::Testing;
     let wcfg = workers_cfg(pool.clone(), env, wrap_key, &cfg, &fakes);
+    // Testing uses in-process fakes unless Pay__LiveHttp=1 (sandbox Billplz on a laptop).
+    let live_http = if testing && std::env::var("Pay__LiveHttp").ok().as_deref() != Some("1") {
+        None
+    } else {
+        Some(mint_http::live_client())
+    };
     let state = AppState {
         pool,
         env,
@@ -280,11 +286,7 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
         one_webhook_secret: std::env::var("Pay__OneWebhookSecret").unwrap_or_default(),
         metrics_token: std::env::var("Pay__MetricsToken").unwrap_or_default(),
         cors_origins,
-        live_http: if testing {
-            None
-        } else {
-            Some(mint_http::live_client())
-        },
+        live_http: live_http.clone(),
     };
     let app = api::router(state);
     let port: u16 = std::env::var("PORT")
@@ -294,7 +296,9 @@ async fn serve(with_workers: bool) -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     eprintln!("lazuar-pay-rs listening on {addr}");
-    if with_workers {
+    // Live rails need PSync if the PSP callback never arrives (trycloudflare / --api-only).
+    let run_loops = with_workers || live_http.is_some();
+    if run_loops {
         tokio::select! {
             r = axum::serve(listener, app) => r?,
             _ = workers::run(wcfg) => {}
