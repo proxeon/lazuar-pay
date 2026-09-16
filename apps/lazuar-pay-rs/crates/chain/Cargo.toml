@@ -1,0 +1,19 @@
+[package]
+name = "chain"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Watcher trait + Solana impl. Emits proofs, never attempt_id."
+
+[lints]
+workspace = true
+
+[dependencies]
+domain.workspace = true
+rails.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true

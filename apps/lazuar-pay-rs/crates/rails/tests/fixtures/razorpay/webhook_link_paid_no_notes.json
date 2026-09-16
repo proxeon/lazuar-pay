@@ -1,0 +1,1 @@
+{"event":"payment_link.paid","payload":{"payment":{"entity":{"id":"pay_ln","amount":1000,"currency":"INR"}},"payment_link":{"entity":{"id":"plink_1"}}}}

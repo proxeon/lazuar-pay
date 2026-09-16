@@ -1,0 +1,48 @@
+//! Persistence. `apply` is the only composer of fold + journal + outbox (033/02).
+//! This crate must not import rail HTTP clients.
+
+#![forbid(unsafe_code)]
+
+pub mod apply;
+pub mod backfill;
+pub mod catalog;
+pub mod chain;
+pub mod documents;
+pub mod error;
+pub mod lease;
+pub mod money_query;
+pub mod org_settings;
+pub mod read;
+pub mod refund_settle;
+pub mod rows;
+pub mod vault;
+
+pub use apply::{apply, stable_refund_id, ApplyCmd, ApplyOutcome, MintSpec};
+pub use backfill::{run as backfill, BackfillError, BackfillOpts, BackfillReport, PUBLIC_DDL};
+pub use chain::{
+    bind_proof, claim_unbound_proofs, claim_watch_reservations, insert_proof,
+    reservation_by_locator, ProofRow, WatchRow,
+};
+pub use documents::{allocate as allocate_document, malaysia_year, DocSeries};
+pub use error::ApplyError;
+pub use lease::{
+    claim_deliveries, claim_expired, claim_psync, claim_refunds, defer_psync, enqueue_outbound,
+    enqueue_outbound_pool, envelope, list_org_events, load_endpoint, mark_delivery, mark_refund,
+    money_number, sweep_retention, DeliveryRow, EndpointRow, ExpireCandidate, OrgEvent,
+    PsyncCandidate, RefundClaim, RetentionCfg,
+};
+pub use read::{AttemptView, PaymentView};
+pub use vault::{
+    audit_gateway, ensure_org_settings, get_credential, latest_attempt_refs, payment_by_session,
+    record_ignored_inbound, refund_amount, update_payer, upsert_billplz, upsert_chip,
+    upsert_razorpay, upsert_solana, upsert_stripe, upsert_xendit, CredentialRow,
+};
+
+use sqlx::postgres::PgPool;
+
+/// Relative to `crates/storage` (`CARGO_MANIFEST_DIR`).
+pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../migrations");
+
+pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    MIGRATOR.run(pool).await
+}

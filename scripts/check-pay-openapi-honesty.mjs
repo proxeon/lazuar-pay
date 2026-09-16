@@ -25,6 +25,9 @@ const HTTP_VERBS = new Set(["get", "post", "put", "delete", "patch"]);
 /** Unversioned process probes. Keep host-only; do not grow pay-spec for them. */
 const IMPL_ONLY = new Set(["GET /health", "GET /ready"]);
 
+/** Rust-first TypeSpec paths. .NET Map* follows at cutover (strangler). */
+const SPEC_NOT_ON_DOTNET = new Set(["GET /v1/orgs/{orgId}/events"]);
+
 function normalizeRoute(p) {
   let s = String(p).trim().replace(/\/+/g, "/");
   if (!s.startsWith("/")) s = `/${s}`;
@@ -109,7 +112,10 @@ function fail(lines) {
 const maps = loadMapRoutes();
 const { paths: spec, text: yaml } = loadOpenApiPaths(OPENAPI_PATH);
 
-const extraSpec = [...spec.keys()].filter((k) => !maps.has(k)).sort();
+const extraSpec = [...spec.keys()]
+  .filter((k) => !maps.has(k) && !SPEC_NOT_ON_DOTNET.has(k))
+  .sort();
+const allowlistedButMapped = [...SPEC_NOT_ON_DOTNET].filter((k) => maps.has(k)).sort();
 const missingSpec = [...maps.keys()]
   .filter((k) => !spec.has(k) && !IMPL_ONLY.has(k))
   .sort();
@@ -127,6 +133,10 @@ if (missingSpec.length) {
 if (allowlistedButMappedInSpec.length) {
   errors.push("Host-only probes should stay out of pay-spec:");
   for (const k of allowlistedButMappedInSpec) errors.push(`  ${k}`);
+}
+if (allowlistedButMapped.length) {
+  errors.push("SPEC_NOT_ON_DOTNET paths are now on Map* — drop from the allowlist:");
+  for (const k of allowlistedButMapped) errors.push(`  ${k}`);
 }
 
 function schemaBlock(text, name) {

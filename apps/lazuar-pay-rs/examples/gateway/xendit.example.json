@@ -1,0 +1,6 @@
+{
+  "provider": "xendit",
+  "secret": "xnd_development_REPLACE_ME",
+  "webhook_secret": "REPLACE_CALLBACK_TOKEN",
+  "environment": "test"
+}

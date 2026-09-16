@@ -1,0 +1,20 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Payment / Attempt / Settlement fold. No I/O (032/07)."
+
+[lints]
+workspace = true
+
+[dependencies]
+rust_decimal.workspace = true
+thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest = "1.6"

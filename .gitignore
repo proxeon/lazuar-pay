@@ -70,6 +70,7 @@ Thumbs.db
 # Miscellaneous
 # ----------------------------------------------------------------------
 *.pem
+!apps/lazuar-pay-rs/crates/rails/tests/fixtures/**/*.pem
 plan/
 ctx.ignore
 system-architecture
@@ -108,6 +109,9 @@ docs/payment/
 # ----------------------------------------------------------------------
 scripts/lhdn_sandbox/cookies.txt
 scripts/lhdn_sandbox/**/cookies.txt
+
+# Rust
+**/target/
 
 # Sample app local demo stores
 .data/

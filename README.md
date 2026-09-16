@@ -91,10 +91,29 @@ TypeSpec: [`packages/pay-spec`](packages/pay-spec/) (`task pay:spec`). Generated
 
 Pay images: `docker-compose.pay.yml`. Production must set `Pay__CorsOrigins` and `VITE_PAY_API_URL` / `VITE_CHECKOUT_ORIGIN` to public HTTPS.
 
+## CLI (`lazuar-pay`)
+
+HTTP client of `:8081` (Rust `apps/lazuar-pay-rs`, crate `pay-cli`). Not a second money writer. Prefer env over `--api-key` (`ps` / history).
+
+| Canonical | pay-node alias | Role |
+|-----------|----------------|------|
+| `LAZUAR_PAY_BASE_URL` | `PAY_API_URL` | Origin, default `http://localhost:8081` |
+| `LAZUAR_PAY_API_KEY` | `PAY_API_KEY` | One `lzr_sk_…` (Testing: `lzr_sk_test` / `test-writer`) |
+| `LAZUAR_PAY_ORG_ID` | `PAY_ORG_ID` | One tenant id |
+
+```sh
+export LAZUAR_PAY_API_KEY=lzr_sk_…   # or PAY_API_KEY from examples/pay-node/.env
+export LAZUAR_PAY_ORG_ID=…
+cargo run -p pay-cli -- whoami
+cargo run -p pay-cli -- checkout create --provider test --amount 10.00 --idempotency-key k1
+# Vault: chmod 600 then gateway put --file (shapes in apps/lazuar-pay-rs/examples/gateway/)
+```
+
 ## Layout
 
 ```
-apps/lazuar-pay/              focused host (.NET, :8081)
+apps/lazuar-pay/              focused host (.NET, :8081) — production SoT until cutover
+apps/lazuar-pay-rs/           Rust engine + `lazuar-pay` CLI + pay-client
 apps/lazuar-pay-merchant/     staff SPA (:5178)
 apps/lazuar-pay-checkout/     buyer page (:5179)
 examples/pay-node/            integrator sample (:3021)

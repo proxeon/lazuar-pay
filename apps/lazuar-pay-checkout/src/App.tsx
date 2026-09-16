@@ -377,7 +377,7 @@ function App() {
             </div>
             <Heading live>Confirming payment</Heading>
             <CardDescription>
-              The processor success URL is not paid. Waiting for the webhook.
+              The processor success URL is not paid. Confirming with Billplz.
             </CardDescription>
           </CardHeader>
           {verifyTimedOut ? (

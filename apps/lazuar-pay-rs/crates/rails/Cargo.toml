@@ -1,0 +1,25 @@
+[package]
+name = "rails"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Per-rail HTTP. No sqlx (032/10)."
+
+[lints]
+workspace = true
+
+[dependencies]
+base64.workspace = true
+domain.workspace = true
+getrandom.workspace = true
+hex.workspace = true
+hmac.workspace = true
+num-bigint = "0.4"
+num-traits = "0.2"
+rsa.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true

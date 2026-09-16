@@ -50,3 +50,58 @@ jobs:
           git diff --exit-code -- packages/pay-types-ts
       - name: Pay OpenAPI ↔ Map* honesty
         run: node scripts/check-pay-openapi-honesty.mjs
+      - name: Pay OpenAPI ↔ Rust axum honesty
+        run: node scripts/check-pay-rs-openapi-honesty.mjs
+
+  pay-rs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/lazuar-pay-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/lazuar-pay-rs
+      - name: Domain purity
+        run: |
+          set -euo pipefail
+          if grep -R -nE 'as f64|as_f64' crates/domain --include='*.rs'; then
+            echo "domain forbids f64"
+            exit 1
+          fi
+      - name: fmt
+        run: cargo fmt --all -- --check
+      - name: clippy domain
+        run: cargo clippy -p domain --all-targets -- -D warnings
+      - name: clippy pay-client pay-cli pay-mcp
+        run: cargo clippy -p pay-client -p pay-cli -p pay-mcp --all-targets -- -D warnings
+      - name: test domain
+        run: cargo test -p domain
+      - name: test rails (parse + fixtures, no Docker)
+        run: cargo test -p rails
+      - name: test storage (Docker Postgres 16)
+        run: cargo test -p storage
+      - name: test api (Docker Postgres 16)
+        run: cargo test -p api
+      - name: test workers (Docker Postgres 16)
+        run: cargo test -p workers
+      - name: test pay-client and pay-cli (Docker Postgres 16)
+        run: cargo test -p pay-client -p pay-cli
+      - name: test pay-mcp (stdio, no Docker)
+        run: cargo test -p pay-mcp
+      - name: rails has no sqlx
+        run: |
+          set -euo pipefail
+          if cargo tree -p rails -i sqlx >/dev/null 2>&1; then echo "sqlx in rails"; exit 1; fi
+      - name: check workspace
+        run: cargo check --workspace
+      - name: domain has no tokio/sqlx/axum
+        run: |
+          set -euo pipefail
+          if cargo tree -p domain -i tokio >/dev/null 2>&1; then echo "tokio in domain"; exit 1; fi
+          if cargo tree -p domain -i sqlx >/dev/null 2>&1; then echo "sqlx in domain"; exit 1; fi
+          if cargo tree -p domain -i axum >/dev/null 2>&1; then echo "axum in domain"; exit 1; fi

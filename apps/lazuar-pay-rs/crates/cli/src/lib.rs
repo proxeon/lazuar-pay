@@ -1,0 +1,1547 @@
+//! `lazuar-pay` — TypeSpec `/v1` CLI. Talks HTTP only (035/02). Never imports storage.
+
+#![forbid(unsafe_code)]
+
+use clap::Subcommand;
+use pay_client::{
+    env_first, validate_gateway_put, CheckoutExtras, Client, Config, Error, PaymentLinkExtras,
+};
+use rust_decimal::Decimal;
+use serde::Deserialize;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+
+/// Re-export so integration tests can `try_parse_from` without a clap dev-dep.
+pub use clap::Parser;
+
+/// Merchant client of focused Pay `:8081`. The money host is `lazuar-pay-rs serve`.
+#[derive(Parser)]
+#[command(
+    name = "lazuar-pay",
+    about = "Lazuar Pay /v1 client (HTTP). Not the payment host.",
+    version
+)]
+pub struct Cli {
+    /// Pay origin, no trailing slash. Env `LAZUAR_PAY_BASE_URL` or `PAY_API_URL`.
+    #[arg(long, env = "LAZUAR_PAY_BASE_URL")]
+    pub base_url: Option<String>,
+    /// One `lzr_sk_…` (or Testing `test-writer`). Env `LAZUAR_PAY_API_KEY` or `PAY_API_KEY`.
+    // 036/006 #1: hide_env_values so `--help` does not print the key.
+    #[arg(long, env = "LAZUAR_PAY_API_KEY", hide_env_values = true)]
+    pub api_key: Option<String>,
+    /// One tenant id. Env `LAZUAR_PAY_ORG_ID` or `PAY_ORG_ID`.
+    #[arg(long, env = "LAZUAR_PAY_ORG_ID")]
+    pub org_id: Option<String>,
+    /// One-line JSON on stdout. Default is pretty-print.
+    #[arg(long, global = true)]
+    pub compact: bool,
+    /// Success is exit 0 with empty stdout. Errors still stderr JSON.
+    #[arg(long, global = true)]
+    pub quiet: bool,
+    /// Tab-separated table for `items` lists. `--quiet` still wins.
+    #[arg(long, global = true)]
+    pub table: bool,
+    /// JSON config path. Default `~/.config/lazuar-pay/config.json`. Never stores api_key.
+    #[arg(long, env = "LAZUAR_PAY_CONFIG")]
+    pub config: Option<PathBuf>,
+    /// Named profile inside the config file (`profiles.<name>`).
+    #[arg(long, env = "LAZUAR_PAY_PROFILE")]
+    pub profile: Option<String>,
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+impl std::fmt::Debug for Cli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Never print the writer key (036/006 #33).
+        f.debug_struct("Cli")
+            .field("base_url", &self.base_url)
+            .field("api_key", &self.api_key.as_ref().map(|_| "***"))
+            .field("org_id", &self.org_id)
+            .field("compact", &self.compact)
+            .field("quiet", &self.quiet)
+            .field("table", &self.table)
+            .field("config", &self.config)
+            .field("profile", &self.profile)
+            .field("command", &self.command)
+            .finish()
+    }
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// `GET /v1/whoami`
+    Whoami,
+    /// `GET /v1/orgs/{orgId}/ready`
+    Ready,
+    #[command(subcommand)]
+    Checkout(CheckoutCmd),
+    #[command(subcommand)]
+    Refund(RefundCmd),
+    /// Occupancy mint (SPA Pay links).
+    #[command(name = "payment-link", subcommand)]
+    PaymentLink(PaymentLinkCmd),
+    /// `GET /v1/orgs/{orgId}/payments` — `list` matches `receipts list` (036/006 #12).
+    #[command(subcommand)]
+    Payments(PaymentsCmd),
+    #[command(subcommand)]
+    Receipts(ReceiptsCmd),
+    /// BYOK vault. Write only via `--file` (035/03). No `--secret` flags.
+    #[command(subcommand)]
+    Gateway(GatewayCmd),
+    /// Plane C org webhook (dashboard Webhooks page).
+    #[command(subcommand)]
+    Webhook(WebhookCmd),
+    /// MYR one-off catalog (SPA creates a product then a payment-link).
+    #[command(subcommand)]
+    Product(ProductCmd),
+    /// Plane C delivery cursor (`GET /v1/orgs/{org}/events`).
+    #[command(subcommand)]
+    Events(EventsCmd),
+    /// One inbound webhook secret. Write via `--file` only.
+    #[command(name = "one-webhook", subcommand)]
+    OneWebhook(OneWebhookCmd),
+    /// Recurring is not offered; list is honest-empty.
+    #[command(subcommand)]
+    Subscription(SubscriptionCmd),
+    /// Poll events and POST each envelope to a loopback URL (Testing).
+    Listen {
+        #[arg(long)]
+        forward_to: String,
+        /// 0 = run until killed. Tests use a small value.
+        #[arg(long, default_value_t = 0)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 500)]
+        interval_ms: u64,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CheckoutCmd {
+    /// `POST /v1/checkouts`. `--provider` is required (no silent test default).
+    Create {
+        /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
+        #[arg(short, long)]
+        provider: String,
+        /// Decimal string, at most 2 display places. Never parsed as f64.
+        #[arg(short, long)]
+        amount: String,
+        /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
+        #[arg(long)]
+        currency: Option<String>,
+        /// Required so a retry does not mint a second charge (036/006 #7).
+        #[arg(long)]
+        idempotency_key: String,
+        /// Buyer return URL after pay (TypeSpec; host persists).
+        #[arg(long)]
+        success_url: Option<String>,
+        /// Buyer return URL on cancel (TypeSpec; host persists).
+        #[arg(long)]
+        cancel_url: Option<String>,
+        /// TypeSpec optional. Catalog mint uses `payment-link create --product-id`.
+        #[arg(long)]
+        product_id: Option<String>,
+    },
+    /// `GET /v1/checkouts/{id}`
+    Get { id: String },
+    /// `GET /v1/orgs/{orgId}/checkouts`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+    /// Poll GET until `--until`. Not a buyer start. Terminal mismatch is 409, not a wait.
+    Wait {
+        id: String,
+        #[arg(long, default_value = "paid")]
+        until: String,
+        #[arg(long, default_value_t = 900)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 500)]
+        interval_ms: u64,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum RefundCmd {
+    /// `POST /v1/orgs/{orgId}/refunds`
+    Create {
+        #[arg(long)]
+        checkout: String,
+        #[arg(long)]
+        amount: Option<String>,
+        #[arg(long)]
+        idempotency_key: String,
+    },
+    /// `GET /v1/orgs/{orgId}/refunds`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+    /// `POST /v1/orgs/{orgId}/refunds/{id}/resolve` — ops hatch, not MCP.
+    Resolve {
+        id: String,
+        /// succeeded | failed
+        #[arg(long)]
+        status: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PaymentLinkCmd {
+    /// `POST /v1/payment-links`
+    Create {
+        /// stripe|chip|billplz|xendit|razorpay|solana|test. `solana` is USDC only.
+        #[arg(short, long)]
+        provider: String,
+        #[arg(short, long)]
+        amount: String,
+        /// Fiat default MYR, or `LAZUAR_PAY_CURRENCY` / `PAY_CURRENCY`.
+        #[arg(long)]
+        currency: Option<String>,
+        #[arg(long)]
+        max_payers: Option<i32>,
+        #[arg(long)]
+        unlimited: bool,
+        #[arg(long)]
+        label: Option<String>,
+        /// Catalog product (SPA: product create then link).
+        #[arg(long)]
+        product_id: Option<String>,
+    },
+    /// `GET /v1/orgs/{orgId}/payment-links`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PaymentsCmd {
+    /// `GET /v1/orgs/{orgId}/payments`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ReceiptsCmd {
+    /// `GET /v1/orgs/{orgId}/receipts`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+    /// `GET /v1/orgs/{orgId}/receipts/{id}`
+    Get { id: String },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum GatewayCmd {
+    /// `PUT /v1/orgs/{orgId}/gateway`. Secrets stay in the file, not argv / MCP args.
+    Put {
+        #[arg(long, value_name = "PATH")]
+        file: PathBuf,
+    },
+    /// `GET /v1/orgs/{orgId}/gateway?provider=`
+    Get {
+        #[arg(long)]
+        provider: String,
+    },
+    /// `GET /v1/orgs/{orgId}/gateways`
+    List,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum WebhookCmd {
+    /// `PUT /v1/orgs/{orgId}/webhooks`. URL only — host mints `whsec_`.
+    Put {
+        #[arg(long)]
+        url: String,
+    },
+    /// `GET /v1/orgs/{orgId}/webhooks` (no secret, prefix only).
+    Get,
+    /// `POST /v1/orgs/{orgId}/webhooks/rotate` — new `whsec_` once.
+    Rotate,
+    /// `POST /v1/orgs/{orgId}/webhooks/test` — enqueue `webhook.test`.
+    Test,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ProductCmd {
+    /// `POST /v1/orgs/{orgId}/products`. Currency is MYR; no recurring interval.
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        amount: String,
+        #[arg(long, default_value = "MYR")]
+        currency: String,
+        #[arg(long)]
+        description: Option<String>,
+    },
+    /// `GET /v1/orgs/{orgId}/products`
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EventsCmd {
+    /// `GET /v1/orgs/{orgId}/events`. `after` is event_id; results are newer, oldest first.
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum OneWebhookCmd {
+    /// `PUT /v1/orgs/{orgId}/one-webhook`
+    Put {
+        #[arg(long, value_name = "PATH")]
+        file: PathBuf,
+    },
+    /// `GET /v1/orgs/{orgId}/one-webhook` (configured bool only).
+    Get,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SubscriptionCmd {
+    /// `GET /v1/orgs/{orgId}/subscriptions` — items always [].
+    List {
+        #[arg(long)]
+        limit: Option<u32>,
+        #[arg(long)]
+        after: Option<String>,
+    },
+}
+
+pub fn config_from_cli(cli: &Cli) -> Result<Config, Error> {
+    // Flags/env beat the file. The file must not hold api_key (036/006 #26).
+    let file = load_file_config(cli.config.as_deref(), cli.profile.as_deref())?;
+    Config::from_parts(
+        nonempty(cli.base_url.clone())
+            .or_else(|| env_first(&["PAY_API_URL"]))
+            .or(file.base_url),
+        nonempty(cli.api_key.clone()).or_else(|| env_first(&["PAY_API_KEY"])),
+        nonempty(cli.org_id.clone())
+            .or_else(|| env_first(&["PAY_ORG_ID"]))
+            .or(file.org_id),
+    )
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FileConfig {
+    #[serde(default)]
+    base_url: Option<String>,
+    #[serde(default)]
+    org_id: Option<String>,
+    #[serde(default)]
+    profile: Option<String>,
+    #[serde(default)]
+    profiles: HashMap<String, FileConfig>,
+    /// Present only so we can refuse it. Never copied into Config.
+    #[serde(default)]
+    api_key: Option<String>,
+}
+
+fn load_file_config(
+    explicit: Option<&Path>,
+    profile_flag: Option<&str>,
+) -> Result<FileConfig, Error> {
+    let path = match explicit {
+        Some(p) => Some(p.to_path_buf()),
+        None => default_config_path(),
+    };
+    let Some(path) = path else {
+        return Ok(FileConfig::default());
+    };
+    if !path.exists() {
+        return Ok(FileConfig::default());
+    }
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let mut parsed: FileConfig = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    if parsed
+        .api_key
+        .as_ref()
+        .is_some_and(|s| !s.trim().is_empty())
+    {
+        return Err(Error::Config(format!(
+            "{} must not contain api_key; use LAZUAR_PAY_API_KEY",
+            path.display()
+        )));
+    }
+    let name = profile_flag
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .or_else(|| parsed.profile.clone());
+    if let Some(name) = name {
+        if let Some(p) = parsed.profiles.remove(&name) {
+            if p.api_key.as_ref().is_some_and(|s| !s.trim().is_empty()) {
+                return Err(Error::Config(format!(
+                    "{} profile {name} must not contain api_key",
+                    path.display()
+                )));
+            }
+            return Ok(FileConfig {
+                base_url: p.base_url.or(parsed.base_url),
+                org_id: p.org_id.or(parsed.org_id),
+                ..FileConfig::default()
+            });
+        }
+        if profile_flag.is_some() {
+            return Err(Error::Config(format!(
+                "profile {name} not found in {}",
+                path.display()
+            )));
+        }
+    }
+    Ok(parsed)
+}
+
+fn default_config_path() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    Some(PathBuf::from(home).join(".config/lazuar-pay/config.json"))
+}
+
+/// `sk_live` JSON at mode 0644 must not be accepted (036/006 #21). Unix only.
+fn refuse_world_readable(path: &Path) -> Result<(), Error> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(path)
+            .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?
+            .permissions()
+            .mode();
+        if mode & 0o077 != 0 {
+            return Err(Error::Config(format!(
+                "{} is group/world-readable; chmod 600 and retry",
+                path.display()
+            )));
+        }
+    }
+    let _ = path;
+    Ok(())
+}
+
+fn default_currency() -> String {
+    env_first(&["LAZUAR_PAY_CURRENCY", "PAY_CURRENCY"]).unwrap_or_else(|| "MYR".into())
+}
+
+/// Flag beats env. clap must not bake default_value_t (Command is cached).
+fn resolve_currency(flag: Option<String>) -> String {
+    nonempty(flag).unwrap_or_else(default_currency)
+}
+
+fn nonempty(s: Option<String>) -> Option<String> {
+    s.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+}
+
+/// `--quiet` wins. `--table` then `--compact`. Else pretty JSON.
+pub fn stdout_json(body: &Value, compact: bool, quiet: bool, table: bool) -> Option<String> {
+    if quiet {
+        return None;
+    }
+    if table {
+        return Some(format_table(body));
+    }
+    if compact {
+        serde_json::to_string(body).ok()
+    } else {
+        serde_json::to_string_pretty(body).ok()
+    }
+}
+
+/// TSV: header from the first object's keys. Scalars only (036/006 #27).
+pub fn format_table(body: &Value) -> String {
+    if let Some(items) = body.get("items").and_then(Value::as_array) {
+        if items.is_empty() {
+            return "items\t(empty)\n".into();
+        }
+        let keys = table_keys(items);
+        let mut out = keys.join("\t");
+        out.push('\n');
+        for row in items {
+            let cells: Vec<String> = keys.iter().map(|k| cell(row.get(k))).collect();
+            out.push_str(&cells.join("\t"));
+            out.push('\n');
+        }
+        return out;
+    }
+    if let Some(obj) = body.as_object() {
+        let mut out = String::new();
+        for (k, v) in obj {
+            out.push_str(k);
+            out.push('\t');
+            out.push_str(&cell(Some(v)));
+            out.push('\n');
+        }
+        return out;
+    }
+    body.to_string()
+}
+
+fn table_keys(items: &[Value]) -> Vec<String> {
+    let prefer = ["id", "status", "provider", "amount", "currency", "number"];
+    let mut keys = Vec::new();
+    for p in prefer {
+        if items.iter().any(|i| i.get(p).is_some()) {
+            keys.push(p.to_string());
+        }
+    }
+    if let Some(obj) = items[0].as_object() {
+        for k in obj.keys() {
+            if !keys.iter().any(|e| e == k) {
+                keys.push(k.clone());
+            }
+        }
+    }
+    keys
+}
+
+const GATEWAY_VIEW_KEYS: &[&str] = &[
+    "org_id",
+    "provider",
+    "configured",
+    "last4",
+    "environment",
+    "webhook_configured",
+    "public_merchant_id",
+    "currency",
+    "capability",
+];
+
+/// Drop unknown keys so a host regression cannot print `secret` (036/006 #33).
+pub fn allowlist_gateway(v: Value) -> Value {
+    if let Some(procs) = v.get("processors").and_then(Value::as_array) {
+        let processors: Vec<Value> = procs.iter().cloned().map(allowlist_gateway_one).collect();
+        let mut out = serde_json::Map::new();
+        if let Some(org) = v.get("org_id") {
+            out.insert("org_id".into(), org.clone());
+        }
+        out.insert("processors".into(), Value::Array(processors));
+        return Value::Object(out);
+    }
+    allowlist_gateway_one(v)
+}
+
+fn allowlist_gateway_one(v: Value) -> Value {
+    let Some(obj) = v.as_object() else {
+        return v;
+    };
+    let mut out = serde_json::Map::new();
+    for k in GATEWAY_VIEW_KEYS {
+        if let Some(val) = obj.get(*k) {
+            out.insert((*k).to_string(), val.clone());
+        }
+    }
+    Value::Object(out)
+}
+
+fn cell(v: Option<&Value>) -> String {
+    match v {
+        None | Some(Value::Null) => String::new(),
+        Some(Value::String(s)) => s.replace(['\t', '\n'], " "),
+        Some(other) => other.to_string(),
+    }
+}
+
+/// `--api-key` on argv lands in `ps` / shell history (036/006 #22). Prefer env.
+pub fn api_key_flag_on_argv<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    // clap accepts `--api-key val` and `--api-key=val`.
+    args.into_iter().any(|a| {
+        let a = a.as_ref();
+        a == "--api-key" || a.starts_with("--api-key=")
+    })
+}
+
+pub async fn run(cli: Cli) -> Result<Value, Error> {
+    let cfg = config_from_cli(&cli)?;
+    let client = Client::new(cfg)?;
+    match cli.command {
+        Command::Whoami => client.whoami().await,
+        Command::Ready => client.ready().await,
+        Command::Checkout(CheckoutCmd::Create {
+            provider,
+            amount,
+            currency,
+            idempotency_key,
+            success_url,
+            cancel_url,
+            product_id,
+        }) => {
+            let amount = parse_amount(&amount)?;
+            let currency = resolve_currency(currency);
+            client
+                .checkout_create(
+                    &provider,
+                    amount,
+                    &currency,
+                    &idempotency_key,
+                    CheckoutExtras {
+                        success_url: success_url.as_deref(),
+                        cancel_url: cancel_url.as_deref(),
+                        product_id: product_id.as_deref(),
+                    },
+                )
+                .await
+        }
+        Command::Checkout(CheckoutCmd::Get { id }) => client.checkout_get(&id).await,
+        Command::Checkout(CheckoutCmd::List { limit, after }) => {
+            client.checkout_list(limit, after.as_deref()).await
+        }
+        Command::Checkout(CheckoutCmd::Wait {
+            id,
+            until,
+            timeout_secs,
+            interval_ms,
+        }) => {
+            client
+                .checkout_wait(
+                    &id,
+                    &until,
+                    std::time::Duration::from_secs(timeout_secs),
+                    std::time::Duration::from_millis(interval_ms),
+                )
+                .await
+        }
+        Command::Refund(RefundCmd::Create {
+            checkout,
+            amount,
+            idempotency_key,
+        }) => {
+            let amount = match amount {
+                Some(a) => Some(parse_amount(&a)?),
+                None => None,
+            };
+            client
+                .refund_create(&checkout, amount, &idempotency_key)
+                .await
+        }
+        Command::Refund(RefundCmd::List { limit, after }) => {
+            client.refund_list(limit, after.as_deref()).await
+        }
+        Command::Refund(RefundCmd::Resolve { id, status }) => {
+            client.refund_resolve(&id, &status).await
+        }
+        Command::PaymentLink(PaymentLinkCmd::Create {
+            provider,
+            amount,
+            currency,
+            max_payers,
+            unlimited,
+            label,
+            product_id,
+        }) => {
+            let amount = parse_amount(&amount)?;
+            let currency = resolve_currency(currency);
+            client
+                .payment_link_create(
+                    &provider,
+                    amount,
+                    &currency,
+                    PaymentLinkExtras {
+                        max_payers,
+                        unlimited,
+                        label: label.as_deref(),
+                        product_id: product_id.as_deref(),
+                    },
+                )
+                .await
+        }
+        Command::PaymentLink(PaymentLinkCmd::List { limit, after }) => {
+            client.payment_link_list(limit, after.as_deref()).await
+        }
+        Command::Payments(PaymentsCmd::List { limit, after }) => {
+            client.payments_list(limit, after.as_deref()).await
+        }
+        Command::Receipts(ReceiptsCmd::List { limit, after }) => {
+            client.receipts_list(limit, after.as_deref()).await
+        }
+        Command::Receipts(ReceiptsCmd::Get { id }) => client.receipts_get(&id).await,
+        Command::Gateway(GatewayCmd::Put { file }) => {
+            let body = read_gateway_file(&file)?;
+            client.gateway_put(body).await.map(allowlist_gateway)
+        }
+        Command::Gateway(GatewayCmd::Get { provider }) => {
+            client.gateway_get(&provider).await.map(allowlist_gateway)
+        }
+        Command::Gateway(GatewayCmd::List) => client.gateway_list().await.map(allowlist_gateway),
+        Command::Webhook(WebhookCmd::Put { url }) => client.webhook_put(&url).await,
+        Command::Webhook(WebhookCmd::Get) => client.webhook_get().await,
+        Command::Webhook(WebhookCmd::Rotate) => client.webhook_rotate().await,
+        Command::Webhook(WebhookCmd::Test) => client.webhook_test().await,
+        Command::Product(ProductCmd::Create {
+            name,
+            amount,
+            currency,
+            description,
+        }) => {
+            let amount = parse_amount(&amount)?;
+            client
+                .product_create(&name, amount, &currency, description.as_deref())
+                .await
+        }
+        Command::Product(ProductCmd::List { limit, after }) => {
+            client.product_list(limit, after.as_deref()).await
+        }
+        Command::Events(EventsCmd::List { limit, after }) => {
+            client.events_list(limit, after.as_deref()).await
+        }
+        Command::OneWebhook(OneWebhookCmd::Put { file }) => {
+            let secret = read_one_webhook_file(&file)?;
+            client.one_webhook_put(&secret).await
+        }
+        Command::OneWebhook(OneWebhookCmd::Get) => client.one_webhook_get().await,
+        Command::Subscription(SubscriptionCmd::List { limit, after }) => {
+            client.subscription_list(limit, after.as_deref()).await
+        }
+        Command::Listen {
+            forward_to,
+            timeout_secs,
+            interval_ms,
+        } => listen_loop(&client, &forward_to, timeout_secs, interval_ms).await,
+    }
+}
+
+/// Testing-only forwarder (036/006 #28). Host loopback PUT is separate; we poll events.
+async fn listen_loop(
+    client: &Client,
+    forward_to: &str,
+    timeout_secs: u64,
+    interval_ms: u64,
+) -> Result<Value, Error> {
+    require_loopback(forward_to)?;
+    let http = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(Error::Transport)?;
+    let _ = client.webhook_put(forward_to).await;
+    let deadline = if timeout_secs == 0 {
+        None
+    } else {
+        Some(std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs))
+    };
+    let mut after: Option<String> = None;
+    let mut forwarded = 0u64;
+    loop {
+        if deadline.is_some_and(|d| std::time::Instant::now() >= d) {
+            break;
+        }
+        let page = client.events_list(Some(50), after.as_deref()).await?;
+        if let Some(items) = page.get("items").and_then(Value::as_array) {
+            for ev in items {
+                let body = ev.get("data").cloned().unwrap_or_else(|| ev.clone());
+                let res = http
+                    .post(forward_to)
+                    .header("Content-Type", "application/json")
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(Error::Transport)?;
+                if !res.status().is_success() {
+                    return Err(Error::Config(format!(
+                        "forward-to returned {}",
+                        res.status()
+                    )));
+                }
+                forwarded += 1;
+                if let Some(id) = ev.get("event_id").and_then(Value::as_str) {
+                    after = Some(id.to_string());
+                }
+            }
+        }
+        if deadline.is_none() || deadline.is_some_and(|d| std::time::Instant::now() < d) {
+            tokio::time::sleep(std::time::Duration::from_millis(interval_ms.max(50))).await;
+        }
+    }
+    Ok(serde_json::json!({ "forwarded": forwarded, "after": after }))
+}
+
+fn require_loopback(url: &str) -> Result<(), Error> {
+    let err = || Error::Config("listen --forward-to must be loopback http (Testing only)".into());
+    let u = url.trim();
+    let rest = u.strip_prefix("http://").ok_or_else(err)?;
+    // Reject userinfo (`127.0.0.1:80@evil`) and non-http schemes already stripped.
+    if rest.contains('@') {
+        return Err(err());
+    }
+    let hostport = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let (host, port) = loopback_hostport(hostport).ok_or_else(err)?;
+    if let Some(p) = port {
+        if p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(err());
+        }
+    }
+    let h = host.to_ascii_lowercase();
+    if h == "127.0.0.1" || h == "localhost" || h == "::1" || h == "0:0:0:0:0:0:0:1" {
+        return Ok(());
+    }
+    Err(err())
+}
+
+/// `127.0.0.1[:port]`, `localhost[:port]`, or `[::1][:port]`.
+fn loopback_hostport(hostport: &str) -> Option<(String, Option<&str>)> {
+    if let Some(rest) = hostport.strip_prefix('[') {
+        let (host, after) = rest.split_once(']')?;
+        let port = if after.is_empty() {
+            None
+        } else if let Some(p) = after.strip_prefix(':') {
+            Some(p)
+        } else {
+            return None;
+        };
+        return Some((host.to_string(), port));
+    }
+    match hostport.split_once(':') {
+        Some((h, p)) => Some((h.to_string(), Some(p))),
+        None => Some((hostport.to_string(), None)),
+    }
+}
+
+/// One webhook JSON `{ "webhook_secret": "…" }`. Errors name the path, never the secret.
+pub fn read_one_webhook_file(path: &Path) -> Result<String, Error> {
+    refuse_world_readable(path)?;
+    let raw = std::fs::read_to_string(path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let body: Value = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    if body
+        .get("api_key")
+        .and_then(Value::as_str)
+        .is_some_and(|s| !s.is_empty())
+    {
+        return Err(Error::Config(format!(
+            "{} must not contain api_key",
+            path.display()
+        )));
+    }
+    let secret = body
+        .get("webhook_secret")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| Error::Config(format!("{} missing webhook_secret", path.display())))?;
+    Ok(secret.to_string())
+}
+
+/// Read PutGateway JSON. Errors name the path, never the file bytes (sk_ / PEM).
+pub fn read_gateway_file(path: &Path) -> Result<Value, Error> {
+    refuse_world_readable(path)?;
+    let raw = std::fs::read_to_string(path)
+        .map_err(|e| Error::Config(format!("cannot read {}: {e}", path.display())))?;
+    let body: Value = serde_json::from_str(&raw)
+        .map_err(|_| Error::Config(format!("{} is not JSON", path.display())))?;
+    validate_gateway_put(&body)?;
+    Ok(body)
+}
+
+fn parse_amount(raw: &str) -> Result<Decimal, Error> {
+    let s = raw.trim();
+    Decimal::from_str(s)
+        .map_err(|_| Error::Config(format!("amount must be a decimal, got {raw:?}")))
+        .and_then(|d| {
+            // Host refuses >2 display decimals (issue 003 / quoted display).
+            if d.round_dp(2) != d {
+                return Err(Error::Config(
+                    "amount must have at most 2 decimal places".into(),
+                ));
+            }
+            if d <= Decimal::ZERO {
+                return Err(Error::Config("amount must be greater than 0".into()));
+            }
+            Ok(d)
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn restore_env(key: &str, prev: Option<String>) {
+        match prev {
+            Some(v) => std::env::set_var(key, v),
+            None => std::env::remove_var(key),
+        }
+    }
+
+    #[test]
+    fn create_requires_provider_amount_and_idempotency() {
+        let err = Cli::try_parse_from(["lazuar-pay", "checkout", "create"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("provider") || msg.contains("required"),
+            "{msg}"
+        );
+        let err = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+        ])
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("idempotency-key"),
+            "{}",
+            err.to_string()
+        );
+    }
+
+    #[test]
+    fn listen_requires_loopback_forward_to() {
+        assert!(require_loopback("http://127.0.0.1:9/hook").is_ok());
+        assert!(require_loopback("http://localhost:3021/hook").is_ok());
+        assert!(require_loopback("http://[::1]/hook").is_ok());
+        assert!(require_loopback("http://[::1]:3021/hook").is_ok());
+        let err = require_loopback("https://example.com/hook").unwrap_err();
+        assert!(err.to_string().contains("loopback"), "{err}");
+        assert!(require_loopback("http://127.0.0.1.evil.example/hook").is_err());
+        assert!(require_loopback("http://127.0.0.1:80@evil.example/hook").is_err());
+        assert!(require_loopback("http://[::2]/hook").is_err());
+        assert!(require_loopback("http://[::1]:80@evil.example/hook").is_err());
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "listen",
+            "--forward-to",
+            "http://127.0.0.1:9/hook",
+            "--timeout-secs",
+            "1",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Listen { timeout_secs, .. } => assert_eq!(timeout_secs, 1),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn create_parses_short_provider_and_amount() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "10.00",
+            "--idempotency-key",
+            "k1",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Checkout(CheckoutCmd::Create {
+                provider, amount, ..
+            }) => {
+                assert_eq!(provider, "test");
+                assert_eq!(amount, "10.00");
+            }
+            other => panic!("{other:?}"),
+        }
+        let link = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "12.50",
+        ])
+        .unwrap();
+        match link.command {
+            Command::PaymentLink(PaymentLinkCmd::Create {
+                provider, amount, ..
+            }) => {
+                assert_eq!(provider, "test");
+                assert_eq!(amount, "12.50");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn create_parses_flags() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "--base-url",
+            "http://127.0.0.1:8081",
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "checkout",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10.00",
+            "--idempotency-key",
+            "k1",
+            "--success-url",
+            "https://app.example/ok",
+            "--cancel-url",
+            "https://app.example/no",
+            "--product-id",
+            "prod_1",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Checkout(CheckoutCmd::Create {
+                provider,
+                amount,
+                success_url,
+                cancel_url,
+                product_id,
+                ..
+            }) => {
+                assert_eq!(provider, "test");
+                assert_eq!(amount, "10.00");
+                assert_eq!(success_url.as_deref(), Some("https://app.example/ok"));
+                assert_eq!(cancel_url.as_deref(), Some("https://app.example/no"));
+                assert_eq!(product_id.as_deref(), Some("prod_1"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn sk_key_rejected_before_http() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "--api-key",
+            "sk_test_abc",
+            "--org-id",
+            "t1",
+            "whoami",
+        ])
+        .unwrap();
+        let err = config_from_cli(&cli).unwrap_err();
+        assert!(err.to_string().contains("lzr_sk_"), "{err}");
+    }
+
+    #[test]
+    fn parse_amount_rejects_three_decimals() {
+        let err = parse_amount("10.001").unwrap_err();
+        assert!(err.to_string().contains("2 decimal"), "{err}");
+    }
+
+    #[test]
+    fn parse_amount_rejects_zero() {
+        assert!(parse_amount("0").is_err());
+        assert!(parse_amount("-1").is_err());
+    }
+
+    #[test]
+    fn api_key_flag_on_argv_detects_long_flag() {
+        assert!(api_key_flag_on_argv([
+            "lazuar-pay",
+            "--api-key",
+            "lzr_sk_x",
+            "whoami"
+        ]));
+        assert!(api_key_flag_on_argv([
+            "lazuar-pay",
+            "--api-key=lzr_sk_x",
+            "whoami"
+        ]));
+        assert!(!api_key_flag_on_argv(["lazuar-pay", "whoami"]));
+        assert!(!api_key_flag_on_argv([
+            "lazuar-pay",
+            "--org-id",
+            "t1",
+            "whoami"
+        ]));
+    }
+
+    #[test]
+    fn compact_and_quiet_are_global_flags() {
+        let cli = Cli::try_parse_from(["lazuar-pay", "--quiet", "whoami"]).unwrap();
+        assert!(cli.quiet);
+        assert!(!cli.compact);
+        let cli = Cli::try_parse_from(["lazuar-pay", "ready", "--compact"]).unwrap();
+        assert!(cli.compact);
+        assert!(!cli.quiet);
+        let cli = Cli::try_parse_from(["lazuar-pay", "--compact", "--quiet", "whoami"]).unwrap();
+        assert!(cli.compact && cli.quiet);
+    }
+
+    #[test]
+    fn stdout_json_quiet_wins_then_compact() {
+        let body = serde_json::json!({"ready": true});
+        assert!(stdout_json(&body, false, true, false).is_none());
+        assert!(stdout_json(&body, true, true, false).is_none());
+        let compact = stdout_json(&body, true, false, false).unwrap();
+        assert!(!compact.contains('\n'), "{compact}");
+        assert!(compact.contains("\"ready\":true") || compact.contains("\"ready\": true"));
+        let pretty = stdout_json(&body, false, false, false).unwrap();
+        assert!(pretty.contains('\n'), "{pretty}");
+    }
+
+    #[test]
+    fn allowlist_gateway_drops_secret() {
+        let dirty = serde_json::json!({
+            "provider": "stripe",
+            "configured": true,
+            "secret": "sk_live_nope",
+            "last4": "nope"
+        });
+        let clean = allowlist_gateway(dirty);
+        assert_eq!(clean["provider"], "stripe");
+        assert!(clean.get("secret").is_none(), "{clean}");
+        let dbg = format!(
+            "{:?}",
+            Cli::try_parse_from(["lazuar-pay", "--api-key", "lzr_sk_secret", "whoami"]).unwrap()
+        );
+        assert!(!dbg.contains("lzr_sk_secret"), "{dbg}");
+        assert!(dbg.contains("***"), "{dbg}");
+    }
+
+    #[test]
+    fn format_table_lists_items() {
+        let body = serde_json::json!({
+            "items": [
+                {"id": "a", "status": "open", "amount": 10},
+                {"id": "b", "status": "paid", "amount": 5}
+            ]
+        });
+        let t = format_table(&body);
+        assert!(t.starts_with("id\tstatus\tamount\n"), "{t}");
+        assert!(t.contains("a\topen\t10\n"), "{t}");
+        assert!(t.contains("b\tpaid\t5\n"), "{t}");
+        assert!(stdout_json(&body, false, false, true)
+            .unwrap()
+            .contains('\t'));
+    }
+
+    #[test]
+    fn gateway_put_requires_file_not_secret_flag() {
+        let err = Cli::try_parse_from(["lazuar-pay", "gateway", "put", "--secret", "sk_test_x"])
+            .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("unexpected") || msg.contains("file") || msg.contains("required"),
+            "{msg}"
+        );
+        assert!(Cli::try_parse_from(["lazuar-pay", "gateway", "put"]).is_err());
+    }
+
+    #[test]
+    fn gateway_put_parses_file_flag() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "--api-key",
+            "lzr_sk_test",
+            "--org-id",
+            "t1",
+            "gateway",
+            "put",
+            "--file",
+            "/tmp/stripe.json",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Gateway(GatewayCmd::Put { file }) => {
+                assert_eq!(file, PathBuf::from("/tmp/stripe.json"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn help_hides_api_key_value() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        const SENTINEL: &str = "lzr_sk_live_sentinel_do_not_print";
+        let prev = std::env::var("LAZUAR_PAY_API_KEY").ok();
+        std::env::set_var("LAZUAR_PAY_API_KEY", SENTINEL);
+        let err = Cli::try_parse_from(["lazuar-pay", "--help"]).unwrap_err();
+        let msg = err.to_string();
+        restore_env("LAZUAR_PAY_API_KEY", prev);
+        assert!(msg.contains("--api-key"), "{msg}");
+        assert!(msg.contains("LAZUAR_PAY_API_KEY"), "{msg}");
+        // clap would otherwise render `[env: LAZUAR_PAY_API_KEY=lzr_sk_…]`.
+        assert!(!msg.contains(SENTINEL), "{msg}");
+        assert!(!msg.contains("LAZUAR_PAY_API_KEY="), "{msg}");
+    }
+
+    #[test]
+    fn pay_currency_env_defaults_checkout_create() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        let prev = std::env::var("PAY_CURRENCY").ok();
+        let prev_c = std::env::var("LAZUAR_PAY_CURRENCY").ok();
+        std::env::remove_var("LAZUAR_PAY_CURRENCY");
+        std::env::set_var("PAY_CURRENCY", "USD");
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "checkout",
+            "create",
+            "-p",
+            "test",
+            "-a",
+            "10",
+            "--idempotency-key",
+            "k1",
+        ]);
+        let resolved = resolve_currency(None);
+        let flagged = resolve_currency(Some("MYR".into()));
+        restore_env("PAY_CURRENCY", prev);
+        restore_env("LAZUAR_PAY_CURRENCY", prev_c);
+        match cli.unwrap().command {
+            Command::Checkout(CheckoutCmd::Create { currency, .. }) => {
+                assert!(currency.is_none(), "{currency:?}");
+            }
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(resolved, "USD");
+        assert_eq!(flagged, "MYR");
+    }
+
+    #[test]
+    fn config_file_fills_org_and_rejects_api_key() {
+        let path = std::env::temp_dir().join(format!(
+            "lazuar-pay-cfg-{}-{}.json",
+            std::process::id(),
+            "ok"
+        ));
+        std::fs::write(
+            &path,
+            r#"{"base_url":"http://127.0.0.1:9","org_id":"from-file","profiles":{"dev":{"org_id":"from-dev"}}}"#,
+        )
+        .unwrap();
+        let got = load_file_config(Some(&path), None).unwrap();
+        assert_eq!(got.org_id.as_deref(), Some("from-file"));
+        let dev = load_file_config(Some(&path), Some("dev")).unwrap();
+        assert_eq!(dev.org_id.as_deref(), Some("from-dev"));
+        std::fs::write(&path, r#"{"api_key":"lzr_sk_nope","org_id":"x"}"#).unwrap();
+        let err = load_file_config(Some(&path), None).unwrap_err();
+        assert!(
+            err.to_string().contains("must not contain api_key"),
+            "{err}"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn pay_aliases_fill_when_canonical_missing() {
+        let _g = ENV_LOCK.lock().expect("env lock");
+        let prev_key = std::env::var("PAY_API_KEY").ok();
+        let prev_org = std::env::var("PAY_ORG_ID").ok();
+        let prev_url = std::env::var("PAY_API_URL").ok();
+        std::env::set_var("PAY_API_KEY", "lzr_sk_alias");
+        std::env::set_var("PAY_ORG_ID", "org-alias");
+        std::env::set_var("PAY_API_URL", "http://127.0.0.1:9");
+        let cli = Cli {
+            base_url: None,
+            api_key: None,
+            org_id: None,
+            compact: false,
+            quiet: false,
+            table: false,
+            config: None,
+            profile: None,
+            command: Command::Whoami,
+        };
+        let cfg = config_from_cli(&cli);
+        restore_env("PAY_API_KEY", prev_key);
+        restore_env("PAY_ORG_ID", prev_org);
+        restore_env("PAY_API_URL", prev_url);
+        let cfg = cfg.expect("PAY_* aliases");
+        assert_eq!(cfg.api_key, "lzr_sk_alias");
+        assert_eq!(cfg.org_id.as_deref(), Some("org-alias"));
+        assert_eq!(cfg.base_url, "http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn product_create_parses_name_and_amount() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "product",
+            "create",
+            "--name",
+            "Seat",
+            "--amount",
+            "10.00",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Product(ProductCmd::Create { name, amount, .. }) => {
+                assert_eq!(name, "Seat");
+                assert_eq!(amount, "10.00");
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(Cli::try_parse_from(["lazuar-pay", "product", "list"]).is_ok());
+    }
+
+    #[test]
+    fn list_subcommands_parse() {
+        let link =
+            Cli::try_parse_from(["lazuar-pay", "payment-link", "list", "--limit", "5"]).unwrap();
+        match link.command {
+            Command::PaymentLink(PaymentLinkCmd::List { limit, .. }) => {
+                assert_eq!(limit, Some(5));
+            }
+            other => panic!("{other:?}"),
+        }
+        let refunds = Cli::try_parse_from(["lazuar-pay", "refund", "list"]).unwrap();
+        match refunds.command {
+            Command::Refund(RefundCmd::List { .. }) => {}
+            other => panic!("{other:?}"),
+        }
+        let checkouts = Cli::try_parse_from(["lazuar-pay", "checkout", "list"]).unwrap();
+        match checkouts.command {
+            Command::Checkout(CheckoutCmd::List { .. }) => {}
+            other => panic!("{other:?}"),
+        }
+        assert!(Cli::try_parse_from(["lazuar-pay", "subscription", "list"]).is_ok());
+        let ev = Cli::try_parse_from(["lazuar-pay", "events", "list", "--after", "evt_1"]).unwrap();
+        match ev.command {
+            Command::Events(EventsCmd::List { after, .. }) => {
+                assert_eq!(after.as_deref(), Some("evt_1"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn refund_resolve_parses_status() {
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "refund",
+            "resolve",
+            "abc",
+            "--status",
+            "succeeded",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Refund(RefundCmd::Resolve { id, status }) => {
+                assert_eq!(id, "abc");
+                assert_eq!(status, "succeeded");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn refund_create_requires_idempotency() {
+        let err = Cli::try_parse_from(["lazuar-pay", "refund", "create", "--checkout", "abc"])
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("idempotency-key"),
+            "{}",
+            err.to_string()
+        );
+    }
+
+    #[test]
+    fn one_webhook_put_requires_file_not_secret() {
+        let err =
+            Cli::try_parse_from(["lazuar-pay", "one-webhook", "put", "--secret", "x"]).unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected") || err.to_string().contains("file"),
+            "{}",
+            err.to_string()
+        );
+        let path = std::env::temp_dir().join(format!("lazuar-pay-one-{}.json", std::process::id()));
+        std::fs::write(&path, r#"{"webhook_secret":"whsec_should_not_leak"}"#).unwrap();
+        chmod_owner_rw(&path);
+        let secret = read_one_webhook_file(&path).unwrap();
+        assert_eq!(secret, "whsec_should_not_leak");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn webhook_put_requires_url_not_secret() {
+        let err = Cli::try_parse_from(["lazuar-pay", "webhook", "put"]).unwrap_err();
+        assert!(err.to_string().contains("url"), "{}", err.to_string());
+        let err = Cli::try_parse_from(["lazuar-pay", "webhook", "put", "--secret", "whsec_x"])
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected") || err.to_string().contains("url"),
+            "{}",
+            err.to_string()
+        );
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "webhook",
+            "put",
+            "--url",
+            "http://127.0.0.1:9/hook",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Webhook(WebhookCmd::Put { url }) => {
+                assert_eq!(url, "http://127.0.0.1:9/hook");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn checkout_create_help_states_solana_usdc() {
+        let err = Cli::try_parse_from(["lazuar-pay", "checkout", "create", "--help"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("USDC"), "{msg}");
+        assert!(msg.contains("solana"), "{msg}");
+        assert!(msg.contains("MYR"), "{msg}");
+    }
+
+    #[test]
+    fn payments_list_matches_receipts_shape() {
+        let err = Cli::try_parse_from(["lazuar-pay", "payments"]).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("list") || msg.contains("required"), "{msg}");
+        let cli = Cli::try_parse_from([
+            "lazuar-pay",
+            "payments",
+            "list",
+            "--limit",
+            "10",
+            "--after",
+            "abc",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Payments(PaymentsCmd::List { limit, after }) => {
+                assert_eq!(limit, Some(10));
+                assert_eq!(after.as_deref(), Some("abc"));
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn unlimited_is_presence_flag() {
+        let on = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+            "--unlimited",
+        ])
+        .unwrap();
+        match on.command {
+            Command::PaymentLink(PaymentLinkCmd::Create { unlimited, .. }) => {
+                assert!(unlimited);
+            }
+            other => panic!("{other:?}"),
+        }
+        let off = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+        ])
+        .unwrap();
+        match off.command {
+            Command::PaymentLink(PaymentLinkCmd::Create { unlimited, .. }) => {
+                assert!(!unlimited);
+            }
+            other => panic!("{other:?}"),
+        }
+        let err = Cli::try_parse_from([
+            "lazuar-pay",
+            "payment-link",
+            "create",
+            "--provider",
+            "test",
+            "--amount",
+            "10",
+            "--unlimited",
+            "true",
+        ])
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected argument"),
+            "{}",
+            err.to_string()
+        );
+    }
+
+    #[test]
+    fn read_gateway_file_rejects_test_without_echoing_secret() {
+        let path =
+            std::env::temp_dir().join(format!("lazuar-pay-gw-test-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"{"provider":"test","secret":"sk_should_not_leak","webhook_secret":"x"}"#,
+        )
+        .unwrap();
+        chmod_owner_rw(&path);
+        let err = read_gateway_file(&path).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("test processor"), "{msg}");
+        assert!(!msg.contains("sk_should_not_leak"), "{msg}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[cfg(unix)]
+    fn chmod_owner_rw(path: &std::path::Path) {
+        use std::os::unix::fs::PermissionsExt;
+        let mut p = std::fs::metadata(path).unwrap().permissions();
+        p.set_mode(0o600);
+        std::fs::set_permissions(path, p).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    fn chmod_owner_rw(_: &std::path::Path) {}
+
+    #[cfg(unix)]
+    #[test]
+    fn read_gateway_file_rejects_world_readable() {
+        use std::os::unix::fs::PermissionsExt;
+        let path =
+            std::env::temp_dir().join(format!("lazuar-pay-gw-mode-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"{"provider":"stripe","secret":"sk_live_should_not_leak","webhook_secret":"whsec_x","environment":"live"}"#,
+        )
+        .unwrap();
+        let mut p = std::fs::metadata(&path).unwrap().permissions();
+        p.set_mode(0o644);
+        std::fs::set_permissions(&path, p).unwrap();
+        let err = read_gateway_file(&path).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("chmod 600") || msg.contains("world-readable"),
+            "{msg}"
+        );
+        assert!(!msg.contains("sk_live_should_not_leak"), "{msg}");
+        let _ = std::fs::remove_file(&path);
+    }
+}

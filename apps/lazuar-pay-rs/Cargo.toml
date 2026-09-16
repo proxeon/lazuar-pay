@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/rails",
+    "crates/chain",
+    "crates/storage",
+    "crates/api",
+    "crates/workers",
+    "crates/obs",
+    "crates/app",
+    "crates/client",
+    "crates/cli",
+    "crates/mcp",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "UNLICENSED"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+float_arithmetic = "deny"
+
+[workspace.dependencies]
+domain = { path = "crates/domain" }
+rails = { path = "crates/rails" }
+chain = { path = "crates/chain" }
+storage = { path = "crates/storage" }
+api = { path = "crates/api" }
+workers = { path = "crates/workers" }
+obs = { path = "crates/obs" }
+pay-client = { path = "crates/client" }
+clap = { version = "4.5", default-features = false, features = [
+    "std",
+    "derive",
+    "help",
+    "usage",
+    "error-context",
+    "env",
+] }
+rust_decimal = { version = "1.36", default-features = false, features = ["std"] }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "postgres",
+    "macros",
+    "migrate",
+    "uuid",
+    "time",
+] }
+thiserror = "2"
+time = { version = "0.3.36", default-features = false, features = ["std", "formatting", "parsing"] }
+tokio = { version = "1", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+    "net",
+    "io-util",
+    "time",
+] }
+uuid = { version = "1.11", default-features = false, features = ["std", "v4"] }
+axum = { version = "0.8", default-features = false, features = ["json", "tokio", "http1", "query"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hmac = "0.12"
+sha2 = "0.10"
+subtle = "2"
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+aes-gcm = "0.10"
+base64 = "0.22"
+getrandom = "0.2"
+rsa = { version = "0.9", default-features = false, features = ["std", "pem", "sha2"] }
+prometheus = "0.13"
