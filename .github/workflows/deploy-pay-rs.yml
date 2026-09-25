@@ -1,19 +1,18 @@
-# Deploy pay-rs to the VPS. Pulls the GHCR image published by
-# publish-pay-rs and restarts the production compose.
+# Deploy pay-rs to the VPS. Ships the production compose file from this
+# repo to the server, pulls the GHCR image published by publish-pay-rs,
+# and restarts the stack. No source checkout on the server.
 #
 # One-time server setup (run on the VPS):
-#   sudo mkdir -p /srv/lazuar/pay && sudo chown "$USER" /srv/lazuar/pay
-#   cd /srv/lazuar/pay && git clone <this-repo-url> repo && cd repo
 #   docker network create lazuar-edge
-#   cp apps/lazuar-pay-rs/.env.production.example pay-rs.env.production
-#   # fill it, chmod 600 pay-rs.env.production
+#   mkdir -p /srv/lazuar/pay
+#   # write /srv/lazuar/pay/pay-rs.env.production from
+#   # apps/lazuar-pay-rs/.env.production.example (fill, chmod 600)
 #   # GHCR read login (once; persists in ~/.docker/config.json):
 #   #   echo $GHCR_READ_TOKEN | docker login ghcr.io -u USER --password-stdin
 #
 # Repo secrets (Settings → Secrets → Actions, paste values, never chat):
-#   VPS_HOST, VPS_USER, VPS_SSH_KEY (private deploy key; its public key must
-#   be in the server's ~/.ssh/authorized_keys AND added as a read-only
-#   deploy key on this repo so the server can git pull).
+#   VPS_HOST, VPS_USER, VPS_SSH_KEY (private key; its public key must be in
+#   the server's ~/.ssh/authorized_keys).
 
 name: deploy pay-rs
 
@@ -29,6 +28,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ship compose file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "apps/lazuar-pay-rs/docker-compose.production.yml"
+          strip_components: 2
+          target: "/srv/lazuar/pay"
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -37,12 +49,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd /srv/lazuar/pay/repo
-            git pull --ff-only
+            cd /srv/lazuar/pay
             export PAY_RS_IMAGE="ghcr.io/${{ github.repository }}/lazuar-pay-rs:${{ github.event.inputs.tag }}"
             export PAY_RS_ENV_FILE=/srv/lazuar/pay/pay-rs.env.production
-            docker compose -f apps/lazuar-pay-rs/docker-compose.production.yml pull
-            docker compose -f apps/lazuar-pay-rs/docker-compose.production.yml up -d --remove-orphans
-            docker compose -f apps/lazuar-pay-rs/docker-compose.production.yml ps
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
+            docker compose -f docker-compose.production.yml ps
             # No host ports by design — probe from inside the container.
-            docker compose -f apps/lazuar-pay-rs/docker-compose.production.yml exec -T pay curl -fsS http://127.0.0.1:8081/health
+            docker compose -f docker-compose.production.yml exec -T pay curl -fsS http://127.0.0.1:8081/health
