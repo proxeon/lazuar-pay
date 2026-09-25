@@ -1,0 +1,35 @@
+# Lazuar Pay (Rust) — production. No laptop overlay, no local Postgres
+# (data lives in Supabase via ConnectionStrings__Pay), no published ports:
+# the shared Caddy (store stack, `lazuar-edge` network) terminates TLS.
+#
+#   docker network create lazuar-edge   # once per host
+#   cp .env.production.example pay-rs.env.production  # fill, chmod 600
+#   TAG=<ghcr-tag> docker compose -f docker-compose.production.yml --env-file pay-rs.env.production up -d
+#
+# ThrowIf is fail-closed: missing Pay__WrapKey, non-public One__BaseUrl,
+# non-https checkout URL or empty CORS origins refuse boot (exit 1).
+
+name: lazuar-pay-rs
+
+services:
+  pay:
+    image: ${PAY_RS_IMAGE:?set PAY_RS_IMAGE (e.g. ghcr.io/OWNER/lazuar-pay-rs:TAG)}
+    restart: unless-stopped
+    env_file:
+      - ${PAY_RS_ENV_FILE:-pay-rs.env.production}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PORT: "8081"
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  edge:
+    name: lazuar-edge
+    external: true
