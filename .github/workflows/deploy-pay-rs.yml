@@ -4,8 +4,8 @@
 #
 # One-time server setup (run on the VPS):
 #   docker network create lazuar-edge
-#   mkdir -p /srv/lazuar/pay
-#   # write /srv/lazuar/pay/pay-rs.env.production from
+#   mkdir -p ~/lazuar/pay
+#   # write ~/lazuar/pay/pay-rs.env.production from
 #   # apps/lazuar-pay-rs/.env.production.example (fill, chmod 600)
 #   # GHCR read login (once; persists in ~/.docker/config.json):
 #   #   echo $GHCR_READ_TOKEN | docker login ghcr.io -u USER --password-stdin
@@ -39,7 +39,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "apps/lazuar-pay-rs/docker-compose.production.yml"
           strip_components: 2
-          target: "/srv/lazuar/pay"
+          target: "/home/${{ secrets.VPS_USER }}/lazuar/pay"
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
@@ -49,9 +49,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd /srv/lazuar/pay
+            cd ~/lazuar/pay
             export PAY_RS_IMAGE="ghcr.io/${{ github.repository }}/lazuar-pay-rs:${{ github.event.inputs.tag }}"
-            export PAY_RS_ENV_FILE=/srv/lazuar/pay/pay-rs.env.production
+            export PAY_RS_ENV_FILE=~/lazuar/pay/pay-rs.env.production
             docker compose -f docker-compose.production.yml pull
             docker compose -f docker-compose.production.yml up -d --remove-orphans
             docker compose -f docker-compose.production.yml ps
